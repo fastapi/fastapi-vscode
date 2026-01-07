@@ -1,7 +1,10 @@
 import * as vscode from "vscode"
 import { EndpointTreeProvider } from "./providers/EndpointTreeProvider"
 // TODO: Replace with real endpoint discovery service
-import { mockApps } from "./test/fixtures/mockEndpointData"
+import {
+  groupAppsByWorkspace,
+  mockApps,
+} from "./test/fixtures/mockEndpointData"
 import type { EndpointTreeItem, SourceLocation } from "./types/endpoint"
 
 function navigateToLocation(location: SourceLocation): void {
@@ -16,8 +19,12 @@ function navigateToLocation(location: SourceLocation): void {
   })
 }
 
+// This method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
-  const endpointProvider = new EndpointTreeProvider(mockApps)
+  const endpointProvider = new EndpointTreeProvider(
+    mockApps,
+    groupAppsByWorkspace,
+  )
 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider(
