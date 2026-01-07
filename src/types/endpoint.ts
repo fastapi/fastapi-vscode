@@ -27,6 +27,7 @@ export interface RouterDefinition {
   location: SourceLocation
   routes: RouteDefinition[]
 }
+
 export interface AppDefinition {
   name: string
   filePath: string
@@ -36,7 +37,7 @@ export interface AppDefinition {
 }
 
 export type EndpointTreeItem =
-  | { type: "workspace"; label: string; app: AppDefinition[] }
+  | { type: "workspace"; label: string; apps: AppDefinition[] }
   | { type: "app"; app: AppDefinition }
   | { type: "router"; router: RouterDefinition }
   | { type: "route"; route: RouteDefinition }

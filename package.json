@@ -93,7 +93,7 @@
     "watch": "bun run esbuild.js --watch",
     "package": "vsce package",
     "publish:marketplace": "vsce publish",
-    "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./",
+    "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/",
     "test": "vscode-test",
     "prepare": "husky"
   },

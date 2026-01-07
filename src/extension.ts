@@ -1,12 +1,25 @@
 import * as vscode from "vscode"
 import { EndpointTreeProvider } from "./providers/EndpointTreeProvider"
-import type { EndpointTreeItem } from "./types/endpoint"
+import { mockApps } from "./test/fixtures/mockEndpointData"
+import type { EndpointTreeItem, SourceLocation } from "./types/endpoint"
+
+function navigateToLocation(location: SourceLocation): void {
+  const uri = vscode.Uri.file(location.filePath)
+  const position = new vscode.Position(location.line - 1, location.column)
+  vscode.window.showTextDocument(uri, {
+    selection: new vscode.Range(position, position),
+  })
+}
 
 export function activate(context: vscode.ExtensionContext) {
-  const endpointProvider = new EndpointTreeProvider()
-  vscode.window.registerTreeDataProvider("endpoint-explorer", endpointProvider)
+  const endpointProvider = new EndpointTreeProvider(mockApps)
 
   context.subscriptions.push(
+    vscode.window.registerTreeDataProvider(
+      "endpoint-explorer",
+      endpointProvider,
+    ),
+
     vscode.commands.registerCommand("fastapi-vscode.refreshEndpoints", () => {
       endpointProvider.refresh()
     }),
@@ -15,15 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
       "fastapi-vscode.goToEndpoint",
       (item: EndpointTreeItem) => {
         if (item.type === "route") {
-          const location = item.route.location
-          const uri = vscode.Uri.file(location.filePath)
-          const position = new vscode.Position(
-            location.line - 1,
-            location.column,
-          )
-          vscode.window.showTextDocument(uri, {
-            selection: new vscode.Range(position, position),
-          })
+          navigateToLocation(item.route.location)
         }
       },
     ),
@@ -42,15 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
       "fastapi-vscode.goToRouter",
       (item: EndpointTreeItem) => {
         if (item.type === "router") {
-          const location = item.router.location
-          const uri = vscode.Uri.file(location.filePath)
-          const position = new vscode.Position(
-            location.line - 1,
-            location.column,
-          )
-          vscode.window.showTextDocument(uri, {
-            selection: new vscode.Range(position, position),
-          })
+          navigateToLocation(item.router.location)
         }
       },
     ),

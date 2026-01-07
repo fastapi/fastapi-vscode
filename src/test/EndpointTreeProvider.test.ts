@@ -1,11 +1,12 @@
 import * as assert from "node:assert"
 import { EndpointTreeProvider } from "../providers/EndpointTreeProvider"
+import { mockApps } from "./fixtures/mockEndpointData"
 
 suite("EndpointTreeProvider", () => {
   let provider: EndpointTreeProvider
 
   setup(() => {
-    provider = new EndpointTreeProvider()
+    provider = new EndpointTreeProvider(mockApps)
   })
 
   test("getChildren returns apps at root level", () => {
