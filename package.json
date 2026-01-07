@@ -1,0 +1,52 @@
+{
+  "name": "fastapi-vscode",
+  "displayName": "FastAPI Extension",
+  "description": "VS Code extension for FastAPI development",
+  "version": "0.0.1",
+  "publisher": "FastAPI Labs",
+  "engines": {
+    "vscode": "^1.107.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.py"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "fastapi-vscode.helloWorld",
+        "title": "Hello World"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "bun run esbuild.js --production",
+    "compile": "bun run esbuild.js",
+    "watch": "bun run esbuild.js --watch",
+    "package": "vsce package",
+    "publish:marketplace": "vsce publish",
+    "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.11",
+    "@types/bun": "latest",
+    "@types/vscode": "^1.107.0",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.27.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fastapi/fastapi-vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/fastapi/fastapi-vscode/issues"
+  },
+  "homepage": "https://github.com/fastapi/fastapi-vscode#readme"
+}
