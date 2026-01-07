@@ -103,6 +103,7 @@ export class EndpointTreeProvider
         workspaceItem.contextValue = "workspace"
         return workspaceItem
       }
+
       case "app": {
         const appItem = new TreeItem(
           element.app.name,
@@ -112,6 +113,7 @@ export class EndpointTreeProvider
         appItem.contextValue = "app"
         return appItem
       }
+
       case "router": {
         const routerItem = new TreeItem(
           element.router.prefix,
@@ -126,12 +128,13 @@ export class EndpointTreeProvider
         routerItem.contextValue = "router"
         return routerItem
       }
+
       case "route": {
-        // For WebSocket routes, just show path (icon already indicates WS)
         const label =
           element.route.method === "WEBSOCKET"
             ? element.route.path
             : `${element.route.method} ${element.route.path}`
+
         const routeItem = new TreeItem(label)
         routeItem.description = element.route.functionName
         routeItem.iconPath = this.getMethodIcon(element.route.method)
