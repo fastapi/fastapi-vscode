@@ -1,4 +1,4 @@
-import * as assert from "assert"
+import * as assert from "node:assert"
 import { EndpointTreeProvider } from "../providers/EndpointTreeProvider"
 
 suite("EndpointTreeProvider", () => {
@@ -20,24 +20,30 @@ suite("EndpointTreeProvider", () => {
     assert.strictEqual(app.type, "app")
 
     const children = provider.getChildren(app)
-    const routers = children.filter(c => c.type === "router")
-    const routes = children.filter(c => c.type === "route")
+    const routers = children.filter((c) => c.type === "router")
+    const routes = children.filter((c) => c.type === "route")
 
     // App should have at least one router or route
-    assert.ok(routers.length > 0 || routes.length > 0, "App should have routers or routes")
+    assert.ok(
+      routers.length > 0 || routes.length > 0,
+      "App should have routers or routes",
+    )
   })
 
   test("getChildren returns routes for router", () => {
     const roots = provider.getChildren()
     const app = roots[0]
     const children = provider.getChildren(app)
-    const router = children.find(c => c.type === "router")
+    const router = children.find((c) => c.type === "router")
 
     assert.ok(router, "Should find a router")
     if (router?.type === "router") {
       const routes = provider.getChildren(router)
       assert.ok(routes.length > 0, "Router should have routes")
-      assert.ok(routes.every(r => r.type === "route"), "All children should be routes")
+      assert.ok(
+        routes.every((r) => r.type === "route"),
+        "All children should be routes",
+      )
     }
   })
 
@@ -45,12 +51,16 @@ suite("EndpointTreeProvider", () => {
     const roots = provider.getChildren()
     const app = roots[0]
     const children = provider.getChildren(app)
-    const route = children.find(c => c.type === "route")
+    const route = children.find((c) => c.type === "route")
 
     assert.ok(route, "Should find a route")
     if (route) {
       const routeChildren = provider.getChildren(route)
-      assert.strictEqual(routeChildren.length, 0, "Routes should have no children")
+      assert.strictEqual(
+        routeChildren.length,
+        0,
+        "Routes should have no children",
+      )
     }
   })
 
@@ -66,13 +76,16 @@ suite("EndpointTreeProvider", () => {
     const roots = provider.getChildren()
     const app = roots[0]
     const children = provider.getChildren(app)
-    const route = children.find(c => c.type === "route")
+    const route = children.find((c) => c.type === "route")
 
     assert.ok(route, "Should find a route")
     if (route?.type === "route") {
       const treeItem = provider.getTreeItem(route)
       const label = treeItem.label as string
-      assert.ok(label.includes(route.route.method), "Label should include method")
+      assert.ok(
+        label.includes(route.route.method),
+        "Label should include method",
+      )
       assert.ok(label.includes(route.route.path), "Label should include path")
     }
   })
@@ -81,7 +94,7 @@ suite("EndpointTreeProvider", () => {
     const roots = provider.getChildren()
     const app = roots[0]
     const children = provider.getChildren(app)
-    const route = children.find(c => c.type === "route")
+    const route = children.find((c) => c.type === "route")
 
     assert.ok(route, "Should find a route")
     if (route) {
@@ -94,7 +107,7 @@ suite("EndpointTreeProvider", () => {
     const roots = provider.getChildren()
     const app = roots[0]
     const children = provider.getChildren(app)
-    const router = children.find(c => c.type === "router")
+    const router = children.find((c) => c.type === "router")
 
     assert.ok(router, "Should find a router")
     if (router) {
@@ -107,12 +120,15 @@ suite("EndpointTreeProvider", () => {
     const roots = provider.getChildren()
     const app = roots[0]
     const children = provider.getChildren(app)
-    const router = children.find(c => c.type === "router")
+    const router = children.find((c) => c.type === "router")
 
     assert.ok(router, "Should find a router")
     if (router?.type === "router") {
       const treeItem = provider.getTreeItem(router)
-      assert.ok(treeItem.description?.toString().includes("routes"), "Description should mention routes")
+      assert.ok(
+        treeItem.description?.toString().includes("routes"),
+        "Description should mention routes",
+      )
     }
   })
 
@@ -120,13 +136,16 @@ suite("EndpointTreeProvider", () => {
     const roots = provider.getChildren()
     const app = roots[0]
     const children = provider.getChildren(app)
-    const route = children.find(c => c.type === "route")
+    const route = children.find((c) => c.type === "route")
 
     assert.ok(route, "Should find a route")
     if (route) {
       const treeItem = provider.getTreeItem(route)
       assert.ok(treeItem.command, "Route should have a command")
-      assert.strictEqual(treeItem.command?.command, "fastapi-vscode.goToEndpoint")
+      assert.strictEqual(
+        treeItem.command?.command,
+        "fastapi-vscode.goToEndpoint",
+      )
     }
   })
 
@@ -134,14 +153,17 @@ suite("EndpointTreeProvider", () => {
     const roots = provider.getChildren()
     const app = roots[0]
     const children = provider.getChildren(app)
-    const route = children.find(c => c.type === "route")
+    const route = children.find((c) => c.type === "route")
 
     assert.ok(route, "Should find a route")
     if (route?.type === "route") {
       const treeItem = provider.getTreeItem(route)
       const tooltip = treeItem.tooltip as string
       assert.ok(tooltip.includes("File:"), "Tooltip should include file info")
-      assert.ok(tooltip.includes(route.route.location.filePath), "Tooltip should include file path")
+      assert.ok(
+        tooltip.includes(route.route.location.filePath),
+        "Tooltip should include file path",
+      )
     }
   })
 })

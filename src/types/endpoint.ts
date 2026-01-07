@@ -1,34 +1,42 @@
-export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'WEBSOCKET';
+export type HTTPMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "DELETE"
+  | "PATCH"
+  | "OPTIONS"
+  | "HEAD"
+  | "WEBSOCKET"
 
 export interface SourceLocation {
-    filePath: string;
-    line: number;
-    column: number;
-};
+  filePath: string
+  line: number
+  column: number
+}
 
 export interface RouteDefinition {
-    method: HTTPMethod;
-    path: string;
-    functionName: string;
-    location: SourceLocation;
+  method: HTTPMethod
+  path: string
+  functionName: string
+  location: SourceLocation
 }
 
 export interface RouterDefinition {
-    name: string;
-    prefix: string;
-    location: SourceLocation;
-    routes: RouteDefinition[];
+  name: string
+  prefix: string
+  location: SourceLocation
+  routes: RouteDefinition[]
 }
 export interface AppDefinition {
-    name: string;
-    filePath: string;
-    workspaceFolder: string; // Needed for multi-root workspaces
-    routers: RouterDefinition[];
-    routes: RouteDefinition[]; // Direct routes on the app
+  name: string
+  filePath: string
+  workspaceFolder: string // Needed for multi-root workspaces
+  routers: RouterDefinition[]
+  routes: RouteDefinition[] // Direct routes on the app
 }
 
 export type EndpointTreeItem =
-    | { type: "workspace"; label: string; app: AppDefinition[] }
-    | { type: "app"; app: AppDefinition }
-    | { type: "router"; router: RouterDefinition }
-    | { type: "route"; route: RouteDefinition };
+  | { type: "workspace"; label: string; app: AppDefinition[] }
+  | { type: "app"; app: AppDefinition }
+  | { type: "router"; router: RouterDefinition }
+  | { type: "route"; route: RouteDefinition }
