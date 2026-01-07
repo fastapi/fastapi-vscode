@@ -5,7 +5,11 @@ const watch = process.argv.includes("--watch")
 
 async function main() {
   const ctx = await esbuild.context({
-    entryPoints: ["src/extension.ts", "src/test/extension.test.ts"],
+    entryPoints: [
+      "src/extension.ts",
+      "src/test/extension.test.ts",
+      "src/test/EndpointTreeProvider.test.ts",
+    ],
     bundle: true,
     format: "cjs",
     minify: production,

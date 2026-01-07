@@ -2,10 +2,22 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "watch",
-      "problemMatcher": "$tsc-watch",
+      "label": "watch",
+      "type": "shell",
+      "command": "bun run watch",
       "isBackground": true,
+      "problemMatcher": {
+        "owner": "esbuild",
+        "pattern": {
+          "regexp": "^✘ \\[ERROR\\] (.*)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\[watch\\]",
+          "endsPattern": "Watching for changes\\.\\.\\."
+        }
+      },
       "presentation": {
         "reveal": "never"
       },
@@ -15,9 +27,10 @@
       }
     },
     {
-      "type": "npm",
-      "script": "compile",
-      "problemMatcher": "$tsc",
+      "label": "compile",
+      "type": "shell",
+      "command": "bun run compile",
+      "problemMatcher": [],
       "presentation": {
         "reveal": "silent"
       },

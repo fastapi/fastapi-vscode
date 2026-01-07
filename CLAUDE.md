@@ -16,3 +16,8 @@ VS Code extension for FastAPI development.
 - `src/providers/` - TreeView, CodeLens providers
 - `src/services/` - FastAPI endpoint scanning
 - `src/types/` - TypeScript interfaces
+
+
+## Scratch space
+
+* NEVER create throw away idea exploration files in the top directory of the repo. Use a `.agents/sandbox/` directory for those. They will never be committed.

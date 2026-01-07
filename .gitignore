@@ -36,3 +36,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # VS Code extension
 *.vsix
 .vscode-test
+
+/.agents/
+/.claude/
+CLAUDE.local.md
