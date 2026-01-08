@@ -5,7 +5,7 @@
   "version": "0.0.1",
   "publisher": "FastAPI Labs",
   "engines": {
-    "vscode": "^1.107.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
@@ -17,10 +17,75 @@
   "contributes": {
     "commands": [
       {
-        "command": "fastapi-vscode.helloWorld",
-        "title": "Hello World"
+        "command": "fastapi-vscode.refreshEndpoints",
+        "title": "Refresh Endpoints",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "fastapi-vscode.goToEndpoint",
+        "title": "Go to Definition"
+      },
+      {
+        "command": "fastapi-vscode.copyEndpointPath",
+        "title": "Copy Path"
+      },
+      {
+        "command": "fastapi-vscode.goToRouter",
+        "title": "Go to Router Definition"
+      },
+      {
+        "command": "fastapi-vscode.copyRouterPrefix",
+        "title": "Copy Prefix"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "fastapi-vscode.refreshEndpoints",
+          "when": "view == endpoint-explorer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "fastapi-vscode.goToEndpoint",
+          "when": "view == endpoint-explorer && viewItem == route",
+          "group": "navigation"
+        },
+        {
+          "command": "fastapi-vscode.copyEndpointPath",
+          "when": "view == endpoint-explorer && viewItem == route",
+          "group": "navigation"
+        },
+        {
+          "command": "fastapi-vscode.goToRouter",
+          "when": "view == endpoint-explorer && viewItem == router",
+          "group": "navigation"
+        },
+        {
+          "command": "fastapi-vscode.copyRouterPrefix",
+          "when": "view == endpoint-explorer && viewItem == router",
+          "group": "navigation"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "fastapi",
+          "title": "FastAPI",
+          "icon": "$(zap)"
+        }
+      ]
+    },
+    "views": {
+      "fastapi": [
+        {
+          "id": "endpoint-explorer",
+          "name": "Endpoint Explorer"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "bun run esbuild.js --production",
@@ -28,18 +93,21 @@
     "watch": "bun run esbuild.js --watch",
     "package": "vsce package",
     "publish:marketplace": "vsce publish",
-    "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./",
-    "test": "vscode-test"
+    "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/",
+    "test": "vscode-test",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
     "@types/bun": "latest",
     "@types/mocha": "^10.0.10",
-    "@types/vscode": "^1.107.0",
+    "@types/vscode": "^1.85.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -52,5 +120,10 @@
   "bugs": {
     "url": "https://github.com/fastapi/fastapi-vscode/issues"
   },
-  "homepage": "https://github.com/fastapi/fastapi-vscode#readme"
+  "homepage": "https://github.com/fastapi/fastapi-vscode#readme",
+  "lint-staged": {
+    "*.{ts,js,json}": [
+      "biome check --write"
+    ]
+  }
 }
