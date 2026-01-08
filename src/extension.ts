@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { analyzeFile, analyzeTree } from "./core/analyzer"
 import { findNodesByType } from "./core/astUtils"
 import {
   decoratorExtractor,
@@ -50,75 +51,10 @@ export async function activate(context: vscode.ExtensionContext) {
     groupAppsByWorkspace,
   )
 
-  const fastapiCode = `
-  from fastapi import FastAPI, APIRouter
-  from .routes import users, items
-  from ..api import main
-  app = FastAPI()
-
-  router = APIRouter(prefix="/items")
-
-  @router.get("/{item_id}")
-  async def read_item(item_id: int):
-      return {"item_id": item_id}
-
-  app.include_router(router)
-  
-  @app.get("/items/{item_id}")
-  async def read_item(item_id: int):
-      return {"item_id": item_id} 
-  
-  app.include_router(router)
-  app.include_router(users.router, prefix="/users")
-  api_router.include_router(items_router, prefix="/items", tags=["items"])
-
-  `
-
-  const tree = parserService.parse(fastapiCode)
-
-  // Extract routes
-  const decoratedDefs = tree
-    ? findNodesByType(tree.rootNode, "decorated_definition")
-    : []
-  console.log("Decorated Definitions Found:", decoratedDefs.length)
-
-  for (const def of decoratedDefs) {
-    const result = decoratorExtractor(def)
-    console.log("Processed Decorated Definition:", result)
-  }
-
-  // Extract routers
-  const assignments = tree ? findNodesByType(tree.rootNode, "assignment") : []
-  console.log("Assignments Found:", assignments.length)
-
-  for (const assign of assignments) {
-    const result = routerExtractor(assign)
-    console.log("Processed Router Definition:", result)
-  }
-
-  // Extract imports
-  const importNodes = tree
-    ? findNodesByType(tree.rootNode, "import_statement")
-    : []
-  const importFromNodes = tree
-    ? findNodesByType(tree.rootNode, "import_from_statement")
-    : []
-  const allImportNodes = importNodes.concat(importFromNodes)
-  console.log("Import Statements Found:", allImportNodes.length)
-  for (const importNode of allImportNodes) {
-    const result = importExtractor(importNode)
-    console.log("Processed Import Statement:", result)
-  }
-
-  // Extract include_router calls
-  const callNodes = tree ? findNodesByType(tree.rootNode, "call") : []
-  console.log("Function Calls Found:", callNodes.length)
-  for (const callNode of callNodes) {
-    const result = includeRouterExtractor(callNode)
-    if (result) {
-      console.log("Processed include_router Call:", result)
-    }
-  }
+  const realFile =
+    "/Users/savannah/work/full-stack-fastapi-template/backend/app/api/routes/users.py"
+  const realAnalysis = analyzeFile(realFile, parserService)
+  console.log("Real file analysis:", realAnalysis)
 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider(
