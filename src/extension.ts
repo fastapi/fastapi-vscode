@@ -3,6 +3,7 @@ import { findNodesByType } from "./core/astUtils"
 import {
   decoratorExtractor,
   importExtractor,
+  includeRouterExtractor,
   routerExtractor,
 } from "./core/extractors"
 import { Parser } from "./core/parser"
@@ -66,6 +67,11 @@ export async function activate(context: vscode.ExtensionContext) {
   @app.get("/items/{item_id}")
   async def read_item(item_id: int):
       return {"item_id": item_id} 
+  
+  app.include_router(router)
+  app.include_router(users.router, prefix="/users")
+  api_router.include_router(items_router, prefix="/items", tags=["items"])
+
   `
 
   const tree = parserService.parse(fastapiCode)
@@ -102,6 +108,16 @@ export async function activate(context: vscode.ExtensionContext) {
   for (const importNode of allImportNodes) {
     const result = importExtractor(importNode)
     console.log("Processed Import Statement:", result)
+  }
+
+  // Extract include_router calls
+  const callNodes = tree ? findNodesByType(tree.rootNode, "call") : []
+  console.log("Function Calls Found:", callNodes.length)
+  for (const callNode of callNodes) {
+    const result = includeRouterExtractor(callNode)
+    if (result) {
+      console.log("Processed include_router Call:", result)
+    }
   }
 
   context.subscriptions.push(

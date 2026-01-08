@@ -103,9 +103,7 @@ export function routerExtractor(
   return null
 }
 
-export function importExtractor(
-  node: Node,
-): {
+export function importExtractor(node: Node): {
   modulePath: string
   names: string[]
   isRelative: boolean
@@ -156,4 +154,49 @@ export function importExtractor(
   }
 
   return { modulePath, names, isRelative, relativeDots }
+}
+
+export function includeRouterExtractor(
+  node: Node,
+): { object: string; router: string; prefix: string } | null {
+  if (node.type !== "call") {
+    return null
+  }
+
+  const functionNameNode = node.childForFieldName("function")
+  if (!functionNameNode || functionNameNode.type !== "attribute") {
+    return null
+  }
+
+  const objectNode = functionNameNode.childForFieldName("object")
+  const methodNode = functionNameNode.childForFieldName("attribute")
+
+  if (!objectNode || !methodNode || methodNode.text !== "include_router") {
+    return null
+  }
+
+  const argumentsNode = node.childForFieldName("arguments")
+  if (!argumentsNode) {
+    return null
+  }
+
+  const routerArg = argumentsNode.namedChildren[0]
+  const router = routerArg ? routerArg.text : ""
+
+  let prefix = ""
+  for (const argNode of argumentsNode.namedChildren) {
+    if (argNode.type === "keyword_argument") {
+      const nameNode = argNode.childForFieldName("name")
+      const valueNode = argNode.childForFieldName("value")
+      if (nameNode?.text === "prefix" && valueNode?.type === "string") {
+        prefix = valueNode.text.slice(1, -1) // Remove quotes
+      }
+    }
+  }
+
+  return {
+    object: objectNode.text,
+    router,
+    prefix,
+  }
 }
