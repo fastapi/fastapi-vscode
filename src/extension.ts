@@ -1,9 +1,6 @@
 import * as vscode from "vscode"
-import {
-  findNodesByType,
-  processDecoratedDefinition,
-  walkTree,
-} from "./core/astUtils"
+import { findNodesByType } from "./core/astUtils"
+import { decoratorExtractor, routerExtractor } from "./core/extractors"
 import { Parser } from "./core/parser"
 import { EndpointTreeProvider } from "./providers/EndpointTreeProvider"
 // TODO: Replace with real endpoint discovery service
@@ -51,24 +48,40 @@ export async function activate(context: vscode.ExtensionContext) {
   const fastapiCode = `
   from fastapi import FastAPI
   app = FastAPI()
+
+  router = APIRouter(prefix="/items")
+
+  @router.get("/{item_id}")
+  async def read_item(item_id: int):
+      return {"item_id": item_id}
+
+  app.include_router(router)
   
   @app.get("/items/{item_id}")
   async def read_item(item_id: int):
       return {"item_id": item_id} 
-    
   `
-  const t = parserService.parse(fastapiCode)
-  console.log("Parsed FastAPI Code Tree:", t?.rootNode.toString())
 
   const tree = parserService.parse(fastapiCode)
+
+  // Extract routes
   const decoratedDefs = tree
     ? findNodesByType(tree.rootNode, "decorated_definition")
     : []
   console.log("Decorated Definitions Found:", decoratedDefs.length)
 
   for (const def of decoratedDefs) {
-    const result = processDecoratedDefinition(def)
+    const result = decoratorExtractor(def)
     console.log("Processed Decorated Definition:", result)
+  }
+
+  // Extract routers
+  const assignments = tree ? findNodesByType(tree.rootNode, "assignment") : []
+  console.log("Assignments Found:", assignments.length)
+
+  for (const assign of assignments) {
+    const result = routerExtractor(assign)
+    console.log("Processed Router Definition:", result)
   }
 
   context.subscriptions.push(

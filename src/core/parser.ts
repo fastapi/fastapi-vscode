@@ -1,5 +1,5 @@
-import { promises as fs, readFileSync } from "node:fs"
-import { Language, Tree, Parser as TreeSitterParser } from "web-tree-sitter"
+import { readFileSync } from "node:fs"
+import { Language, Parser as TreeSitterParser } from "web-tree-sitter"
 
 export class Parser {
   private parser: TreeSitterParser | null = null
