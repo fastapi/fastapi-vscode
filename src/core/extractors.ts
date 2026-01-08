@@ -102,3 +102,58 @@ export function routerExtractor(
 
   return null
 }
+
+export function importExtractor(
+  node: Node,
+): {
+  modulePath: string
+  names: string[]
+  isRelative: boolean
+  relativeDots: number
+} | null {
+  if (
+    node.type !== "import_statement" &&
+    node.type !== "import_from_statement"
+  ) {
+    return null
+  }
+
+  let modulePath = ""
+  const names: string[] = []
+  let isRelative = false
+  let relativeDots = 0
+
+  if (node.type === "import_statement") {
+    const moduleNode = node.childForFieldName("module_name")
+    console.log("Import module node:", moduleNode)
+    if (moduleNode) {
+      modulePath = moduleNode.text
+    }
+
+    const nameNodes = findNodesByType(node, "dotted_name")
+    for (const nameNode of nameNodes) {
+      const asNames = nameNode.text.split(".")
+      names.push(asNames[0])
+    }
+  } else if (node.type === "import_from_statement") {
+    const moduleNode = node.childForFieldName("module_name")
+    if (moduleNode) {
+      const rawPath = moduleNode.text
+      const matches = rawPath.match(/^(\.+)(.*)/)
+      if (matches) {
+        isRelative = true
+        relativeDots = matches[1].length
+        modulePath = matches[2]
+      } else {
+        modulePath = rawPath
+      }
+    }
+  }
+
+  const nameNodes = findNodesByType(node, "dotted_name")
+  for (let i = 1; i < nameNodes.length; i++) {
+    names.push(nameNodes[i].text)
+  }
+
+  return { modulePath, names, isRelative, relativeDots }
+}

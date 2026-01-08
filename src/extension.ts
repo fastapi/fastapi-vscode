@@ -1,6 +1,10 @@
 import * as vscode from "vscode"
 import { findNodesByType } from "./core/astUtils"
-import { decoratorExtractor, routerExtractor } from "./core/extractors"
+import {
+  decoratorExtractor,
+  importExtractor,
+  routerExtractor,
+} from "./core/extractors"
 import { Parser } from "./core/parser"
 import { EndpointTreeProvider } from "./providers/EndpointTreeProvider"
 // TODO: Replace with real endpoint discovery service
@@ -46,7 +50,9 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   const fastapiCode = `
-  from fastapi import FastAPI
+  from fastapi import FastAPI, APIRouter
+  from .routes import users, items
+  from ..api import main
   app = FastAPI()
 
   router = APIRouter(prefix="/items")
@@ -82,6 +88,20 @@ export async function activate(context: vscode.ExtensionContext) {
   for (const assign of assignments) {
     const result = routerExtractor(assign)
     console.log("Processed Router Definition:", result)
+  }
+
+  // Extract imports
+  const importNodes = tree
+    ? findNodesByType(tree.rootNode, "import_statement")
+    : []
+  const importFromNodes = tree
+    ? findNodesByType(tree.rootNode, "import_from_statement")
+    : []
+  const allImportNodes = importNodes.concat(importFromNodes)
+  console.log("Import Statements Found:", allImportNodes.length)
+  for (const importNode of allImportNodes) {
+    const result = importExtractor(importNode)
+    console.log("Processed Import Statement:", result)
   }
 
   context.subscriptions.push(
