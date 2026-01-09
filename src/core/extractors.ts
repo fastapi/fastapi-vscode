@@ -9,6 +9,53 @@ export interface SourceLocation {
   column: number
 }
 
+/**
+ * Extracts a path string from various AST node types.
+ * Handles: plain strings, f-strings, concatenation, identifiers.
+ */
+function extractPathFromNode(node: Node): string {
+  switch (node.type) {
+    case "string":
+      // Plain string: "/users" or f-string: f"/users/{id}"
+      // For f-strings, we want to preserve the interpolation syntax
+      return node.text.slice(1, -1) // Remove outer quotes
+
+    case "concatenated_string":
+      // Adjacent strings: "/api" "/v1" -> "/api/v1"
+      return node.namedChildren
+        .map((child) => extractPathFromNode(child))
+        .join("")
+
+    case "binary_operator": {
+      // Concatenation: BASE + "/users"
+      const left = node.childForFieldName("left")
+      const right = node.childForFieldName("right")
+      const operator = node.childForFieldName("operator")
+      if (operator?.text === "+" && left && right) {
+        return extractPathFromNode(left) + extractPathFromNode(right)
+      }
+      // For other operators, just return the raw text
+      return `{${node.text}}`
+    }
+
+    case "identifier":
+      // Variable reference: BASE_PATH -> {BASE_PATH}
+      return `{${node.text}}`
+
+    case "attribute":
+      // Attribute access: config.BASE_PATH -> {config.BASE_PATH}
+      return `{${node.text}}`
+
+    case "call":
+      // Function call: get_path() -> {get_path()}
+      return `{${node.text}}`
+
+    default:
+      // Fallback: wrap unknown types in braces to indicate dynamic
+      return node.text ? `{${node.text}}` : ""
+  }
+}
+
 export function decoratorExtractor(node: Node): {
   object: string
   method: string
@@ -44,10 +91,7 @@ export function decoratorExtractor(node: Node): {
   }
 
   const pathArgNode = argumentsNode.namedChildren[0]
-  let path = ""
-  if (pathArgNode && pathArgNode.type === "string") {
-    path = pathArgNode.text.slice(1, -1) // Remove quotes
-  }
+  const path = pathArgNode ? extractPathFromNode(pathArgNode) : ""
 
   const functionDefNode = node.childForFieldName("definition")
   const functionNameDefNode = functionDefNode
@@ -107,8 +151,8 @@ export function routerExtractor(node: Node): {
         const argName = child.childForFieldName("name")?.text
         const argValue = child.childForFieldName("value")
 
-        if (argName === "prefix" && argValue?.type === "string") {
-          prefix = argValue.text.slice(1, -1) // Remove quotes
+        if (argName === "prefix" && argValue) {
+          prefix = extractPathFromNode(argValue)
         } else if (argName === "tags" && argValue?.type === "list") {
           // Extract tags from list like ["login", "auth"]
           for (const elem of argValue.namedChildren) {
@@ -215,8 +259,8 @@ export function includeRouterExtractor(
     if (argNode.type === "keyword_argument") {
       const nameNode = argNode.childForFieldName("name")
       const valueNode = argNode.childForFieldName("value")
-      if (nameNode?.text === "prefix" && valueNode?.type === "string") {
-        prefix = valueNode.text.slice(1, -1) // Remove quotes
+      if (nameNode?.text === "prefix" && valueNode) {
+        prefix = extractPathFromNode(valueNode)
       }
     }
   }

@@ -18,6 +18,21 @@ type GroupingFunction = (apps: AppDefinition[]) => EndpointTreeItem[]
 const defaultGrouping: GroupingFunction = (apps) =>
   apps.map((app) => ({ type: "app" as const, app }))
 
+/**
+ * Strips leading dynamic segments (like {settings.API_V1_STR}) from a path.
+ * Keeps path parameters that appear later in the path.
+ *
+ * Examples:
+ *   "{settings.API_V1_STR}/users/{id}" -> "/users/{id}"
+ *   "{BASE}/api/items" -> "/api/items"
+ *   "/users/{id}/posts" -> "/users/{id}/posts" (unchanged)
+ */
+function stripLeadingDynamicSegments(path: string): string {
+  // Match leading {something} segments (possibly multiple)
+  // These are runtime variables, not path parameters
+  return path.replace(/^(\{[^}]+\})+/, "") || "/"
+}
+
 export class EndpointTreeProvider
   implements TreeDataProvider<EndpointTreeItem>
 {
@@ -115,8 +130,11 @@ export class EndpointTreeProvider
       }
 
       case "router": {
-        // Use prefix as label, or first tag, or filename as fallback
-        let routerLabel = element.router.prefix
+        // Use prefix as label (stripped of dynamic segments), or first tag, or filename as fallback
+        const strippedPrefix = stripLeadingDynamicSegments(
+          element.router.prefix,
+        )
+        let routerLabel = strippedPrefix !== "/" ? strippedPrefix : ""
         let labelSource: "prefix" | "tag" | "file" = "prefix"
         if (!routerLabel) {
           if (element.router.tags.length > 0) {
@@ -150,10 +168,14 @@ export class EndpointTreeProvider
       }
 
       case "route": {
+        // Strip leading dynamic segments and leading slash for cleaner display
+        const displayPath =
+          stripLeadingDynamicSegments(element.route.path).replace(/^\//, "") ||
+          "/"
         const label =
           element.route.method === "WEBSOCKET"
-            ? element.route.path
-            : `${element.route.method} ${element.route.path}`
+            ? displayPath
+            : `${element.route.method} ${displayPath}`
 
         const routeItem = new TreeItem(label)
         routeItem.description = element.route.functionName

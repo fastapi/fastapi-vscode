@@ -9,6 +9,7 @@ export const mockApps: AppDefinition[] = [
       {
         name: "users_router",
         prefix: "/api/v1/users",
+        tags: ["users"],
         location: {
           filePath: "/Users/dev/ecommerce-api/app/routers/users.py",
           line: 5,
@@ -70,6 +71,7 @@ export const mockApps: AppDefinition[] = [
       {
         name: "items_router",
         prefix: "/api/v1/items",
+        tags: ["items"],
         location: {
           filePath: "/Users/dev/ecommerce-api/app/routers/items.py",
           line: 5,
@@ -111,6 +113,7 @@ export const mockApps: AppDefinition[] = [
       {
         name: "ws_router",
         prefix: "/ws",
+        tags: ["websocket"],
         location: {
           filePath: "/Users/dev/ecommerce-api/app/routers/websocket.py",
           line: 5,
@@ -199,6 +202,7 @@ export const mockApps: AppDefinition[] = [
       {
         name: "metrics_router",
         prefix: "/api/metrics",
+        tags: ["metrics"],
         location: {
           filePath: "/Users/dev/analytics-service/src/routers/metrics.py",
           line: 8,
