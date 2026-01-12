@@ -103,6 +103,25 @@ export async function activate(context: vscode.ExtensionContext) {
   const apps = await discoverFastAPIApps(parserService)
   const endpointProvider = new EndpointTreeProvider(apps)
 
+  let refreshTimeout: NodeJS.Timeout | null = null
+
+  const triggerRefresh = () => {
+    if (refreshTimeout) {
+      clearTimeout(refreshTimeout)
+    }
+    refreshTimeout = setTimeout(async () => {
+      const newApps = await discoverFastAPIApps(parserService)
+      endpointProvider.setApps(newApps)
+    }, 500) // Debounce for 500ms
+  }
+
+  // Watch for changes in Python files to refresh endpoints
+  const watcher = vscode.workspace.createFileSystemWatcher("**/*.py")
+  watcher.onDidChange(triggerRefresh)
+  watcher.onDidCreate(triggerRefresh)
+  watcher.onDidDelete(triggerRefresh)
+  context.subscriptions.push(watcher)
+
   const treeView = vscode.window.createTreeView("endpoint-explorer", {
     treeDataProvider: endpointProvider,
   })
