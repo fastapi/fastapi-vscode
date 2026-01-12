@@ -1,4 +1,5 @@
-import type { AppDefinition, EndpointTreeItem } from "../../types/endpoint"
+import type { EndpointTreeItem } from "../../providers/EndpointTreeProvider"
+import type { AppDefinition } from "../../types/endpoint"
 
 export const mockApps: AppDefinition[] = [
   {
@@ -67,6 +68,7 @@ export const mockApps: AppDefinition[] = [
             },
           },
         ],
+        children: [],
       },
       {
         name: "items_router",
@@ -109,6 +111,7 @@ export const mockApps: AppDefinition[] = [
             },
           },
         ],
+        children: [],
       },
       {
         name: "ws_router",
@@ -141,6 +144,7 @@ export const mockApps: AppDefinition[] = [
             },
           },
         ],
+        children: [],
       },
     ],
     routes: [
@@ -240,6 +244,7 @@ export const mockApps: AppDefinition[] = [
             },
           },
         ],
+        children: [],
       },
     ],
     routes: [

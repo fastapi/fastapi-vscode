@@ -140,5 +140,59 @@ suite("routerResolver", () => {
       assert.ok(result.line > 0)
       assert.ok(result.column >= 0)
     })
+
+    test("follows __init__.py re-exports to actual router file", () => {
+      // integrations/__init__.py re-exports router from router.py
+      const initPath = path.join(
+        fixturesPath,
+        "app",
+        "api",
+        "routes",
+        "integrations",
+        "__init__.py",
+      )
+      const result = buildRouterGraph(initPath, parser, fixturesPath)
+
+      assert.ok(result, "Should find router via re-export")
+      assert.strictEqual(result.type, "APIRouter")
+      assert.strictEqual(result.variableName, "router")
+
+      // Should point to router.py, not __init__.py
+      assert.ok(
+        result.filePath.endsWith("router.py"),
+        `Expected filePath to end with router.py, got ${result.filePath}`,
+      )
+
+      // Should have the routes defined in router.py
+      assert.ok(result.routes.length >= 3, "Should have routes from router.py")
+      const neonRoute = result.routes.find((r) => r.path === "/neon/status")
+      assert.ok(neonRoute, "Should find neon route")
+    })
+
+    test("includes integrations router when following include_router chain", () => {
+      const mainPyPath = path.join(fixturesPath, "main.py")
+      const result = buildRouterGraph(mainPyPath, parser, fixturesPath)
+
+      assert.ok(result)
+
+      // Find the api_router child
+      const apiChild = result.children.find((c) => c.prefix === "/api/v1")
+      assert.ok(apiChild, "Should have api_router child")
+
+      // The api_router should include integrations router
+      const integrationsChild = apiChild.router.children.find(
+        (c) => c.prefix === "/integrations",
+      )
+      assert.ok(
+        integrationsChild,
+        "api_router should include integrations router",
+      )
+
+      // integrations router should have routes
+      assert.ok(
+        integrationsChild.router.routes.length >= 3,
+        "integrations router should have routes",
+      )
+    })
   })
 })

@@ -124,3 +124,55 @@ function resolveReExport(
 
   return null
 }
+
+/**
+ * When an __init__.py has no router definitions but re-exports a router,
+ * this function finds the actual file containing the router.
+ * For example, if integrations/__init__.py contains:
+ *   from .router import router as router
+ * This will return the path to integrations/router.py
+ */
+export function resolveRouterFromInit(
+  initFilePath: string,
+  projectRoot: string,
+  parser: Parser,
+): string | null {
+  if (!initFilePath.endsWith("__init__.py")) {
+    return null
+  }
+
+  const analysis = analyzeFile(initFilePath, parser)
+  if (!analysis) {
+    return null
+  }
+
+  // If this file has routers defined, no need to follow re-exports
+  if (analysis.routers.length > 0) {
+    return null
+  }
+
+  // Look for a re-exported "router" variable
+  for (const imp of analysis.imports) {
+    for (const namedImport of imp.namedImports) {
+      // Look for imports that provide a "router" name
+      const providedName = namedImport.alias ?? namedImport.name
+      if (providedName === "router") {
+        // Resolve where the router comes from
+        const resolved = resolveImport(
+          {
+            modulePath: imp.modulePath,
+            isRelative: imp.isRelative,
+            relativeDots: imp.relativeDots,
+          },
+          initFilePath,
+          projectRoot,
+        )
+        if (resolved) {
+          return resolved
+        }
+      }
+    }
+  }
+
+  return null
+}

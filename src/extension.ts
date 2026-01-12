@@ -1,13 +1,13 @@
+// VSCode extension entry point
 import * as vscode from "vscode"
 import { Parser } from "./core/parser"
 import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
-import { EndpointTreeProvider } from "./providers/EndpointTreeProvider"
-import type {
-  AppDefinition,
-  EndpointTreeItem,
-  SourceLocation,
-} from "./types/endpoint"
+import {
+  type EndpointTreeItem,
+  EndpointTreeProvider,
+} from "./providers/EndpointTreeProvider"
+import type { AppDefinition, SourceLocation } from "./types/endpoint"
 
 async function discoverFastAPIApps(parser: Parser): Promise<AppDefinition[]> {
   const apps: AppDefinition[] = []
@@ -17,47 +17,30 @@ async function discoverFastAPIApps(parser: Parser): Promise<AppDefinition[]> {
     return apps
   }
 
+  const defaultPatterns = [
+    "main.py",
+    "app/main.py",
+    "api/main.py",
+    "src/main.py",
+    "backend/app/main.py",
+  ]
+
   for (const folder of workspaceFolders) {
-    // Check if user has configured a custom entry point
     const config = vscode.workspace.getConfiguration("fastapi", folder.uri)
     const customEntryPoint = config.get<string>("entryPoint")
+    const patterns = customEntryPoint ? [customEntryPoint] : defaultPatterns
 
-    let entryPatterns: string[]
-    if (customEntryPoint) {
-      // Use only the custom entry point if configured
-      entryPatterns = [customEntryPoint]
-    } else {
-      // Look for common FastAPI entry points
-      entryPatterns = [
-        "main.py",
-        "app/main.py",
-        "api/main.py",
-        "src/main.py",
-        "backend/app/main.py",
-      ]
-    }
+    for (const pattern of patterns) {
+      // Handle both relative patterns and absolute paths
+      const entryPath = pattern.startsWith("/")
+        ? pattern
+        : vscode.Uri.joinPath(folder.uri, pattern).fsPath
+      const projectRoot = entryPath.split("/").slice(0, -2).join("/")
+      const routerNode = buildRouterGraph(entryPath, parser, projectRoot)
 
-    for (const pattern of entryPatterns) {
-      const entryUri = vscode.Uri.joinPath(folder.uri, pattern)
-      try {
-        await vscode.workspace.fs.stat(entryUri)
-        // File exists, try to build router graph
-        // The project root for Python imports is the directory containing the entry file's parent package
-        // e.g., for backend/app/main.py, the project root is backend/
-        const entryDir = entryUri.fsPath.split("/").slice(0, -1).join("/")
-        const pythonProjectRoot = entryDir.split("/").slice(0, -1).join("/")
-        const routerNode = buildRouterGraph(
-          entryUri.fsPath,
-          parser,
-          pythonProjectRoot,
-        )
-        if (routerNode) {
-          const app = routerNodeToAppDefinition(routerNode, folder.uri.fsPath)
-          apps.push(app)
-          break // Found an entry point for this workspace
-        }
-      } catch {
-        // File doesn't exist, try next pattern
+      if (routerNode) {
+        apps.push(routerNodeToAppDefinition(routerNode, folder.uri.fsPath))
+        break
       }
     }
   }
@@ -98,11 +81,12 @@ export async function activate(context: vscode.ExtensionContext) {
   const apps = await discoverFastAPIApps(parserService)
   const endpointProvider = new EndpointTreeProvider(apps)
 
+  const treeView = vscode.window.createTreeView("endpoint-explorer", {
+    treeDataProvider: endpointProvider,
+  })
+
   context.subscriptions.push(
-    vscode.window.registerTreeDataProvider(
-      "endpoint-explorer",
-      endpointProvider,
-    ),
+    treeView,
 
     vscode.commands.registerCommand(
       "fastapi-vscode.refreshEndpoints",
@@ -149,6 +133,10 @@ export async function activate(context: vscode.ExtensionContext) {
         }
       },
     ),
+
+    vscode.commands.registerCommand("fastapi-vscode.toggleRouters", () => {
+      endpointProvider.toggleRouters()
+    }),
   )
 }
 

@@ -1,8 +1,12 @@
 import fs from "node:fs"
 import path from "node:path"
-import { analyzeFile } from "./analyzer"
+import { analyzeFile, type FileAnalysis } from "./analyzer"
 import type { RouterType } from "./extractors"
-import { resolveImport, resolveNamedImport } from "./importResolver"
+import {
+  resolveImport,
+  resolveNamedImport,
+  resolveRouterFromInit,
+} from "./importResolver"
 import type { Parser } from "./parser"
 
 export interface RouterNode {
@@ -28,26 +32,68 @@ export function buildRouterGraph(
   parser: Parser,
   projectRoot: string,
 ): RouterNode | null {
+  return buildRouterGraphInternal(entryFile, parser, projectRoot, new Set())
+}
+
+function buildRouterGraphInternal(
+  entryFile: string,
+  parser: Parser,
+  projectRoot: string,
+  visited: Set<string>,
+): RouterNode | null {
   // Resolve the full path of the entry file if necessary
   let resolvedEntryFile = entryFile
   if (!fs.existsSync(resolvedEntryFile)) {
-    resolvedEntryFile = path.join(projectRoot, entryFile)
+    // Only try joining if entryFile is not already absolute
+    if (!path.isAbsolute(entryFile)) {
+      resolvedEntryFile = path.join(projectRoot, entryFile)
+    }
     if (!fs.existsSync(resolvedEntryFile)) {
-      console.error(`Entry file does not exist: ${resolvedEntryFile}`)
       return null
     }
   }
+
+  // Prevent infinite recursion on circular imports
+  if (visited.has(resolvedEntryFile)) {
+    return null
+  }
+  visited.add(resolvedEntryFile)
+
   // Analyze the entry file
-  const analysis = analyzeFile(resolvedEntryFile, parser)
+  let analysis = analyzeFile(resolvedEntryFile, parser)
   if (!analysis) {
     return null
   }
 
   // Find FastAPI instantiation
-  const appRouter = analysis.routers.find(
+  let appRouter = analysis.routers.find(
     (r) => r.type === "FastAPI" || r.type === "APIRouter",
   )
-  if (!appRouter) {
+
+  // If no router found and this is an __init__.py, check for re-exports
+  if (!appRouter && resolvedEntryFile.endsWith("__init__.py")) {
+    const actualRouterFile = resolveRouterFromInit(
+      resolvedEntryFile,
+      projectRoot,
+      parser,
+    )
+    if (actualRouterFile && !visited.has(actualRouterFile)) {
+      visited.add(actualRouterFile)
+      // Re-analyze the actual file containing the router
+      analysis = analyzeFile(actualRouterFile, parser)
+      if (analysis) {
+        appRouter = analysis.routers.find(
+          (r) => r.type === "FastAPI" || r.type === "APIRouter",
+        )
+        // Update the resolved path to the actual file
+        if (appRouter) {
+          resolvedEntryFile = actualRouterFile
+        }
+      }
+    }
+  }
+
+  if (!appRouter || !analysis) {
     return null
   }
 
@@ -72,53 +118,97 @@ export function buildRouterGraph(
 
   // Process include_router calls to find child routers
   for (const include of analysis.includeRouters) {
-    const parts = include.router.split(".")
-    const moduleName = parts[0]
-
-    const matchingImport = analysis.imports.find((imp) =>
-      imp.names.includes(moduleName),
+    const childRouter = resolveRouterReference(
+      include.router,
+      analysis,
+      resolvedEntryFile,
+      projectRoot,
+      parser,
+      visited,
     )
+    if (childRouter) {
+      rootRouter.children.push({
+        router: childRouter,
+        prefix: include.prefix,
+      })
+    }
+  }
 
-    if (matchingImport) {
-      let importedFilePath = resolveNamedImport(
-        {
-          modulePath: matchingImport.modulePath,
-          names: [moduleName],
-          isRelative: matchingImport.isRelative,
-          relativeDots: matchingImport.relativeDots,
-        },
-        resolvedEntryFile,
-        projectRoot,
-        parser, // Pass parser to enable __init__.py re-export resolution
-      )
-
-      if (!importedFilePath) {
-        importedFilePath = resolveImport(
-          {
-            modulePath: matchingImport.modulePath,
-            isRelative: matchingImport.isRelative,
-            relativeDots: matchingImport.relativeDots,
-          },
-          resolvedEntryFile,
-          projectRoot,
-        )
-      }
-
-      if (importedFilePath) {
-        const childRouterNode = buildRouterGraph(
-          importedFilePath,
-          parser,
-          projectRoot,
-        )
-        if (childRouterNode) {
-          rootRouter.children.push({
-            router: childRouterNode,
-            prefix: include.prefix,
-          })
-        }
-      }
+  // Process mount() calls for subapps
+  for (const mount of analysis.mounts) {
+    const childRouter = resolveRouterReference(
+      mount.app,
+      analysis,
+      resolvedEntryFile,
+      projectRoot,
+      parser,
+      visited,
+    )
+    if (childRouter) {
+      rootRouter.children.push({
+        router: childRouter,
+        prefix: mount.path,
+      })
     }
   }
 
   return rootRouter
+}
+
+/**
+ * Resolves a router/app reference to its RouterNode.
+ */
+function resolveRouterReference(
+  reference: string,
+  analysis: FileAnalysis,
+  currentFile: string,
+  projectRoot: string,
+  parser: Parser,
+  visited: Set<string>,
+): RouterNode | null {
+  const parts = reference.split(".")
+  const moduleName = parts[0]
+
+  const matchingImport = analysis.imports.find((imp) =>
+    imp.names.includes(moduleName),
+  )
+
+  if (!matchingImport) {
+    return null
+  }
+
+  let importedFilePath = resolveNamedImport(
+    {
+      modulePath: matchingImport.modulePath,
+      names: [moduleName],
+      isRelative: matchingImport.isRelative,
+      relativeDots: matchingImport.relativeDots,
+    },
+    currentFile,
+    projectRoot,
+    parser,
+  )
+
+  if (!importedFilePath) {
+    importedFilePath = resolveImport(
+      {
+        modulePath: matchingImport.modulePath,
+        isRelative: matchingImport.isRelative,
+        relativeDots: matchingImport.relativeDots,
+      },
+      currentFile,
+      projectRoot,
+    )
+  }
+
+  if (importedFilePath) {
+    return buildRouterGraphInternal(
+      importedFilePath,
+      parser,
+      projectRoot,
+      visited,
+    )
+  }
+
+  return null
 }

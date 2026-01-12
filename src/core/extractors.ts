@@ -1,13 +1,61 @@
 // Utility functions to extract information from AST nodes
 
 import type { Node } from "web-tree-sitter"
+import { ROUTE_METHODS } from "../types/endpoint"
 import { findNodesByType } from "./astUtils"
 
-export interface SourceLocation {
-  filePath: string
+// ============================================================================
+// Extractor result types
+// ============================================================================
+
+export interface RouteInfo {
+  object: string
+  method: string
+  path: string
+  function: string
   line: number
   column: number
 }
+
+export type RouterType = "APIRouter" | "FastAPI" | "Unknown"
+
+export interface RouterInfo {
+  variableName: string
+  type: RouterType
+  prefix: string
+  tags: string[]
+  line: number
+  column: number
+}
+
+export interface ImportedName {
+  name: string
+  alias: string | null
+}
+
+export interface ImportInfo {
+  modulePath: string
+  names: string[]
+  namedImports: ImportedName[]
+  isRelative: boolean
+  relativeDots: number
+}
+
+export interface IncludeRouterInfo {
+  object: string
+  router: string
+  prefix: string
+}
+
+export interface MountInfo {
+  object: string
+  path: string
+  app: string
+}
+
+// ============================================================================
+// Extractors
+// ============================================================================
 
 /**
  * Extracts a path string from various AST node types.
@@ -56,14 +104,7 @@ function extractPathFromNode(node: Node): string {
   }
 }
 
-export function decoratorExtractor(node: Node): {
-  object: string
-  method: string
-  path: string
-  function: string
-  line: number
-  column: number
-} | null {
+export function decoratorExtractor(node: Node): RouteInfo | null {
   if (node.type !== "decorated_definition") {
     return null
   }
@@ -90,8 +131,38 @@ export function decoratorExtractor(node: Node): {
     return null
   }
 
-  const pathArgNode = argumentsNode.namedChildren[0]
+  // Filter out non-route decorators like exception_handler, middleware, on_event
+  const method = methodNode.text.toLowerCase()
+  const isApiRoute = method === "api_route"
+  if (!ROUTE_METHODS.has(method) && !isApiRoute) {
+    return null
+  }
+
+  // Skip comment nodes to find the actual first argument
+  const pathArgNode = argumentsNode.namedChildren.find(
+    (child) => child.type !== "comment",
+  )
   const path = pathArgNode ? extractPathFromNode(pathArgNode) : ""
+
+  // For api_route, extract methods from keyword argument
+  let resolvedMethod = methodNode.text
+  if (isApiRoute) {
+    // Default to GET if no methods specified
+    resolvedMethod = "GET"
+    for (const argNode of argumentsNode.namedChildren) {
+      if (argNode.type === "keyword_argument") {
+        const nameNode = argNode.childForFieldName("name")
+        const valueNode = argNode.childForFieldName("value")
+        if (nameNode?.text === "methods" && valueNode) {
+          // Extract first method from list like ["GET", "POST"]
+          const listItems = valueNode.namedChildren
+          if (listItems.length > 0 && listItems[0].type === "string") {
+            resolvedMethod = listItems[0].text.slice(1, -1) // Remove quotes
+          }
+        }
+      }
+    }
+  }
 
   const functionDefNode = node.childForFieldName("definition")
   const functionNameDefNode = functionDefNode
@@ -101,7 +172,7 @@ export function decoratorExtractor(node: Node): {
 
   return {
     object: objectNode.text,
-    method: methodNode.text,
+    method: resolvedMethod,
     path,
     function: functionName,
     line: node.startPosition.row + 1,
@@ -109,16 +180,7 @@ export function decoratorExtractor(node: Node): {
   }
 }
 
-export type RouterType = "APIRouter" | "FastAPI" | "Unknown"
-
-export function routerExtractor(node: Node): {
-  variableName: string
-  type: RouterType
-  prefix: string
-  tags: string[]
-  line: number
-  column: number
-} | null {
+export function routerExtractor(node: Node): RouterInfo | null {
   if (node.type !== "assignment") {
     return null
   }
@@ -178,18 +240,7 @@ export function routerExtractor(node: Node): {
   return null
 }
 
-export interface ImportedName {
-  name: string // The original name being imported
-  alias: string | null // The alias if using "as", null otherwise
-}
-
-export function importExtractor(node: Node): {
-  modulePath: string
-  names: string[]
-  namedImports: ImportedName[] // More detailed info including aliases
-  isRelative: boolean
-  relativeDots: number
-} | null {
+export function importExtractor(node: Node): ImportInfo | null {
   if (
     node.type !== "import_statement" &&
     node.type !== "import_from_statement"
@@ -266,9 +317,7 @@ export function importExtractor(node: Node): {
   return { modulePath, names, namedImports, isRelative, relativeDots }
 }
 
-export function includeRouterExtractor(
-  node: Node,
-): { object: string; router: string; prefix: string } | null {
+export function includeRouterExtractor(node: Node): IncludeRouterInfo | null {
   if (node.type !== "call") {
     return null
   }
@@ -308,5 +357,54 @@ export function includeRouterExtractor(
     object: objectNode.text,
     router,
     prefix,
+  }
+}
+
+/**
+ * Extracts mount() calls for subapps.
+ * Pattern: app.mount("/path", subapp)
+ */
+export function mountExtractor(node: Node): MountInfo | null {
+  if (node.type !== "call") {
+    return null
+  }
+
+  const functionNameNode = node.childForFieldName("function")
+  if (!functionNameNode || functionNameNode.type !== "attribute") {
+    return null
+  }
+
+  const objectNode = functionNameNode.childForFieldName("object")
+  const methodNode = functionNameNode.childForFieldName("attribute")
+
+  if (!objectNode || !methodNode || methodNode.text !== "mount") {
+    return null
+  }
+
+  const argumentsNode = node.childForFieldName("arguments")
+  if (!argumentsNode) {
+    return null
+  }
+
+  // Skip comment nodes to find actual arguments
+  const args = argumentsNode.namedChildren.filter(
+    (child) => child.type !== "comment",
+  )
+
+  // First arg is path, second is app
+  const pathArg = args[0]
+  const appArg = args[1]
+
+  if (!pathArg || !appArg) {
+    return null
+  }
+
+  const path = extractPathFromNode(pathArg)
+  const app = appArg.text
+
+  return {
+    object: objectNode.text,
+    path,
+    app,
   }
 }

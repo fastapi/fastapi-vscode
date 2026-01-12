@@ -3,57 +3,52 @@ import type { Tree } from "web-tree-sitter"
 import { findNodesByType } from "./astUtils"
 import {
   decoratorExtractor,
+  type ImportInfo,
+  type IncludeRouterInfo,
   importExtractor,
   includeRouterExtractor,
+  type MountInfo,
+  mountExtractor,
+  type RouteInfo,
+  type RouterInfo,
   routerExtractor,
 } from "./extractors.js"
 import type { Parser } from "./parser.js"
 
 export interface FileAnalysis {
   filePath: string
-  routes: NonNullable<ReturnType<typeof decoratorExtractor>>[]
-  routers: NonNullable<ReturnType<typeof routerExtractor>>[]
-  includeRouters: NonNullable<ReturnType<typeof includeRouterExtractor>>[]
-  imports: NonNullable<ReturnType<typeof importExtractor>>[]
+  routes: RouteInfo[]
+  routers: RouterInfo[]
+  includeRouters: IncludeRouterInfo[]
+  mounts: MountInfo[]
+  imports: ImportInfo[]
+}
+
+// Type guard to filter out nulls
+function notNull<T>(value: T | null): value is T {
+  return value !== null
 }
 
 export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
   const rootNode = tree.rootNode
 
   const decoratedDefs = findNodesByType(rootNode, "decorated_definition")
-  const routes = decoratedDefs
-    .map((node) => decoratorExtractor(node))
-    .filter((r) => r !== null)
+  const routes = decoratedDefs.map(decoratorExtractor).filter(notNull)
 
-  // Extract router/app instantiations from assignments
   const assignments = findNodesByType(rootNode, "assignment")
-  const routers = assignments
-    .map((node) => routerExtractor(node))
-    .filter((r) => r !== null)
+  const routers = assignments.map(routerExtractor).filter(notNull)
 
-  // Extract include_router calls
   const callNodes = findNodesByType(rootNode, "call")
-  const includeRouters = callNodes
-    .map((node) => includeRouterExtractor(node))
-    .filter((r) => r !== null)
+  const includeRouters = callNodes.map(includeRouterExtractor).filter(notNull)
+  const mounts = callNodes.map(mountExtractor).filter(notNull)
 
-  // Extract imports
   const importNodes = findNodesByType(rootNode, "import_statement")
   const importFromNodes = findNodesByType(rootNode, "import_from_statement")
-  const allImportNodes = importNodes.concat(importFromNodes)
-  const imports = allImportNodes
-    .map((node) => importExtractor(node))
-    .filter((r) => r !== null)
+  const imports = [...importNodes, ...importFromNodes]
+    .map(importExtractor)
+    .filter(notNull)
 
-  return {
-    filePath,
-    routes: routes as NonNullable<ReturnType<typeof decoratorExtractor>>[],
-    routers: routers as NonNullable<ReturnType<typeof routerExtractor>>[],
-    includeRouters: includeRouters as NonNullable<
-      ReturnType<typeof includeRouterExtractor>
-    >[],
-    imports: imports as NonNullable<ReturnType<typeof importExtractor>>[],
-  }
+  return { filePath, routes, routers, includeRouters, mounts, imports }
 }
 
 export function analyzeFile(
@@ -64,12 +59,10 @@ export function analyzeFile(
     const code = fs.readFileSync(filePath, "utf-8")
     const tree = parser.parse(code)
     if (!tree) {
-      console.error(`Failed to parse file: ${filePath}`)
       return null
     }
     return analyzeTree(tree, filePath)
-  } catch (error) {
-    console.error(`Error analyzing file ${filePath}:`, error)
+  } catch {
     return null
   }
 }

@@ -1,10 +1,21 @@
 # FastAPI VS Code Extension
 
-A VS Code extension for FastAPI development.
+A VS Code extension for FastAPI development that discovers and displays your API endpoints in a tree view.
 
 ## Features
 
-- Hello World command (example)
+- Automatic discovery of FastAPI routes and routers
+- Tree view showing all endpoints organized by router
+- Click to navigate to route definitions
+- Supports `include_router` chains with prefix resolution
+
+## Settings
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `fastapi.entryPoint` | Path to the main FastAPI application file (e.g., `src/main.py`). If not set, the extension searches common locations: `main.py`, `app/main.py`, `api/main.py`, `src/main.py`, `backend/app/main.py`. | `""` (auto-detect) |
+
+**Note:** Currently the extension discovers one FastAPI app per workspace folder. If you have multiple apps, use separate workspace folders or configure `fastapi.entryPoint` to point to your primary app.
 
 ## Development
 

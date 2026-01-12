@@ -16,8 +16,6 @@ export class Parser {
     const pythonWasmBinary = readFileSync(wasmPaths.python)
     const pythonLanguage = await Language.load(pythonWasmBinary)
     this.parser.setLanguage(pythonLanguage)
-
-    console.log("ParserService initialized with Python language.")
   }
 
   parse(code: string) {
@@ -30,6 +28,5 @@ export class Parser {
 
   dispose() {
     this.parser?.delete()
-    console.log("ParserService disposed.")
   }
 }

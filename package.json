@@ -52,6 +52,11 @@
       {
         "command": "fastapi-vscode.copyRouterPrefix",
         "title": "Copy Prefix"
+      },
+      {
+        "command": "fastapi-vscode.toggleRouters",
+        "title": "Toggle Expand/Collapse",
+        "icon": "$(fold)"
       }
     ],
     "menus": {
@@ -59,7 +64,12 @@
         {
           "command": "fastapi-vscode.refreshEndpoints",
           "when": "view == endpoint-explorer",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "fastapi-vscode.toggleRouters",
+          "when": "view == endpoint-explorer",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [

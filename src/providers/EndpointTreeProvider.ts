@@ -6,34 +6,26 @@ import {
   TreeItem,
   TreeItemCollapsibleState,
 } from "vscode"
+import { stripLeadingDynamicSegments } from "../core/pathUtils"
 import type {
   AppDefinition,
-  EndpointTreeItem,
   RouteDefinition,
   RouteMethod,
   RouterDefinition,
 } from "../types/endpoint"
+
+export type EndpointTreeItem =
+  | { type: "workspace"; label: string; apps: AppDefinition[] }
+  | { type: "app"; app: AppDefinition }
+  | { type: "router"; router: RouterDefinition }
+  | { type: "route"; route: RouteDefinition }
+  | { type: "message"; text: string }
 
 type GroupingFunction = (apps: AppDefinition[]) => EndpointTreeItem[]
 
 // Default grouping: apps directly at root level
 const defaultGrouping: GroupingFunction = (apps) =>
   apps.map((app) => ({ type: "app" as const, app }))
-
-/**
- * Strips leading dynamic segments (like {settings.API_V1_STR}) from a path.
- * Keeps path parameters that appear later in the path.
- *
- * Examples:
- *   "{settings.API_V1_STR}/users/{id}" -> "/users/{id}"
- *   "{BASE}/api/items" -> "/api/items"
- *   "/users/{id}/posts" -> "/users/{id}/posts" (unchanged)
- */
-function stripLeadingDynamicSegments(path: string): string {
-  // Match leading {something} segments (possibly multiple)
-  // These are runtime variables, not path parameters
-  return path.replace(/^(\{[^}]+\})+/, "") || "/"
-}
 
 export class EndpointTreeProvider
   implements TreeDataProvider<EndpointTreeItem>
@@ -44,6 +36,8 @@ export class EndpointTreeProvider
 
   private apps: AppDefinition[] = []
   private groupApps: GroupingFunction
+  private routersExpanded = false
+  private toggleCount = 0
 
   constructor(apps: AppDefinition[] = [], groupApps?: GroupingFunction) {
     this.apps = apps
@@ -104,9 +98,126 @@ export class EndpointTreeProvider
     return `${route.method} ${path}`.toLowerCase()
   }
 
+  /**
+   * Counts total routes including nested children.
+   */
+  private getTotalRouteCount(router: RouterDefinition): number {
+    let count = router.routes.length
+    for (const child of router.children) {
+      count += this.getTotalRouteCount(child)
+    }
+    return count
+  }
+
+  /**
+   * Finds the parent router if this router is nested.
+   */
+  private findParentRouter(
+    target: RouterDefinition,
+  ): RouterDefinition | undefined {
+    const searchIn = (
+      routers: RouterDefinition[],
+    ): RouterDefinition | undefined => {
+      for (const router of routers) {
+        if (router.children.includes(target)) {
+          return router
+        }
+        const found = searchIn(router.children)
+        if (found) return found
+      }
+      return undefined
+    }
+
+    for (const app of this.apps) {
+      const found = searchIn(app.routers)
+      if (found) return found
+    }
+    return undefined
+  }
+
+  /**
+   * Finds the router that contains this route.
+   */
+  private findParentRouterForRoute(
+    target: RouteDefinition,
+  ): RouterDefinition | undefined {
+    const searchIn = (
+      routers: RouterDefinition[],
+    ): RouterDefinition | undefined => {
+      for (const router of routers) {
+        if (router.routes.includes(target)) {
+          return router
+        }
+        const found = searchIn(router.children)
+        if (found) return found
+      }
+      return undefined
+    }
+
+    for (const app of this.apps) {
+      const found = searchIn(app.routers)
+      if (found) return found
+    }
+    return undefined
+  }
+
+  getParent(element: EndpointTreeItem): EndpointTreeItem | undefined {
+    switch (element.type) {
+      case "message":
+      case "workspace":
+        // Root level items have no parent
+        return undefined
+
+      case "app": {
+        // Check if apps are grouped under workspaces
+        const rootItems = this.groupApps(this.apps)
+        for (const root of rootItems) {
+          if (root.type === "workspace" && root.apps.includes(element.app)) {
+            return root
+          }
+        }
+        // App is at root level
+        return undefined
+      }
+
+      case "router": {
+        // Check if router is nested under another router
+        const parentRouter = this.findParentRouter(element.router)
+        if (parentRouter) {
+          return { type: "router", router: parentRouter }
+        }
+        // Find which app contains this router at top level
+        for (const app of this.apps) {
+          if (app.routers.includes(element.router)) {
+            return { type: "app", app }
+          }
+        }
+        return undefined
+      }
+
+      case "route": {
+        // Check if route belongs to a router
+        for (const app of this.apps) {
+          for (const router of app.routers) {
+            if (router.routes.includes(element.route)) {
+              return { type: "router", router }
+            }
+          }
+          // Check if route is directly on the app
+          if (app.routes.includes(element.route)) {
+            return { type: "app", app }
+          }
+        }
+        return undefined
+      }
+    }
+  }
+
   getChildren(element?: EndpointTreeItem): EndpointTreeItem[] {
     if (!element) {
-      // Root level: use grouping function (may return workspaces or apps)
+      if (this.apps.length === 0) {
+        return [{ type: "message", text: "No FastAPI app found" }]
+      }
       return this.groupApps(this.apps)
     }
 
@@ -138,8 +249,19 @@ export class EndpointTreeProvider
           )
         return [...routers, ...routes]
       }
-      case "router":
-        return element.router.routes
+      case "router": {
+        // Child routers first, then routes
+        const childRouters = element.router.children
+          .map((router) => ({
+            type: "router" as const,
+            router,
+          }))
+          .sort((a, b) =>
+            this.getRouterSortKey(a.router).localeCompare(
+              this.getRouterSortKey(b.router),
+            ),
+          )
+        const routes = element.router.routes
           .map((route) => ({
             type: "route" as const,
             route,
@@ -149,13 +271,21 @@ export class EndpointTreeProvider
               this.getRouteSortKey(b.route),
             ),
           )
+        return [...childRouters, ...routes]
+      }
       case "route":
+      case "message":
         return []
     }
   }
 
   getTreeItem(element: EndpointTreeItem): TreeItem {
     switch (element.type) {
+      case "message": {
+        const item = new TreeItem(element.text)
+        item.iconPath = new ThemeIcon("info")
+        return item
+      }
       case "workspace": {
         const workspaceItem = new TreeItem(
           element.label,
@@ -201,44 +331,79 @@ export class EndpointTreeProvider
         const strippedPrefix = stripLeadingDynamicSegments(
           element.router.prefix,
         )
-        let routerLabel = strippedPrefix !== "/" ? strippedPrefix : ""
-        let labelSource: "prefix" | "tag" | "file" = "prefix"
+
+        // If nested under a parent router, show only the relative part
+        const parentRouter = this.findParentRouter(element.router)
+        let displayPrefix = strippedPrefix
+        if (parentRouter) {
+          const parentPrefix = stripLeadingDynamicSegments(parentRouter.prefix)
+          if (strippedPrefix.startsWith(parentPrefix + "/")) {
+            displayPrefix = strippedPrefix.slice(parentPrefix.length)
+          } else if (strippedPrefix.startsWith(parentPrefix)) {
+            displayPrefix = strippedPrefix.slice(parentPrefix.length) || "/"
+          }
+        }
+
+        let routerLabel = displayPrefix !== "/" ? displayPrefix : ""
         if (!routerLabel) {
           if (element.router.tags.length > 0) {
-            routerLabel = element.router.tags[0]
-            labelSource = "tag"
+            // Add / prefix to tag-based labels for consistency
+            routerLabel = "/" + element.router.tags[0]
           } else {
             const filePath = element.router.location.filePath
             const fileName = filePath.split("/").pop() ?? ""
             routerLabel = fileName.replace(/\.py$/, "")
-            labelSource = "file"
           }
         }
         const routerItem = new TreeItem(
           routerLabel,
-          TreeItemCollapsibleState.Collapsed,
+          this.routersExpanded
+            ? TreeItemCollapsibleState.Expanded
+            : TreeItemCollapsibleState.Collapsed,
         )
-        // Different icons: braces for prefix, tag for tag, file for filename
-        const iconMap = {
-          prefix: "symbol-namespace",
-          tag: "tag",
-          file: "symbol-file",
-        }
-        routerItem.iconPath = new ThemeIcon(iconMap[labelSource])
+        // Unique id that changes with toggle to force VS Code to re-render
+        // Include file path to differentiate routers with same prefix from different files
+        routerItem.id = `router-${element.router.location.filePath}-${element.router.prefix}-${this.toggleCount}`
+        routerItem.iconPath = new ThemeIcon("symbol-namespace")
 
+        const totalRoutes = this.getTotalRouteCount(element.router)
         routerItem.description =
-          element.router.routes.length !== 1
-            ? `${element.router.routes.length} routes`
-            : "1 route"
+          totalRoutes !== 1 ? `${totalRoutes} routes` : "1 route"
         routerItem.contextValue = "router"
         return routerItem
       }
 
       case "route": {
-        // Strip leading dynamic segments and leading slash for cleaner display
-        const displayPath =
-          stripLeadingDynamicSegments(element.route.path).replace(/^\//, "") ||
-          "/"
+        // Strip leading dynamic segments for cleaner display
+        const strippedPath = stripLeadingDynamicSegments(element.route.path)
+
+        // Find parent router to show relative path
+        const parentRouter = this.findParentRouterForRoute(element.route)
+        let displayPath = strippedPath
+        if (parentRouter) {
+          const parentPrefix = stripLeadingDynamicSegments(parentRouter.prefix)
+          // Only make relative if parent has a meaningful prefix (not just "/")
+          if (
+            parentPrefix !== "/" &&
+            strippedPath.startsWith(parentPrefix + "/")
+          ) {
+            displayPath = strippedPath.slice(parentPrefix.length)
+          } else if (
+            parentPrefix !== "/" &&
+            strippedPath.startsWith(parentPrefix)
+          ) {
+            displayPath = strippedPath.slice(parentPrefix.length) || "/"
+          }
+          // If parent prefix is "/" (no real prefix), show the full path
+        }
+        // Ensure path starts with / and doesn't end with / (unless it's just "/")
+        if (!displayPath.startsWith("/")) {
+          displayPath = "/" + displayPath
+        }
+        if (displayPath.length > 1 && displayPath.endsWith("/")) {
+          displayPath = displayPath.slice(0, -1)
+        }
+
         const label =
           element.route.method === "WEBSOCKET"
             ? displayPath
@@ -263,6 +428,12 @@ export class EndpointTreeProvider
 
   refresh(): void {
     this._onDidChangeTreeData.fire(undefined)
+  }
+
+  toggleRouters(): void {
+    this.routersExpanded = !this.routersExpanded
+    this.toggleCount++
+    this.refresh()
   }
 
   dispose(): void {

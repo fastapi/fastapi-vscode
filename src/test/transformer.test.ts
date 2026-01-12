@@ -160,20 +160,111 @@ suite("transformer", () => {
       assert.ok(routerNode.tags.includes("items"))
     })
 
-    test("skips routers with no routes", () => {
+    test("skips routers with no routes or children", () => {
       const mainPyPath = path.join(fixturesPath, "main.py")
       const routerNode = buildRouterGraph(mainPyPath, parser, fixturesPath)
       assert.ok(routerNode)
 
       const result = routerNodeToAppDefinition(routerNode, "/workspace")
 
-      // All routers in result should have at least one route
-      for (const router of result.routers) {
+      // All routers in result should have at least one route OR children
+      // (synthetic group routers may have only children)
+      const checkRouter = (router: (typeof result.routers)[0]) => {
         assert.ok(
-          router.routes.length > 0,
-          `Router ${router.name} should have routes`,
+          router.routes.length > 0 || router.children.length > 0,
+          `Router ${router.name} should have routes or children`,
         )
+        for (const child of router.children) {
+          checkRouter(child)
+        }
       }
+      for (const router of result.routers) {
+        checkRouter(router)
+      }
+    })
+
+    test("merges routers with same prefix from different files", () => {
+      // Routers with the same prefix should be merged for cleaner display
+      const mockRouterNode = {
+        type: "FastAPI" as const,
+        variableName: "app",
+        prefix: "",
+        tags: [],
+        routes: [],
+        filePath: "/test/main.py",
+        line: 1,
+        column: 0,
+        children: [
+          {
+            prefix: "/api/v1",
+            router: {
+              type: "APIRouter" as const,
+              variableName: "login_router",
+              prefix: "",
+              tags: ["login"],
+              routes: [
+                {
+                  method: "post",
+                  path: "/login",
+                  function: "login",
+                  line: 10,
+                  column: 0,
+                },
+              ],
+              filePath: "/test/login.py",
+              line: 5,
+              column: 0,
+              children: [],
+            },
+          },
+          {
+            prefix: "/api/v1",
+            router: {
+              type: "APIRouter" as const,
+              variableName: "utils_router",
+              prefix: "",
+              tags: ["utils"],
+              routes: [
+                {
+                  method: "get",
+                  path: "/health",
+                  function: "health",
+                  line: 20,
+                  column: 0,
+                },
+              ],
+              filePath: "/test/utils.py",
+              line: 5,
+              column: 0,
+              children: [],
+            },
+          },
+        ],
+      }
+
+      const result = routerNodeToAppDefinition(mockRouterNode, "/workspace")
+
+      // Should have 1 merged router with routes from both files
+      assert.strictEqual(
+        result.routers.length,
+        1,
+        "Should merge routers with same prefix",
+      )
+
+      const mergedRouter = result.routers[0]
+      assert.strictEqual(
+        mergedRouter.routes.length,
+        2,
+        "Merged router should have both routes",
+      )
+      assert.ok(
+        mergedRouter.routes.some((r) => r.functionName === "login"),
+        "Should have login route",
+      )
+      assert.ok(
+        mergedRouter.routes.some((r) => r.functionName === "health"),
+        "Should have health route",
+      )
     })
   })
 })
