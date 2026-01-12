@@ -35,27 +35,13 @@
       {
         "command": "fastapi-vscode.refreshEndpoints",
         "title": "Refresh Endpoints",
+        "category": "FastAPI",
         "icon": "$(refresh)"
       },
       {
-        "command": "fastapi-vscode.goToEndpoint",
-        "title": "Go to Definition"
-      },
-      {
-        "command": "fastapi-vscode.copyEndpointPath",
-        "title": "Copy Path"
-      },
-      {
-        "command": "fastapi-vscode.goToRouter",
-        "title": "Go to Router Definition"
-      },
-      {
-        "command": "fastapi-vscode.copyRouterPrefix",
-        "title": "Copy Prefix"
-      },
-      {
         "command": "fastapi-vscode.toggleRouters",
-        "title": "Toggle Expand/Collapse",
+        "title": "Toggle Expand/Collapse Routers",
+        "category": "FastAPI",
         "icon": "$(fold)"
       }
     ],
@@ -74,18 +60,8 @@
       ],
       "view/item/context": [
         {
-          "command": "fastapi-vscode.goToEndpoint",
-          "when": "view == endpoint-explorer && viewItem == route",
-          "group": "navigation"
-        },
-        {
           "command": "fastapi-vscode.copyEndpointPath",
           "when": "view == endpoint-explorer && viewItem == route",
-          "group": "navigation"
-        },
-        {
-          "command": "fastapi-vscode.goToRouter",
-          "when": "view == endpoint-explorer && viewItem == router",
           "group": "navigation"
         },
         {
