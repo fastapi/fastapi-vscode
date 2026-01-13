@@ -33,7 +33,7 @@ interface TestClientCall {
   column: number
 }
 
-export class TestClientCodeLensProvider implements CodeLensProvider {
+export class TestCodeLensProvider implements CodeLensProvider {
   private apps: AppDefinition[] = []
   private parser: Parser
   private _onDidChangeCodeLenses = new EventEmitter<void>()

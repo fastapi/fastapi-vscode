@@ -100,21 +100,12 @@ export function pathMatchesEndpoint(
     return false
   }
 
-  // Compare each segment
-  for (let i = 0; i < testSegments.length; i++) {
-    const endpointSeg = endpointSegments[i]
-    const testSeg = testSegments[i]
-
+  return endpointSegments.every((seg, index) => {
     // Path parameter (e.g., {item_id}) matches any segment
-    if (endpointSeg.startsWith("{") && endpointSeg.endsWith("}")) {
-      continue
+    if (seg.startsWith("{") && seg.endsWith("}")) {
+      return true
     }
-
     // Literal segments must match exactly
-    if (endpointSeg !== testSeg) {
-      return false
-    }
-  }
-
-  return true
+    return seg === testSegments[index]
+  })
 }

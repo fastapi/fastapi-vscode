@@ -142,6 +142,7 @@
     "package": "vsce package",
     "publish:marketplace": "vsce publish",
     "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/",
+    "pretest": "bun run compile",
     "test": "vscode-test",
     "prepare": "husky"
   },

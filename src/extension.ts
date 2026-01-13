@@ -15,7 +15,7 @@ import {
   type EndpointTreeItem,
   EndpointTreeProvider,
 } from "./providers/EndpointTreeProvider"
-import { TestClientCodeLensProvider } from "./providers/TestClientCodeLensProvider"
+import { TestCodeLensProvider } from "./providers/TestCodeLensProvider"
 
 async function discoverFastAPIApps(parser: Parser): Promise<AppDefinition[]> {
   const apps: AppDefinition[] = []
@@ -107,7 +107,7 @@ export async function activate(context: vscode.ExtensionContext) {
   let refreshTimeout: NodeJS.Timeout | null = null
 
   // Register CodeLens provider for test files
-  const codeLensProvider = new TestClientCodeLensProvider(parserService, apps)
+  const codeLensProvider = new TestCodeLensProvider(parserService, apps)
 
   const triggerRefresh = () => {
     if (refreshTimeout) {
