@@ -130,21 +130,16 @@ export async function activate(context: vscode.ExtensionContext) {
   const treeView = vscode.window.createTreeView("endpoint-explorer", {
     treeDataProvider: endpointProvider,
   })
+  context.subscriptions.push(treeView)
 
   const config = vscode.workspace.getConfiguration("fastapi")
-  const codeLensEnabled = config.get<boolean>("showTestCodeLenses", true)
-
-  let codeLensDisposable: vscode.Disposable | undefined
-  if (codeLensEnabled) {
-    codeLensDisposable = vscode.languages.registerCodeLensProvider(
-      { language: "python", pattern: "**/test*.py" },
-      codeLensProvider,
+  if (config.get<boolean>("showTestCodeLenses", true)) {
+    context.subscriptions.push(
+      vscode.languages.registerCodeLensProvider(
+        { language: "python", pattern: "**/test*.py" },
+        codeLensProvider,
+      ),
     )
-  }
-
-  context.subscriptions.push(treeView)
-  if (codeLensDisposable) {
-    context.subscriptions.push(codeLensDisposable)
   }
 
   context.subscriptions.push(
