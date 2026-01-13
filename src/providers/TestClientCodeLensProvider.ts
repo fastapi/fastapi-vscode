@@ -14,6 +14,7 @@ import {
 import type {
   AppDefinition,
   RouteDefinition,
+  RouterDefinition,
   SourceLocation,
 } from "../core/types"
 
@@ -155,21 +156,11 @@ export class TestClientCodeLensProvider implements vscode.CodeLensProvider {
       }
     }
 
-    const walkRouters = (
-      routers: {
-        routes: RouteDefinition[]
-        children?: { routes: RouteDefinition[]; children?: unknown }[]
-      }[],
-    ) => {
+    const walkRouters = (routers: RouterDefinition[]) => {
       for (const router of routers) {
         collectRoutes(router.routes)
         if (router.children) {
-          walkRouters(
-            router.children as {
-              routes: RouteDefinition[]
-              children?: { routes: RouteDefinition[]; children?: unknown }[]
-            }[],
-          )
+          walkRouters(router.children)
         }
       }
     }
