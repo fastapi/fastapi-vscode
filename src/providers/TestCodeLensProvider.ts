@@ -7,9 +7,11 @@ import {
   CodeLens,
   type CodeLensProvider,
   EventEmitter,
+  Location,
   Position,
   Range,
   type TextDocument,
+  Uri,
 } from "vscode"
 import type { Node } from "web-tree-sitter"
 import { extractStringValue, findNodesByType } from "../core/extractors"
@@ -71,12 +73,19 @@ export class TestCodeLensProvider implements CodeLensProvider {
 
         const methodUpper = call.method.toUpperCase()
         const displayPath = stripLeadingDynamicSegments(call.path)
+        const locations = matchingRoutes.map(
+          (loc) =>
+            new Location(
+              Uri.file(loc.filePath),
+              new Position(loc.line - 1, loc.column),
+            ),
+        )
         codeLenses.push(
           new CodeLens(range, {
             title: `Go to route: ${methodUpper} ${displayPath}`,
             command: "fastapi-vscode.goToDefinition",
             arguments: [
-              matchingRoutes,
+              locations,
               document.uri,
               new Position(call.line, call.column),
             ],

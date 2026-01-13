@@ -143,7 +143,10 @@ suite("EndpointTreeProvider", () => {
     if (route) {
       const treeItem = provider.getTreeItem(route)
       assert.ok(treeItem.command, "Route should have a command")
-      assert.strictEqual(treeItem.command?.command, "vscode.open")
+      assert.strictEqual(
+        treeItem.command?.command,
+        "fastapi-vscode.openLocation",
+      )
     }
   })
 
