@@ -92,14 +92,8 @@ export function pathMatchesEndpoint(
   testPath: string,
   endpointPath: string,
 ): boolean {
-  // Normalize paths: remove trailing slashes and ensure leading slash
-  const normalizeSegments = (path: string): string[] => {
-    const normalized = path.replace(/\/+$/, "").replace(/^\/+/, "")
-    return normalized ? normalized.split("/") : []
-  }
-
-  const testSegments = normalizeSegments(testPath)
-  const endpointSegments = normalizeSegments(endpointPath)
+  const testSegments = testPath.split("/").filter(Boolean)
+  const endpointSegments = endpointPath.split("/").filter(Boolean)
 
   // Segment counts must match
   if (testSegments.length !== endpointSegments.length) {
