@@ -46,21 +46,12 @@
         "command": "fastapi-vscode.copyEndpointPath",
         "title": "Copy Endpoint Path",
         "category": "FastAPI"
-      },
-      {
-        "command": "fastapi-vscode.copyRouterPrefix",
-        "title": "Copy Router Prefix",
-        "category": "FastAPI"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "command": "fastapi-vscode.copyEndpointPath",
-          "when": "false"
-        },
-        {
-          "command": "fastapi-vscode.copyRouterPrefix",
           "when": "false"
         }
       ],
@@ -80,11 +71,6 @@
         {
           "command": "fastapi-vscode.copyEndpointPath",
           "when": "view == endpoint-explorer && viewItem == route",
-          "group": "navigation"
-        },
-        {
-          "command": "fastapi-vscode.copyRouterPrefix",
-          "when": "view == endpoint-explorer && viewItem == router",
           "group": "navigation"
         }
       ]
