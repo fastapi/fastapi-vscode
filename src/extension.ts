@@ -167,27 +167,14 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand(
-      "fastapi-vscode.goToLocation",
+      "fastapi-vscode.goToDefinition",
       async (
-        location: SourceLocation | SourceLocation[],
-        sourceUri?: vscode.Uri,
-        sourcePosition?: vscode.Position,
+        locations: SourceLocation[],
+        fromUri: vscode.Uri,
+        fromPosition: vscode.Position,
       ) => {
-        const locations = Array.isArray(location) ? location : [location]
         if (locations.length === 0) {
           return
-        }
-
-        // Use passed source location or fall back to active editor
-        let fromUri = sourceUri
-        let fromPosition = sourcePosition
-        if (!fromUri || !fromPosition) {
-          const editor = vscode.window.activeTextEditor
-          if (!editor) {
-            return
-          }
-          fromUri = editor.document.uri
-          fromPosition = editor.selection.active
         }
 
         const locationLinks: vscode.Location[] = locations.map((loc) => {
@@ -199,8 +186,6 @@ export async function activate(context: vscode.ExtensionContext) {
           )
         })
 
-        // Use goToLocations for both single and multiple matches
-        // This properly records navigation history for "go back"
         await vscode.commands.executeCommand(
           "editor.action.goToLocations",
           fromUri,

@@ -71,12 +71,15 @@ export class TestCodeLensProvider implements CodeLensProvider {
 
         const methodUpper = call.method.toUpperCase()
         const displayPath = stripLeadingDynamicSegments(call.path)
-        const sourcePosition = new Position(call.line, call.column)
         codeLenses.push(
           new CodeLens(range, {
             title: `Go to route: ${methodUpper} ${displayPath}`,
-            command: "fastapi-vscode.goToLocation",
-            arguments: [matchingRoutes, document.uri, sourcePosition],
+            command: "fastapi-vscode.goToDefinition",
+            arguments: [
+              matchingRoutes,
+              document.uri,
+              new Position(call.line, call.column),
+            ],
           }),
         )
       }

@@ -1,10 +1,13 @@
 import {
   EventEmitter,
   MarkdownString,
+  Position,
+  Range,
   ThemeIcon,
   type TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
+  Uri,
 } from "vscode"
 import { stripLeadingDynamicSegments } from "../core/pathUtils"
 import type {
@@ -376,10 +379,15 @@ export class EndpointTreeProvider
         routeItem.tooltip = new MarkdownString(
           `${element.route.method} ${element.route.path}\n\nFunction: ${element.route.functionName}\nFile: ${element.route.location.filePath}:${element.route.location.line}`,
         )
+        const loc = element.route.location
+        const pos = new Position(loc.line - 1, loc.column)
         routeItem.command = {
-          command: "fastapi-vscode.goToLocation",
+          command: "vscode.open",
           title: "Go to Definition",
-          arguments: [element.route.location],
+          arguments: [
+            Uri.file(loc.filePath),
+            { selection: new Range(pos, pos) },
+          ],
         }
         return routeItem
       }
