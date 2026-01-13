@@ -54,6 +54,16 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "fastapi-vscode.copyEndpointPath",
+          "when": "false"
+        },
+        {
+          "command": "fastapi-vscode.copyRouterPrefix",
+          "when": "false"
+        }
+      ],
       "view/title": [
         {
           "command": "fastapi-vscode.refreshEndpoints",

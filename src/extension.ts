@@ -4,6 +4,7 @@
 
 import * as vscode from "vscode"
 import { Parser } from "./core/parser"
+import { stripLeadingDynamicSegments } from "./core/pathUtils"
 import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
 import type { AppDefinition, SourceLocation } from "./core/types"
@@ -112,8 +113,9 @@ export async function activate(context: vscode.ExtensionContext) {
       "fastapi-vscode.copyEndpointPath",
       (item: EndpointTreeItem) => {
         if (item.type === "route") {
-          vscode.env.clipboard.writeText(item.route.path)
-          vscode.window.showInformationMessage(`Copied: ${item.route.path}`)
+          vscode.env.clipboard.writeText(
+            stripLeadingDynamicSegments(item.route.path),
+          )
         }
       },
     ),
@@ -131,8 +133,9 @@ export async function activate(context: vscode.ExtensionContext) {
       "fastapi-vscode.copyRouterPrefix",
       (item: EndpointTreeItem) => {
         if (item.type === "router") {
-          vscode.env.clipboard.writeText(item.router.prefix)
-          vscode.window.showInformationMessage(`Copied: ${item.router.prefix}`)
+          vscode.env.clipboard.writeText(
+            stripLeadingDynamicSegments(item.router.prefix),
+          )
         }
       },
     ),
