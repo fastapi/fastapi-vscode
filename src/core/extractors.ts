@@ -34,15 +34,35 @@ function collectNodesByType(node: Node, type: string, results: Node[]): void {
 }
 
 /**
+ * Extracts the string value from a string AST node, handling quotes and f-string prefix.
+ * Returns null if the node is not a string.
+ *
+ * Examples:
+ *   '"/users"' -> "/users"
+ *   "'/users'" -> "/users"
+ *   'f"/users/{id}"' -> "/users/{id}"
+ */
+export function extractStringValue(node: Node): string | null {
+  if (node.type !== "string") {
+    return null
+  }
+  const text = node.text
+  // Handle f-string prefix: f"..." or f'...'
+  if (text.startsWith('f"') || text.startsWith("f'")) {
+    return text.slice(2, -1)
+  }
+  // Regular string: "..." or '...'
+  return text.slice(1, -1)
+}
+
+/**
  * Extracts a path string from various AST node types.
  * Handles: plain strings, f-strings, concatenation, identifiers.
  */
 function extractPathFromNode(node: Node): string {
   switch (node.type) {
     case "string":
-      // Plain string: "/users" or f-string: f"/users/{id}"
-      // For f-strings, preserve the interpolation syntax
-      return node.text.slice(1, -1)
+      return extractStringValue(node) ?? ""
 
     case "concatenated_string":
       // Adjacent strings: "/api" "/v1" -> "/api/v1"
@@ -126,8 +146,10 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
         if (nameNode?.text === "methods" && valueNode) {
           // Extract first method from list
           const listItems = valueNode.namedChildren
-          if (listItems.length > 0 && listItems[0].type === "string") {
-            resolvedMethod = listItems[0].text.slice(1, -1)
+          const firstMethod =
+            listItems.length > 0 ? extractStringValue(listItems[0]) : null
+          if (firstMethod) {
+            resolvedMethod = firstMethod
           }
         }
       }
@@ -187,8 +209,9 @@ export function routerExtractor(node: Node): RouterInfo | null {
           prefix = extractPathFromNode(argValue)
         } else if (argName === "tags" && argValue?.type === "list") {
           for (const elem of argValue.namedChildren) {
-            if (elem.type === "string") {
-              tags.push(elem.text.slice(1, -1))
+            const tagValue = extractStringValue(elem)
+            if (tagValue !== null) {
+              tags.push(tagValue)
             }
           }
         }
