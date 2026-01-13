@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync } from "node:fs"
+import { copyFileSync, existsSync, globSync, mkdirSync } from "node:fs"
 import path from "node:path"
 import esbuild from "esbuild"
 
@@ -37,25 +37,22 @@ function copyWasmFiles() {
 
 async function main() {
   copyWasmFiles()
+
+  const entryPoints = ["src/extension.ts"]
+  if (!production) {
+    entryPoints.push(...globSync("src/test/**/*.test.ts"))
+  }
+
   const ctx = await esbuild.context({
-    entryPoints: [
-      "src/extension.ts",
-      "src/test/extension.test.ts",
-      "src/test/EndpointTreeProvider.test.ts",
-      "src/test/extractors.test.ts",
-      "src/test/analyzer.test.ts",
-      "src/test/importResolver.test.ts",
-      "src/test/routerResolver.test.ts",
-      "src/test/transformer.test.ts",
-      "src/test/pathUtils.test.ts",
-      "src/test/parser.test.ts",
-    ],
+    entryPoints,
     bundle: true,
     format: "cjs",
     minify: production,
     sourcemap: !production,
     sourcesContent: false,
     platform: "node",
+    target: "node20",
+    treeShaking: true,
     outdir: "dist",
     outbase: "src",
     external: ["vscode", "web-tree-sitter"],
