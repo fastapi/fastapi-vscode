@@ -410,6 +410,16 @@ def handler():
       assert.strictEqual(result.prefix, "{settings.PREFIX}")
     })
 
+    test("extracts include_router with tags", () => {
+      const code = `app.include_router(router, tags=["users", "admin"])`
+      const tree = parse(code)
+      const calls = findNodesByType(tree.rootNode, "call")
+      const result = includeRouterExtractor(calls[0])
+
+      assert.ok(result)
+      assert.deepStrictEqual(result.tags, ["users", "admin"])
+    })
+
     test("returns null for non-include_router call", () => {
       const code = "app.some_method(arg)"
       const tree = parse(code)
