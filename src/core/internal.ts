@@ -28,7 +28,8 @@ export function normalizeMethod(method: string): RouteMethod {
 }
 
 export interface RouteInfo {
-  object: string
+  // The router or app that owns this route
+  owner: string
   method: string
   path: string
   function: string
@@ -61,14 +62,16 @@ export interface ImportInfo {
 }
 
 export interface IncludeRouterInfo {
-  object: string
+  // The app or router with the include_router call
+  owner: string
   router: string
   prefix: string
   tags: string[]
 }
 
 export interface MountInfo {
-  object: string
+  // The app that owns this sub application mount
+  owner: string
   path: string
   app: string
 }

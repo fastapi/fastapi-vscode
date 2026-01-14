@@ -45,7 +45,7 @@ def list_users():
 
       const result = decoratorExtractor(decoratedDefs[0])
       assert.ok(result)
-      assert.strictEqual(result.object, "router")
+      assert.strictEqual(result.owner, "router")
       assert.strictEqual(result.method, "get")
       assert.strictEqual(result.path, "/users")
       assert.strictEqual(result.function, "list_users")
@@ -82,7 +82,7 @@ def create_item():
       const result = decoratorExtractor(decoratedDefs[0])
 
       assert.ok(result)
-      assert.strictEqual(result.object, "app")
+      assert.strictEqual(result.owner, "app")
       assert.strictEqual(result.method, "post")
       assert.strictEqual(result.path, "/items")
     })
@@ -385,7 +385,7 @@ def handler():
       const result = includeRouterExtractor(calls[0])
 
       assert.ok(result)
-      assert.strictEqual(result.object, "app")
+      assert.strictEqual(result.owner, "app")
       assert.strictEqual(result.router, "users.router")
       assert.strictEqual(result.prefix, "")
     })
@@ -447,7 +447,7 @@ def handler():
       const result = mountExtractor(calls[0])
 
       assert.ok(result)
-      assert.strictEqual(result.object, "app")
+      assert.strictEqual(result.owner, "app")
       assert.strictEqual(result.path, "/static")
       assert.strictEqual(result.app, "static_app")
     })
