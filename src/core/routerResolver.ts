@@ -92,7 +92,7 @@ function buildRouterGraphInternal(
   // Find all routers included in the app
   // Only include routes that belong directly to the app (not to local APIRouters)
   const appRoutes = analysis.routes.filter(
-    (r) => r.object === appRouter.variableName,
+    (r) => r.owner === appRouter.variableName,
   )
   const rootRouter: RouterNode = {
     filePath: resolvedEntryFile,
@@ -178,7 +178,7 @@ function resolveRouterReference(
   )
   if (localRouter) {
     // Filter routes that belong to this router (decorated with @router.method)
-    const routerRoutes = analysis.routes.filter((r) => r.object === moduleName)
+    const routerRoutes = analysis.routes.filter((r) => r.owner === moduleName)
     return {
       filePath: currentFile,
       variableName: localRouter.variableName,
