@@ -13,6 +13,7 @@ internal:
       - any-glob-to-any-file:
         - .github/**
         - .vscode/**
+        - .husky/**
         - .gitignore
         - .vscode-test.mjs
         - .vscodeignore
