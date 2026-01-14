@@ -5,6 +5,7 @@ import {
   findProjectRoot,
   getPathSegments,
   isWithinDirectory,
+  pathMatchesEndpoint,
   stripLeadingDynamicSegments,
 } from "../../core/pathUtils"
 import { fixtures } from "../testUtils"
@@ -161,6 +162,96 @@ suite("pathUtils", () => {
       const result = findProjectRoot(usersPath, appRoot)
 
       assert.strictEqual(result, appRoot)
+    })
+  })
+
+  suite("pathMatchesEndpoint", () => {
+    test("matches exact static paths", () => {
+      assert.strictEqual(pathMatchesEndpoint("/items", "/items"), true)
+      assert.strictEqual(pathMatchesEndpoint("/api/users", "/api/users"), true)
+    })
+
+    test("matches path with single parameter", () => {
+      assert.strictEqual(
+        pathMatchesEndpoint("/items/123", "/items/{item_id}"),
+        true,
+      )
+      assert.strictEqual(
+        pathMatchesEndpoint("/items/abc", "/items/{item_id}"),
+        true,
+      )
+    })
+
+    test("matches path with multiple parameters", () => {
+      assert.strictEqual(
+        pathMatchesEndpoint(
+          "/users/abc/posts/456",
+          "/users/{user_id}/posts/{post_id}",
+        ),
+        true,
+      )
+    })
+
+    test("rejects when segment count differs", () => {
+      assert.strictEqual(
+        pathMatchesEndpoint("/items/123/details", "/items/{item_id}"),
+        false,
+      )
+      assert.strictEqual(
+        pathMatchesEndpoint("/items", "/items/{item_id}"),
+        false,
+      )
+    })
+
+    test("rejects when static segments differ", () => {
+      assert.strictEqual(
+        pathMatchesEndpoint("/users/123", "/items/{item_id}"),
+        false,
+      )
+      assert.strictEqual(
+        pathMatchesEndpoint("/api/v1/items", "/api/v2/items"),
+        false,
+      )
+    })
+
+    test("handles trailing slashes", () => {
+      assert.strictEqual(pathMatchesEndpoint("/items/", "/items"), true)
+      assert.strictEqual(pathMatchesEndpoint("/items", "/items/"), true)
+      assert.strictEqual(
+        pathMatchesEndpoint("/items/123/", "/items/{id}"),
+        true,
+      )
+    })
+
+    test("handles root path", () => {
+      assert.strictEqual(pathMatchesEndpoint("/", "/"), true)
+      assert.strictEqual(pathMatchesEndpoint("", ""), true)
+    })
+
+    test("rejects empty path against non-empty", () => {
+      assert.strictEqual(
+        pathMatchesEndpoint("/items/123", "/items/{item_id}"),
+        true,
+      )
+      assert.strictEqual(
+        pathMatchesEndpoint("/items/", "/items/{item_id}"),
+        false,
+      )
+    })
+
+    test("matches paths with dynamic prefix", () => {
+      // Dynamic prefixes like {settings.API_V1_STR} match any segment (same as path params)
+      assert.strictEqual(
+        pathMatchesEndpoint(
+          "/v1/items/123",
+          "{settings.API_V1_STR}/items/{item_id}",
+        ),
+        true,
+      )
+      assert.strictEqual(
+        pathMatchesEndpoint("/api/v2/users", "{BASE}/users"),
+        false, // segment count differs
+      )
     })
   })
 })

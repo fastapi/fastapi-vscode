@@ -77,3 +77,35 @@ export function getPathSegments(path: string, count: number): string {
 export function countSegments(path: string): number {
   return path.split("/").filter(Boolean).length
 }
+
+/**
+ * Checks if a test path matches an endpoint path pattern.
+ * Endpoint paths may contain path parameters like {item_id} which match any segment.
+ *
+ * Examples:
+ *   pathMatchesEndpoint("/items/123", "/items/{item_id}") -> true
+ *   pathMatchesEndpoint("/items/123/details", "/items/{item_id}") -> false
+ *   pathMatchesEndpoint("/users/abc/posts/456", "/users/{user_id}/posts/{post_id}") -> true
+ *   pathMatchesEndpoint("/items/", "/items/{item_id}") -> false
+ */
+export function pathMatchesEndpoint(
+  testPath: string,
+  endpointPath: string,
+): boolean {
+  const testSegments = testPath.split("/").filter(Boolean)
+  const endpointSegments = endpointPath.split("/").filter(Boolean)
+
+  // Segment counts must match
+  if (testSegments.length !== endpointSegments.length) {
+    return false
+  }
+
+  return endpointSegments.every((seg, index) => {
+    // Path parameter (e.g., {item_id}) matches any segment
+    if (seg.startsWith("{") && seg.endsWith("}")) {
+      return true
+    }
+    // Literal segments must match exactly
+    return seg === testSegments[index]
+  })
+}
