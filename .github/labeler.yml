@@ -1,0 +1,26 @@
+docs:
+  - all:
+    - changed-files:
+      - any-glob-to-any-file:
+        - README.md
+        - SUPPORT.md
+      - all-globs-to-all-files:
+        - '!src/**'
+
+internal:
+  - all:
+    - changed-files:
+      - any-glob-to-any-file:
+        - .github/**
+        - .vscode/**
+        - .husky/**
+        - .gitignore
+        - .vscode-test.mjs
+        - .vscodeignore
+        - biome.json
+        - bun.lock
+        - esbuild.js
+        - tsconfig.json
+
+      - all-globs-to-all-files:
+        - '!src/**'
