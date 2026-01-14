@@ -113,6 +113,11 @@
           "type": "string",
           "default": "",
           "description": "Path to the main FastAPI application file (e.g., 'src/main.py'). If not set, the extension will search common locations."
+        },
+        "fastapi.showTestCodeLenses": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show CodeLens links above test client calls (e.g., client.get('/items')) to navigate to the corresponding route definition."
         }
       }
     }
