@@ -20,16 +20,11 @@ export const ROUTE_METHODS = new Set([
   "websocket",
 ])
 
-/**
- * Normalizes a method string to a valid RouteMethod.
- * Returns "GET" as default for invalid methods.
- */
+/** Normalizes a method string to a valid RouteMethod. Returns "GET" for invalid methods. */
 export function normalizeMethod(method: string): RouteMethod {
-  const lower = method.toLowerCase()
-  if (ROUTE_METHODS.has(lower)) {
-    return method.toUpperCase() as RouteMethod
-  }
-  return "GET"
+  return ROUTE_METHODS.has(method.toLowerCase())
+    ? (method.toUpperCase() as RouteMethod)
+    : "GET"
 }
 
 export interface RouteInfo {

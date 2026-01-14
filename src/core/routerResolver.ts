@@ -36,14 +36,11 @@ function buildRouterGraphInternal(
 ): RouterNode | null {
   // Resolve the full path of the entry file if necessary
   let resolvedEntryFile = entryFile
+  if (!existsSync(resolvedEntryFile) && !isAbsolute(entryFile)) {
+    resolvedEntryFile = join(projectRoot, entryFile)
+  }
   if (!existsSync(resolvedEntryFile)) {
-    // Only try joining if entryFile is not already absolute
-    if (!isAbsolute(entryFile)) {
-      resolvedEntryFile = join(projectRoot, entryFile)
-    }
-    if (!existsSync(resolvedEntryFile)) {
-      return null
-    }
+    return null
   }
 
   // Prevent infinite recursion on circular imports
@@ -116,17 +113,18 @@ function buildRouterGraphInternal(
       parser,
       visited,
     )
-    if (childRouter) {
-      // Merge tags from include_router call with the router's own tags
-      if (include.tags.length > 0) {
-        childRouter.tags = [...new Set([...childRouter.tags, ...include.tags])]
-      }
-      rootRouter.children.push({
-        router: childRouter,
-        prefix: include.prefix,
-        tags: include.tags,
-      })
+    if (!childRouter) {
+      continue
     }
+    // Merge tags from include_router call with the router's own tags
+    if (include.tags.length > 0) {
+      childRouter.tags = [...new Set([...childRouter.tags, ...include.tags])]
+    }
+    rootRouter.children.push({
+      router: childRouter,
+      prefix: include.prefix,
+      tags: include.tags,
+    })
   }
 
   // Process mount() calls for subapps
@@ -139,13 +137,14 @@ function buildRouterGraphInternal(
       parser,
       visited,
     )
-    if (childRouter) {
-      rootRouter.children.push({
-        router: childRouter,
-        prefix: mount.path,
-        tags: [],
-      })
+    if (!childRouter) {
+      continue
     }
+    rootRouter.children.push({
+      router: childRouter,
+      prefix: mount.path,
+      tags: [],
+    })
   }
 
   return rootRouter
@@ -168,7 +167,6 @@ function resolveRouterReference(
   const matchingImport = analysis.imports.find((imp) =>
     imp.names.includes(moduleName),
   )
-
   if (!matchingImport) {
     return null
   }
@@ -184,7 +182,6 @@ function resolveRouterReference(
     projectRoot,
     parser,
   )
-
   if (!importedFilePath) {
     return null
   }

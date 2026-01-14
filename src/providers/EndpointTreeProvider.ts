@@ -93,15 +93,15 @@ export class EndpointTreeProvider
     return `${route.method} ${path}`.toLowerCase()
   }
 
-  /**
-   * Counts total routes including nested children.
-   */
+  /** Counts total routes including nested children. */
   private getTotalRouteCount(router: RouterDefinition): number {
-    let count = router.routes.length
-    for (const child of router.children) {
-      count += this.getTotalRouteCount(child)
-    }
-    return count
+    return (
+      router.routes.length +
+      router.children.reduce(
+        (sum, child) => sum + this.getTotalRouteCount(child),
+        0,
+      )
+    )
   }
 
   /**
@@ -206,13 +206,10 @@ export class EndpointTreeProvider
       case "app": {
         // Check if apps are grouped under workspaces
         const rootItems = this.groupApps(this.apps)
-        for (const root of rootItems) {
-          if (root.type === "workspace" && root.apps.includes(element.app)) {
-            return root
-          }
-        }
-        // App is at root level
-        return undefined
+        return rootItems.find(
+          (root) =>
+            root.type === "workspace" && root.apps.includes(element.app),
+        )
       }
 
       case "router": {
@@ -222,12 +219,8 @@ export class EndpointTreeProvider
           return { type: "router", router: parentRouter }
         }
         // Find which app contains this router at top level
-        for (const app of this.apps) {
-          if (app.routers.includes(element.router)) {
-            return { type: "app", app }
-          }
-        }
-        return undefined
+        const app = this.apps.find((a) => a.routers.includes(element.router))
+        return app ? { type: "app", app } : undefined
       }
 
       case "route": {
@@ -237,12 +230,8 @@ export class EndpointTreeProvider
           return { type: "router", router: parentRouter }
         }
         // Check if route is directly on an app
-        for (const app of this.apps) {
-          if (app.routes.includes(element.route)) {
-            return { type: "app", app }
-          }
-        }
-        return undefined
+        const app = this.apps.find((a) => a.routes.includes(element.route))
+        return app ? { type: "app", app } : undefined
       }
     }
   }

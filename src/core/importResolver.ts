@@ -24,9 +24,8 @@ import type { Parser } from "./parser"
 const fileExistsCache = new Map<string, boolean>()
 
 function cachedExistsSync(path: string): boolean {
-  const cached = fileExistsCache.get(path)
-  if (cached !== undefined) {
-    return cached
+  if (fileExistsCache.has(path)) {
+    return fileExistsCache.get(path)!
   }
   const exists = existsSync(path)
   fileExistsCache.set(path, exists)
@@ -55,25 +54,16 @@ function resolvePythonModule(basePath: string): string | null {
   return null
 }
 
-/**
- * Finds an import that provides a given exported name
- * Used for resolving re-exports in __init__.py files
- **/
+/** Finds an import that provides a given exported name (for re-exports in __init__.py) */
 function findImportByExportedName(
   imports: ImportInfo[],
   name: string,
-): ImportInfo | null {
-  // Each import may provide multiple named imports
-  // e.g. from module import A as B, C
-  for (const imp of imports) {
-    for (const namedImport of imp.namedImports) {
-      const providedName = namedImport.alias ?? namedImport.name
-      if (providedName === name) {
-        return imp
-      }
-    }
-  }
-  return null
+): ImportInfo | undefined {
+  return imports.find((imp) =>
+    imp.namedImports.some(
+      (namedImport) => (namedImport.alias ?? namedImport.name) === name,
+    ),
+  )
 }
 
 /**
@@ -190,19 +180,11 @@ export function resolveRouterFromInit(
   }
 
   const analysis = analyzeFile(initFilePath, parser)
-  if (!analysis) {
-    return null
-  }
-
-  // If this file has routers defined, no need to follow re-exports
-  if (analysis.routers.length > 0) {
+  // If file has routers defined, no need to follow re-exports
+  if (!analysis || analysis.routers.length > 0) {
     return null
   }
 
   const imp = findImportByExportedName(analysis.imports, "router")
-  if (imp) {
-    return resolveImport(imp, initFilePath, projectRoot)
-  }
-
-  return null
+  return imp ? resolveImport(imp, initFilePath, projectRoot) : null
 }
