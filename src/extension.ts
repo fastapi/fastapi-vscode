@@ -15,6 +15,7 @@ import {
   type EndpointTreeItem,
   EndpointTreeProvider,
 } from "./providers/EndpointTreeProvider"
+import { TestCodeLensProvider } from "./providers/TestCodeLensProvider"
 
 async function discoverFastAPIApps(parser: Parser): Promise<AppDefinition[]> {
   const apps: AppDefinition[] = []
@@ -102,10 +103,47 @@ export async function activate(context: vscode.ExtensionContext) {
   // Discover FastAPI endpoints from workspace
   const apps = await discoverFastAPIApps(parserService)
   const endpointProvider = new EndpointTreeProvider(apps)
+  const codeLensProvider = new TestCodeLensProvider(parserService, apps)
+
+  let refreshTimeout: NodeJS.Timeout | null = null
+
+  const triggerRefresh = () => {
+    if (refreshTimeout) {
+      clearTimeout(refreshTimeout)
+    }
+    refreshTimeout = setTimeout(async () => {
+      if (!parserService) {
+        return
+      }
+      const newApps = await discoverFastAPIApps(parserService)
+      endpointProvider.setApps(newApps)
+      codeLensProvider.setApps(newApps)
+    }, 500)
+  }
+
+  // Watch for changes in Python files to refresh endpoints
+  const watcher = vscode.workspace.createFileSystemWatcher("**/*.py")
+  watcher.onDidChange(triggerRefresh)
+  watcher.onDidCreate(triggerRefresh)
+  watcher.onDidDelete(triggerRefresh)
+  context.subscriptions.push(watcher)
 
   const treeView = vscode.window.createTreeView("endpoint-explorer", {
     treeDataProvider: endpointProvider,
   })
+
+  // Register CodeLens provider for test files
+  const config = vscode.workspace.getConfiguration("fastapi")
+  if (config.get<boolean>("showTestCodeLenses", true)) {
+    context.subscriptions.push(
+      vscode.languages.registerCodeLensProvider(
+        // Covers common test file patterns
+        // e.g., test_*.py, *_test.py, tests/*.py
+        { language: "python", pattern: "**/*test*.py" },
+        codeLensProvider,
+      ),
+    )
+  }
 
   context.subscriptions.push(
     treeView,
@@ -119,6 +157,7 @@ export async function activate(context: vscode.ExtensionContext) {
         clearImportCache()
         const newApps = await discoverFastAPIApps(parserService)
         endpointProvider.setApps(newApps)
+        codeLensProvider.setApps(newApps)
       },
     ),
 
@@ -162,6 +201,24 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("fastapi-vscode.toggleRouters", () => {
       endpointProvider.toggleRouters()
     }),
+
+    vscode.commands.registerCommand(
+      "fastapi-vscode.goToDefinition",
+      (
+        locations: vscode.Location[],
+        fromUri: vscode.Uri,
+        fromPosition: vscode.Position,
+      ) => {
+        vscode.commands.executeCommand(
+          "editor.action.goToLocations",
+          fromUri,
+          fromPosition,
+          locations,
+          locations.length === 1 ? "goto" : "peek",
+          "No matching route found",
+        )
+      },
+    ),
   )
 }
 
