@@ -22,4 +22,4 @@ internal:
         - tsconfig.json
 
       - all-globs-to-all-files:
-        - '!src/**''
+        - '!src/**'
