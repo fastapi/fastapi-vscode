@@ -1,0 +1,34 @@
+name: Latest Changes
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - closed
+  workflow_dispatch:
+    inputs:
+      number:
+        description: PR number
+        required: true
+
+jobs:
+  latest-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - uses: actions/checkout@v6
+        with:
+          # To allow latest-changes to commit to the main branch
+          token: ${{ secrets.FASTAPI_VSCODE_LATEST_CHANGES }}
+      - uses: tiangolo/latest-changes@0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          latest_changes_file: release-notes.md
+          latest_changes_header: '# Latest Changes'
+          end_regex: '^## '
+          debug_logs: true
+          label_header_prefix: '## '
