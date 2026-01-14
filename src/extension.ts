@@ -172,6 +172,22 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand(
+      "fastapi-vscode.goToRouter",
+      (item: EndpointTreeItem) => {
+        if (item.type === "router") {
+          const uri = vscode.Uri.file(item.router.location.filePath)
+          const pos = new vscode.Position(
+            item.router.location.line - 1,
+            item.router.location.column,
+          )
+          vscode.window.showTextDocument(uri, {
+            selection: new vscode.Range(pos, pos),
+          })
+        }
+      },
+    ),
+
+    vscode.commands.registerCommand(
       "fastapi-vscode.openLocation",
       (location: SourceLocation) => {
         const uri = vscode.Uri.file(location.filePath)
