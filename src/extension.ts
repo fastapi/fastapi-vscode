@@ -151,6 +151,24 @@ export async function activate(context: vscode.ExtensionContext) {
       },
     ),
 
+    vscode.commands.registerCommand(
+      "fastapi-vscode.copyRouterPrefix",
+      (item: EndpointTreeItem) => {
+        if (item.type === "router") {
+          vscode.env.clipboard.writeText(item.router.prefix)
+          vscode.window.showInformationMessage(`Copied: ${item.router.prefix}`)
+        }
+      },
+    ),
+
+    vscode.commands.registerCommand("fastapi-vscode.reportIssue", () => {
+      vscode.env.openExternal(
+        vscode.Uri.parse(
+          "https://github.com/fastapi/fastapi-vscode/issues/new?labels=bug",
+        ),
+      )
+    }),
+
     vscode.commands.registerCommand("fastapi-vscode.toggleRouters", () => {
       endpointProvider.toggleRouters()
     }),
