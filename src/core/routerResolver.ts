@@ -41,7 +41,6 @@ function buildRouterGraphInternal(
   // Resolve the full path of the entry file if necessary
   let resolvedEntryFile = entryFile
 
-  // Try resolving relative to project root if not absolute
   if (!existsSync(resolvedEntryFile) && !isAbsolute(entryFile)) {
     resolvedEntryFile = join(projectRoot, entryFile)
   }
