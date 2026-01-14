@@ -170,14 +170,9 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
 
 /** Extracts tags from a list node like ["users", "admin"] */
 function extractTags(listNode: Node): string[] {
-  const tags: string[] = []
-  for (const elem of listNode.namedChildren) {
-    const tagValue = extractStringValue(elem)
-    if (tagValue !== null) {
-      tags.push(tagValue)
-    }
-  }
-  return tags
+  return listNode.namedChildren
+    .map((elem) => extractStringValue(elem))
+    .filter((v): v is string => v !== null)
 }
 
 export function routerExtractor(node: Node): RouterInfo | null {
@@ -192,14 +187,12 @@ export function routerExtractor(node: Node): RouterInfo | null {
   }
 
   const funcName = valueNode.childForFieldName("function")?.text
-  const type: RouterType =
-    funcName === "APIRouter" || funcName === "fastapi.APIRouter"
-      ? "APIRouter"
-      : funcName === "FastAPI" || funcName === "fastapi.FastAPI"
-        ? "FastAPI"
-        : "Unknown"
-
-  if (type === "Unknown") {
+  let type: RouterType
+  if (funcName === "APIRouter" || funcName === "fastapi.APIRouter") {
+    type = "APIRouter"
+  } else if (funcName === "FastAPI" || funcName === "fastapi.FastAPI") {
+    type = "FastAPI"
+  } else {
     return null
   }
 
@@ -230,6 +223,35 @@ export function routerExtractor(node: Node): RouterInfo | null {
   }
 }
 
+/** Checks if a node is inside an ancestor of a given type */
+function hasAncestor(node: Node, ancestorType: string): boolean {
+  let parent = node.parent
+  while (parent) {
+    if (parent.type === ancestorType) {
+      return true
+    }
+    parent = parent.parent
+  }
+  return false
+}
+
+/** Parses a module path, extracting relative dots if present */
+function parseModulePath(rawPath: string): {
+  modulePath: string
+  isRelative: boolean
+  relativeDots: number
+} {
+  const matches = rawPath.match(/^(\.+)(.*)/)
+  if (matches) {
+    return {
+      modulePath: matches[2],
+      isRelative: true,
+      relativeDots: matches[1].length,
+    }
+  }
+  return { modulePath: rawPath, isRelative: false, relativeDots: 0 }
+}
+
 export function importExtractor(node: Node): ImportInfo | null {
   if (
     node.type !== "import_statement" &&
@@ -238,67 +260,50 @@ export function importExtractor(node: Node): ImportInfo | null {
     return null
   }
 
-  let modulePath = ""
   const names: string[] = []
   const namedImports: ImportedName[] = []
-  let isRelative = false
-  let relativeDots = 0
 
   if (node.type === "import_statement") {
     const nameNodes = findNodesByType(node, "dotted_name")
     for (const nameNode of nameNodes) {
-      modulePath = nameNode.text
-      const asNames = nameNode.text.split(".")
-      names.push(asNames[0])
-      namedImports.push({ name: asNames[0], alias: null })
+      const firstName = nameNode.text.split(".")[0]
+      names.push(firstName)
+      namedImports.push({ name: firstName, alias: null })
     }
-  } else if (node.type === "import_from_statement") {
-    const moduleNode = node.childForFieldName("module_name")
-    if (moduleNode) {
-      const rawPath = moduleNode.text
-      const matches = rawPath.match(/^(\.+)(.*)/)
-      if (matches) {
-        isRelative = true
-        relativeDots = matches[1].length
-        modulePath = matches[2]
-      } else {
-        modulePath = rawPath
-      }
-    }
-
-    // Look for aliased_import nodes (e.g., "router as users_router")
-    const aliasedImports = findNodesByType(node, "aliased_import")
-    for (const aliased of aliasedImports) {
-      const nameNode = aliased.childForFieldName("name")
-      const aliasNode = aliased.childForFieldName("alias")
-      if (nameNode) {
-        const originalName = nameNode.text
-        const aliasName = aliasNode?.text ?? null
-        names.push(aliasName ?? originalName)
-        namedImports.push({ name: originalName, alias: aliasName })
-      }
+    const modulePath = nameNodes[0]?.text ?? ""
+    return {
+      modulePath,
+      names,
+      namedImports,
+      isRelative: false,
+      relativeDots: 0,
     }
   }
 
-  // Get non-aliased imports (dotted_name nodes not inside aliased_import)
-  if (node.type === "import_from_statement") {
-    const nameNodes = findNodesByType(node, "dotted_name")
-    for (let i = 1; i < nameNodes.length; i++) {
-      const nameNode = nameNodes[i]
-      // Check if this node is inside an aliased_import
-      let parent = nameNode.parent
-      let isAliased = false
-      while (parent) {
-        if (parent.type === "aliased_import") {
-          isAliased = true
-          break
-        }
-        parent = parent.parent
-      }
-      if (!isAliased) {
-        names.push(nameNode.text)
-        namedImports.push({ name: nameNode.text, alias: null })
-      }
+  // import_from_statement
+  const moduleNode = node.childForFieldName("module_name")
+  const { modulePath, isRelative, relativeDots } = parseModulePath(
+    moduleNode?.text ?? "",
+  )
+
+  // Aliased imports (e.g., "router as users_router")
+  for (const aliased of findNodesByType(node, "aliased_import")) {
+    const nameNode = aliased.childForFieldName("name")
+    const aliasNode = aliased.childForFieldName("alias")
+    if (nameNode) {
+      const alias = aliasNode?.text ?? null
+      names.push(alias ?? nameNode.text)
+      namedImports.push({ name: nameNode.text, alias })
+    }
+  }
+
+  // Non-aliased imports (skip first dotted_name which is the module path)
+  const nameNodes = findNodesByType(node, "dotted_name")
+  for (let i = 1; i < nameNodes.length; i++) {
+    const nameNode = nameNodes[i]
+    if (!hasAncestor(nameNode, "aliased_import")) {
+      names.push(nameNode.text)
+      namedImports.push({ name: nameNode.text, alias: null })
     }
   }
 
