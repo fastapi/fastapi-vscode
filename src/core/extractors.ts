@@ -159,7 +159,7 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
   const functionName = functionNameDefNode ? functionNameDefNode.text : ""
 
   return {
-    object: objectNode.text,
+    owner: objectNode.text,
     method: resolvedMethod,
     path,
     function: functionName,
@@ -360,7 +360,7 @@ export function includeRouterExtractor(node: Node): IncludeRouterInfo | null {
   }
 
   return {
-    object: call.object,
+    owner: call.object,
     router: call.args[0]?.text ?? "",
     prefix,
     tags,
@@ -375,7 +375,7 @@ export function mountExtractor(node: Node): MountInfo | null {
   }
 
   return {
-    object: call.object,
+    owner: call.object,
     path: extractPathFromNode(call.args[0]),
     app: call.args[1].text,
   }
