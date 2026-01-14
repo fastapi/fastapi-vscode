@@ -28,6 +28,7 @@ export function normalizeMethod(method: string): RouteMethod {
 }
 
 export interface RouteInfo {
+  /** Variable name of the app/router that owns this route (e.g., "app" from @app.get) */
   object: string
   method: string
   path: string

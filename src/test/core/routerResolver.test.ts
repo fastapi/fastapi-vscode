@@ -184,5 +184,60 @@ suite("routerResolver", () => {
         "users router should have routes",
       )
     })
+
+    test("prioritizes FastAPI over APIRouter in same file", () => {
+      const result = buildRouterGraph(
+        fixtures.sameFile.mainPy,
+        parser,
+        fixtures.sameFile.root,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.variableName, "app")
+    })
+
+    test("assigns routes to correct owner in same file", () => {
+      const result = buildRouterGraph(
+        fixtures.sameFile.mainPy,
+        parser,
+        fixtures.sameFile.root,
+      )
+
+      assert.ok(result)
+
+      // App routes should only include @app.xxx routes
+      const appRoutePaths = result.routes.map((r) => r.path)
+      assert.ok(
+        !appRoutePaths.includes("/items"),
+        "App should not have /items route (belongs to router)",
+      )
+    })
+
+    test("resolves local router as child in same file", () => {
+      const result = buildRouterGraph(
+        fixtures.sameFile.mainPy,
+        parser,
+        fixtures.sameFile.root,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(
+        result.children.length,
+        1,
+        "Should have one child router",
+      )
+
+      const apiRouter = result.children[0]
+      assert.strictEqual(apiRouter.router.type, "APIRouter")
+      assert.strictEqual(apiRouter.router.prefix, "/api")
+
+      // Router should have its own routes
+      const routerRoutePaths = apiRouter.router.routes.map((r) => r.path)
+      assert.ok(
+        routerRoutePaths.includes("/items"),
+        "Router should have /items route",
+      )
+    })
   })
 })

@@ -35,4 +35,8 @@ export const fixtures = {
       "__init__.py",
     ),
   },
+  sameFile: {
+    root: join(fixturesPath, "same-file"),
+    mainPy: join(fixturesPath, "same-file", "main.py"),
+  },
 }
