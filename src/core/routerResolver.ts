@@ -9,9 +9,13 @@ export type { RouterNode }
 
 /**
  * Finds the main FastAPI app or APIRouter in the list of routers.
+ * We want to prioritize FastAPI apps over APIRouters.
  */
 function findAppRouter(routers: RouterInfo[]): RouterInfo | undefined {
-  return routers.find((r) => r.type === "FastAPI" || r.type === "APIRouter")
+  return (
+    routers.find((r) => r.type === "FastAPI") ??
+    routers.find((r) => r.type === "APIRouter")
+  )
 }
 
 /**
@@ -36,13 +40,14 @@ function buildRouterGraphInternal(
 ): RouterNode | null {
   // Resolve the full path of the entry file if necessary
   let resolvedEntryFile = entryFile
+
   if (!existsSync(resolvedEntryFile) && !isAbsolute(entryFile)) {
     resolvedEntryFile = join(projectRoot, entryFile)
   }
+
   if (!existsSync(resolvedEntryFile)) {
     return null
   }
-
   // Prevent infinite recursion on circular imports
   if (visited.has(resolvedEntryFile)) {
     return null
@@ -85,6 +90,10 @@ function buildRouterGraphInternal(
   }
 
   // Find all routers included in the app
+  // Only include routes that belong directly to the app (not to local APIRouters)
+  const appRoutes = analysis.routes.filter(
+    (r) => r.object === appRouter.variableName,
+  )
   const rootRouter: RouterNode = {
     filePath: resolvedEntryFile,
     variableName: appRouter.variableName,
@@ -93,7 +102,7 @@ function buildRouterGraphInternal(
     tags: appRouter.tags,
     line: appRouter.line,
     column: appRouter.column,
-    routes: analysis.routes.map((r) => ({
+    routes: appRoutes.map((r) => ({
       method: r.method,
       path: r.path,
       function: r.function,
@@ -113,18 +122,17 @@ function buildRouterGraphInternal(
       parser,
       visited,
     )
-    if (!childRouter) {
-      continue
+    if (childRouter) {
+      // Merge tags from include_router call with the router's own tags
+      if (include.tags.length > 0) {
+        childRouter.tags = [...new Set([...childRouter.tags, ...include.tags])]
+      }
+      rootRouter.children.push({
+        router: childRouter,
+        prefix: include.prefix,
+        tags: include.tags,
+      })
     }
-    // Merge tags from include_router call with the router's own tags
-    if (include.tags.length > 0) {
-      childRouter.tags = [...new Set([...childRouter.tags, ...include.tags])]
-    }
-    rootRouter.children.push({
-      router: childRouter,
-      prefix: include.prefix,
-      tags: include.tags,
-    })
   }
 
   // Process mount() calls for subapps
@@ -137,14 +145,13 @@ function buildRouterGraphInternal(
       parser,
       visited,
     )
-    if (!childRouter) {
-      continue
+    if (childRouter) {
+      rootRouter.children.push({
+        router: childRouter,
+        prefix: mount.path,
+        tags: [],
+      })
     }
-    rootRouter.children.push({
-      router: childRouter,
-      prefix: mount.path,
-      tags: [],
-    })
   }
 
   return rootRouter
@@ -152,6 +159,7 @@ function buildRouterGraphInternal(
 
 /**
  * Resolves a router/app reference to its RouterNode.
+ * Used for include_router and mount calls.
  */
 function resolveRouterReference(
   reference: string,
@@ -164,9 +172,37 @@ function resolveRouterReference(
   const parts = reference.split(".")
   const moduleName = parts[0]
 
+  // First, check if this is a local router defined in the same file
+  const localRouter = analysis.routers.find(
+    (r) => r.variableName === moduleName && r.type === "APIRouter",
+  )
+  if (localRouter) {
+    // Filter routes that belong to this router (decorated with @router.method)
+    const routerRoutes = analysis.routes.filter((r) => r.object === moduleName)
+    return {
+      filePath: currentFile,
+      variableName: localRouter.variableName,
+      type: localRouter.type,
+      prefix: localRouter.prefix,
+      tags: localRouter.tags,
+      line: localRouter.line,
+      column: localRouter.column,
+      routes: routerRoutes.map((r) => ({
+        method: r.method,
+        path: r.path,
+        function: r.function,
+        line: r.line,
+        column: r.column,
+      })),
+      children: [],
+    }
+  }
+
+  // Otherwise, look for an imported router
   const matchingImport = analysis.imports.find((imp) =>
     imp.names.includes(moduleName),
   )
+
   if (!matchingImport) {
     return null
   }
@@ -182,6 +218,7 @@ function resolveRouterReference(
     projectRoot,
     parser,
   )
+
   if (!importedFilePath) {
     return null
   }
