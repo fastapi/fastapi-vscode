@@ -157,6 +157,7 @@ export async function activate(context: vscode.ExtensionContext) {
         clearImportCache()
         const newApps = await discoverFastAPIApps(parserService)
         endpointProvider.setApps(newApps)
+        codeLensProvider.setApps(newApps)
       },
     ),
 
