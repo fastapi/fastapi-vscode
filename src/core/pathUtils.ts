@@ -3,7 +3,6 @@ import { dirname, join, relative, sep } from "node:path"
 
 /**
  * Strips leading dynamic segments (like {settings.API_V1_STR}) from a path.
- * These are runtime variables, not URL path parameters.
  *
  * Examples:
  *   "{settings.API_V1_STR}/users/{id}" -> "/users/{id}"

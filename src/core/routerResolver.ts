@@ -117,9 +117,14 @@ function buildRouterGraphInternal(
       visited,
     )
     if (childRouter) {
+      // Merge tags from include_router call with the router's own tags
+      if (include.tags.length > 0) {
+        childRouter.tags = [...new Set([...childRouter.tags, ...include.tags])]
+      }
       rootRouter.children.push({
         router: childRouter,
         prefix: include.prefix,
+        tags: include.tags,
       })
     }
   }
@@ -138,6 +143,7 @@ function buildRouterGraphInternal(
       rootRouter.children.push({
         router: childRouter,
         prefix: mount.path,
+        tags: [],
       })
     }
   }

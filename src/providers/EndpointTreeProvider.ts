@@ -325,12 +325,11 @@ export class EndpointTreeProvider
       }
 
       case "router": {
-        // Use prefix as label (stripped of dynamic segments), or first tag, or filename as fallback
+        // Use prefix as label, showing relative path if nested under a parent
         const strippedPrefix = stripLeadingDynamicSegments(
           element.router.prefix,
         )
 
-        // If nested under a parent router, show only the relative part
         const parentRouter = this.findParentRouter(element.router)
         const parentPrefix = parentRouter
           ? stripLeadingDynamicSegments(parentRouter.prefix)
@@ -339,15 +338,18 @@ export class EndpointTreeProvider
 
         let routerLabel = displayPrefix !== "/" ? displayPrefix : ""
         if (!routerLabel) {
+          // Fallback: use tag, then filename
           if (element.router.tags.length > 0) {
-            // Add / prefix to tag-based labels for consistency
             routerLabel = `/${element.router.tags[0]}`
           } else {
-            // Use filename as label (e.g., "api_routes" from "routes/api_routes.py")
-            const filePath = element.router.location.filePath
-            const fileName =
-              filePath.split("/").pop()?.replace(/\.py$/, "") ?? ""
-            routerLabel = fileName
+            const parts = element.router.location.filePath.split("/")
+            const fileName = parts.pop()?.replace(/\.py$/, "") ?? ""
+            // Use parent directory for generic filenames
+            if (fileName === "router" || fileName === "routes") {
+              routerLabel = parts.pop() ?? fileName
+            } else {
+              routerLabel = fileName
+            }
           }
         }
         const routerItem = new TreeItem(
@@ -369,23 +371,9 @@ export class EndpointTreeProvider
       }
 
       case "route": {
-        // Strip leading dynamic segments for cleaner display
-        const strippedPath = stripLeadingDynamicSegments(element.route.path)
-
-        // Find parent router to show relative path
-        const parentRouter = this.findParentRouterForRoute(element.route)
-        const parentPrefix = parentRouter
-          ? stripLeadingDynamicSegments(parentRouter.prefix)
-          : "/"
-        let displayPath = this.getRelativePath(strippedPath, parentPrefix)
-
-        // Ensure path starts with / and doesn't end with / (unless it's just "/")
-        if (!displayPath.startsWith("/")) {
-          displayPath = `/${displayPath}`
-        }
-        if (displayPath.length > 1 && displayPath.endsWith("/")) {
-          displayPath = displayPath.slice(0, -1)
-        }
+        // Only strip leading dynamic segments (like {settings.API_V1_STR})
+        // Keep the full path otherwise for clarity
+        const displayPath = stripLeadingDynamicSegments(element.route.path)
 
         const label =
           element.route.method === "WEBSOCKET"

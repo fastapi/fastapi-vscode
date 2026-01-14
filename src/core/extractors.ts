@@ -333,12 +333,20 @@ export function includeRouterExtractor(node: Node): IncludeRouterInfo | null {
   const router = routerArg ? routerArg.text : ""
 
   let prefix = ""
+  const tags: string[] = []
   for (const argNode of argumentsNode.namedChildren) {
     if (argNode.type === "keyword_argument") {
       const nameNode = argNode.childForFieldName("name")
       const valueNode = argNode.childForFieldName("value")
       if (nameNode?.text === "prefix" && valueNode) {
         prefix = extractPathFromNode(valueNode)
+      } else if (nameNode?.text === "tags" && valueNode?.type === "list") {
+        for (const elem of valueNode.namedChildren) {
+          const tagValue = extractStringValue(elem)
+          if (tagValue !== null) {
+            tags.push(tagValue)
+          }
+        }
       }
     }
   }
@@ -347,6 +355,7 @@ export function includeRouterExtractor(node: Node): IncludeRouterInfo | null {
     object: objectNode.text,
     router,
     prefix,
+    tags,
   }
 }
 

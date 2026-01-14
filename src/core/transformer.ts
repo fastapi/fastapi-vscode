@@ -107,7 +107,7 @@ function buildPrefixHierarchy(
     const strippedPrefix = stripLeadingDynamicSegments(router.prefix)
     const segmentCount = countSegments(strippedPrefix)
 
-    // Skip routers with no meaningful prefix (root level)
+    // Handle routers with no meaningful prefix
     if (segmentCount === 0) {
       rootRouters.push(router)
       prefixToRouter.set(strippedPrefix, router)
@@ -147,30 +147,53 @@ function buildPrefixHierarchy(
       let groupRouter = prefixToRouter.get(groupPrefix)
 
       if (!groupRouter) {
-        // Check if there are other routers that would be siblings under this group
-        const wouldHaveSiblings = sorted.some((other) => {
-          if (other === router) return false
-          const otherPrefix = stripLeadingDynamicSegments(other.prefix)
-          const otherSegments = countSegments(otherPrefix)
+        // Check if there's a root-level router with matching tag that should be the parent
+        const matchingRootRouter = rootRouters.find((r) => {
+          if (r === router) return false
+          // Router has no prefix but has a tag matching this group
+          const rPrefix = stripLeadingDynamicSegments(r.prefix)
           return (
-            otherSegments >= 2 &&
-            getPathSegments(otherPrefix, 1) === groupPrefix &&
-            otherPrefix !== strippedPrefix
+            countSegments(rPrefix) === 0 &&
+            r.tags.length > 0 &&
+            `/${r.tags[0]}` === groupPrefix
           )
         })
 
-        if (wouldHaveSiblings) {
-          // Create a synthetic group router
-          groupRouter = {
-            name: groupPrefix.replace(/^\//, ""),
-            prefix: groupPrefix,
-            tags: [],
-            location: router.location,
-            routes: [],
-            children: [],
+        if (matchingRootRouter) {
+          // Use this router as the group parent
+          groupRouter = matchingRootRouter
+          // Remove from root and re-register under the group prefix
+          const idx = rootRouters.indexOf(matchingRootRouter)
+          if (idx !== -1) rootRouters.splice(idx, 1)
+          matchingRootRouter.prefix = groupPrefix
+          prefixToRouter.set(groupPrefix, matchingRootRouter)
+          rootRouters.push(matchingRootRouter)
+        } else {
+          // Check if there are other routers that would be siblings under this group
+          const wouldHaveSiblings = sorted.some((other) => {
+            if (other === router) return false
+            const otherPrefix = stripLeadingDynamicSegments(other.prefix)
+            const otherSegments = countSegments(otherPrefix)
+            return (
+              otherSegments >= 2 &&
+              getPathSegments(otherPrefix, 1) === groupPrefix &&
+              otherPrefix !== strippedPrefix
+            )
+          })
+
+          if (wouldHaveSiblings) {
+            // Create a synthetic group router
+            groupRouter = {
+              name: groupPrefix.replace(/^\//, ""),
+              prefix: groupPrefix,
+              tags: [],
+              location: router.location,
+              routes: [],
+              children: [],
+            }
+            prefixToRouter.set(groupPrefix, groupRouter)
+            rootRouters.push(groupRouter)
           }
-          prefixToRouter.set(groupPrefix, groupRouter)
-          rootRouters.push(groupRouter)
         }
       }
 

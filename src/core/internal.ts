@@ -69,6 +69,7 @@ export interface IncludeRouterInfo {
   object: string
   router: string
   prefix: string
+  tags: string[]
 }
 
 export interface MountInfo {
@@ -101,5 +102,5 @@ export interface RouterNode {
     line: number
     column: number
   }[]
-  children: { router: RouterNode; prefix: string }[]
+  children: { router: RouterNode; prefix: string; tags: string[] }[]
 }
