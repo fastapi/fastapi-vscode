@@ -91,11 +91,11 @@ function findParentRouter(
 function buildPrefixHierarchy(
   flatRouters: RouterDefinition[],
 ): RouterDefinition[] {
-  // Sort by prefix length (shortest first) to process parents before children
+  // Sort by segment count (fewest first) to process parents before children
   const sorted = [...flatRouters].sort((a, b) => {
-    const prefixA = stripLeadingDynamicSegments(a.prefix)
-    const prefixB = stripLeadingDynamicSegments(b.prefix)
-    return prefixA.length - prefixB.length
+    const segmentsA = countSegments(stripLeadingDynamicSegments(a.prefix))
+    const segmentsB = countSegments(stripLeadingDynamicSegments(b.prefix))
+    return segmentsA - segmentsB
   })
 
   // Build a map of prefix -> router for grouping

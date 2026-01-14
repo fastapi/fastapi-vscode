@@ -94,30 +94,26 @@ function extractPathFromNode(node: Node): string {
   }
 }
 
+/**
+ * Extracts from route decorators like @app.get("/path"), @router.post("/path"), etc.
+ */
 export function decoratorExtractor(node: Node): RouteInfo | null {
   if (node.type !== "decorated_definition") {
     return null
   }
 
   const decoratorNode = node.firstNamedChild
-  const callNodes = decoratorNode ? findNodesByType(decoratorNode, "call") : []
-  const callNode = callNodes.length > 0 ? callNodes[0] : null
-
-  if (!callNode) {
+  if (!decoratorNode) {
     return null
   }
 
-  const functionNameNode = callNode.childForFieldName("function")
-  const argumentsNode = callNode.childForFieldName("arguments")
+  const callNode = findNodesByType(decoratorNode, "call")[0]
+  const functionNode = callNode?.childForFieldName("function")
+  const argumentsNode = callNode?.childForFieldName("arguments")
+  const objectNode = functionNode?.childForFieldName("object")
+  const methodNode = functionNode?.childForFieldName("attribute")
 
-  if (!functionNameNode || !argumentsNode) {
-    return null
-  }
-
-  const objectNode = functionNameNode.childForFieldName("object")
-  const methodNode = functionNameNode.childForFieldName("attribute")
-
-  if (!objectNode || !methodNode) {
+  if (!objectNode || !methodNode || !argumentsNode) {
     return null
   }
 
@@ -172,6 +168,18 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
   }
 }
 
+/** Extracts tags from a list node like ["users", "admin"] */
+function extractTags(listNode: Node): string[] {
+  const tags: string[] = []
+  for (const elem of listNode.namedChildren) {
+    const tagValue = extractStringValue(elem)
+    if (tagValue !== null) {
+      tags.push(tagValue)
+    }
+  }
+  return tags
+}
+
 export function routerExtractor(node: Node): RouterInfo | null {
   if (node.type !== "assignment") {
     return null
@@ -179,58 +187,47 @@ export function routerExtractor(node: Node): RouterInfo | null {
 
   const variableNameNode = node.childForFieldName("left")
   const valueNode = node.childForFieldName("right")
-
-  if (!variableNameNode || !valueNode) {
+  if (!variableNameNode || valueNode?.type !== "call") {
     return null
   }
 
-  const variableName = variableNameNode.text
+  const funcName = valueNode.childForFieldName("function")?.text
+  const type: RouterType =
+    funcName === "APIRouter" || funcName === "fastapi.APIRouter"
+      ? "APIRouter"
+      : funcName === "FastAPI" || funcName === "fastapi.FastAPI"
+        ? "FastAPI"
+        : "Unknown"
 
-  let type: RouterType = "Unknown"
+  if (type === "Unknown") {
+    return null
+  }
 
-  if (valueNode.type === "call") {
-    const functionNameNode = valueNode.childForFieldName("function")
-    const funcName = functionNameNode?.text
-    if (funcName === "APIRouter" || funcName === "fastapi.APIRouter") {
-      type = "APIRouter"
-    } else if (funcName === "FastAPI" || funcName === "fastapi.FastAPI") {
-      type = "FastAPI"
+  let prefix = ""
+  let tags: string[] = []
+  const argumentsNode = valueNode.childForFieldName("arguments")
+  for (const child of argumentsNode?.namedChildren ?? []) {
+    if (child.type !== "keyword_argument") {
+      continue
     }
+    const argName = child.childForFieldName("name")?.text
+    const argValue = child.childForFieldName("value")
 
-    let prefix = ""
-    const tags: string[] = []
-    const argumentsNode = valueNode.childForFieldName("arguments")
-    if (argumentsNode) {
-      for (const child of argumentsNode.namedChildren) {
-        if (child.type !== "keyword_argument") continue
-        const argName = child.childForFieldName("name")?.text
-        const argValue = child.childForFieldName("value")
-
-        if (argName === "prefix" && argValue) {
-          prefix = extractPathFromNode(argValue)
-        } else if (argName === "tags" && argValue?.type === "list") {
-          for (const elem of argValue.namedChildren) {
-            const tagValue = extractStringValue(elem)
-            if (tagValue !== null) {
-              tags.push(tagValue)
-            }
-          }
-        }
-      }
-    }
-    if (type !== "Unknown") {
-      return {
-        variableName,
-        type,
-        prefix,
-        tags,
-        line: node.startPosition.row + 1,
-        column: node.startPosition.column,
-      }
+    if (argName === "prefix" && argValue) {
+      prefix = extractPathFromNode(argValue)
+    } else if (argName === "tags" && argValue?.type === "list") {
+      tags = extractTags(argValue)
     }
   }
 
-  return null
+  return {
+    variableName: variableNameNode.text,
+    type,
+    prefix,
+    tags,
+    line: node.startPosition.row + 1,
+    column: node.startPosition.column,
+  }
 }
 
 export function importExtractor(node: Node): ImportInfo | null {
@@ -308,98 +305,73 @@ export function importExtractor(node: Node): ImportInfo | null {
   return { modulePath, names, namedImports, isRelative, relativeDots }
 }
 
-export function includeRouterExtractor(node: Node): IncludeRouterInfo | null {
+/** Extracts method call info: object.method(args) */
+function extractMethodCall(
+  node: Node,
+  methodName: string,
+): { object: string; args: Node[] } | null {
   if (node.type !== "call") {
     return null
   }
 
-  const functionNameNode = node.childForFieldName("function")
-  if (!functionNameNode || functionNameNode.type !== "attribute") {
+  const functionNode = node.childForFieldName("function")
+  if (functionNode?.type !== "attribute") {
     return null
   }
 
-  const objectNode = functionNameNode.childForFieldName("object")
-  const methodNode = functionNameNode.childForFieldName("attribute")
-  if (!objectNode || !methodNode || methodNode.text !== "include_router") {
+  const objectNode = functionNode.childForFieldName("object")
+  const methodNode = functionNode.childForFieldName("attribute")
+  if (!objectNode || methodNode?.text !== methodName) {
     return null
   }
 
   const argumentsNode = node.childForFieldName("arguments")
-  if (!argumentsNode) {
+  const args =
+    argumentsNode?.namedChildren.filter((c) => c.type !== "comment") ?? []
+
+  return { object: objectNode.text, args }
+}
+
+export function includeRouterExtractor(node: Node): IncludeRouterInfo | null {
+  const call = extractMethodCall(node, "include_router")
+  if (!call) {
     return null
   }
 
-  const routerArg = argumentsNode.namedChildren[0]
-  const router = routerArg ? routerArg.text : ""
-
   let prefix = ""
-  const tags: string[] = []
-  for (const argNode of argumentsNode.namedChildren) {
-    if (argNode.type === "keyword_argument") {
-      const nameNode = argNode.childForFieldName("name")
-      const valueNode = argNode.childForFieldName("value")
-      if (nameNode?.text === "prefix" && valueNode) {
-        prefix = extractPathFromNode(valueNode)
-      } else if (nameNode?.text === "tags" && valueNode?.type === "list") {
-        for (const elem of valueNode.namedChildren) {
-          const tagValue = extractStringValue(elem)
-          if (tagValue !== null) {
-            tags.push(tagValue)
-          }
-        }
-      }
+  let tags: string[] = []
+  for (const arg of call.args) {
+    if (arg.type !== "keyword_argument") {
+      continue
+    }
+    const name = arg.childForFieldName("name")?.text
+    const value = arg.childForFieldName("value")
+
+    if (name === "prefix" && value) {
+      prefix = extractPathFromNode(value)
+    } else if (name === "tags" && value?.type === "list") {
+      tags = extractTags(value)
     }
   }
 
   return {
-    object: objectNode.text,
-    router,
+    object: call.object,
+    router: call.args[0]?.text ?? "",
     prefix,
     tags,
   }
 }
 
-/**
- * Extracts mount() calls for subapps.
- * Pattern: app.mount("/path", subapp)
- */
+/** Extracts mount() calls for subapps: app.mount("/path", subapp) */
 export function mountExtractor(node: Node): MountInfo | null {
-  if (node.type !== "call") {
-    return null
-  }
-
-  const functionNameNode = node.childForFieldName("function")
-  if (!functionNameNode || functionNameNode.type !== "attribute") {
-    return null
-  }
-
-  const objectNode = functionNameNode.childForFieldName("object")
-  const methodNode = functionNameNode.childForFieldName("attribute")
-  if (!objectNode || !methodNode || methodNode.text !== "mount") {
-    return null
-  }
-
-  const argumentsNode = node.childForFieldName("arguments")
-  if (!argumentsNode) {
-    return null
-  }
-
-  // Skip comment nodes to find actual arguments
-  const args = argumentsNode.namedChildren.filter(
-    (child) => child.type !== "comment",
-  )
-
-  // First arg is path, second is app
-  const pathArg = args[0]
-  const appArg = args[1]
-
-  if (!pathArg || !appArg) {
+  const call = extractMethodCall(node, "mount")
+  if (!call || call.args.length < 2) {
     return null
   }
 
   return {
-    object: objectNode.text,
-    path: extractPathFromNode(pathArg),
-    app: appArg.text,
+    object: call.object,
+    path: extractPathFromNode(call.args[0]),
+    app: call.args[1].text,
   }
 }
