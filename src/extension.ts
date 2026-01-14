@@ -112,7 +112,9 @@ export async function activate(context: vscode.ExtensionContext) {
       clearTimeout(refreshTimeout)
     }
     refreshTimeout = setTimeout(async () => {
-      if (!parserService) return
+      if (!parserService) {
+        return
+      }
       const newApps = await discoverFastAPIApps(parserService)
       endpointProvider.setApps(newApps)
       codeLensProvider.setApps(newApps)
@@ -135,7 +137,9 @@ export async function activate(context: vscode.ExtensionContext) {
   if (config.get<boolean>("showTestCodeLenses", true)) {
     context.subscriptions.push(
       vscode.languages.registerCodeLensProvider(
-        { language: "python", pattern: "**/test*.py" },
+        // Covers common test file patterns
+        // e.g., test_*.py, *_test.py, tests/*.py
+        { language: "python", pattern: "**/*test*.py" },
         codeLensProvider,
       ),
     )
