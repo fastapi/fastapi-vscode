@@ -36,6 +36,11 @@
       {
         "command": "fastapi-vscode.copyRouterPrefix",
         "title": "Copy Prefix"
+      },
+      {
+        "command": "fastapi-vscode.reportIssue",
+        "title": "Report Issue...",
+        "category": "FastAPI"
       }
     ],
     "menus": {

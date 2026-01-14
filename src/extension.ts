@@ -73,6 +73,14 @@ export function activate(context: vscode.ExtensionContext) {
         }
       },
     ),
+
+    vscode.commands.registerCommand("fastapi-vscode.reportIssue", () => {
+      vscode.env.openExternal(
+        vscode.Uri.parse(
+          "https://github.com/fastapi/fastapi-vscode/issues/new?labels=bug",
+        ),
+      )
+    }),
   )
 }
 
