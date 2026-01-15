@@ -146,6 +146,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "toml": "^3.0.0",
     "web-tree-sitter": "^0.26.3"
   },
   "lint-staged": {
