@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs"
 import { isAbsolute, join } from "node:path"
+import { log } from "../utils/logger"
 import { analyzeFile } from "./analyzer"
 import { resolveNamedImport, resolveRouterFromInit } from "./importResolver"
 import type { FileAnalysis, RouterInfo, RouterNode } from "./internal"
@@ -62,10 +63,12 @@ function buildRouterGraphInternal(
   }
 
   if (!existsSync(resolvedEntryFile)) {
+    log(`File not found: "${entryFile}"`)
     return null
   }
   // Prevent infinite recursion on circular imports
   if (visited.has(resolvedEntryFile)) {
+    log(`Skipping already visited file: "${resolvedEntryFile}"`)
     return null
   }
 
@@ -74,8 +77,13 @@ function buildRouterGraphInternal(
   // Analyze the entry file
   let analysis = analyzeFile(resolvedEntryFile, parser)
   if (!analysis) {
+    log(`Failed to analyze file: "${resolvedEntryFile}"`)
     return null
   }
+
+  log(
+    `Analyzed "${resolvedEntryFile}": ${analysis.routes.length} routes, ${analysis.routers.length} routers, ${analysis.includeRouters.length} include_router calls`,
+  )
 
   // Find FastAPI instantiation (filter by targetVariable if specified)
   let appRouter = findAppRouter(analysis.routers, targetVariable)
@@ -130,6 +138,9 @@ function buildRouterGraphInternal(
 
   // Process include_router calls to find child routers
   for (const include of analysis.includeRouters) {
+    log(
+      `Resolving include_router: ${include.router} (prefix: ${include.prefix || "none"})`,
+    )
     const childRouter = resolveRouterReference(
       include.router,
       analysis,
@@ -220,6 +231,7 @@ function resolveRouterReference(
   )
 
   if (!matchingImport) {
+    log(`No import found for router reference: ${reference}`)
     return null
   }
 
@@ -236,6 +248,7 @@ function resolveRouterReference(
   )
 
   if (!importedFilePath) {
+    log(`Could not resolve import: ${matchingImport.modulePath}`)
     return null
   }
 

@@ -4,6 +4,7 @@
 
 import { readFileSync } from "node:fs"
 import type { Tree } from "web-tree-sitter"
+import { logError } from "../utils/logger"
 import {
   decoratorExtractor,
   findNodesByType,
@@ -55,10 +56,12 @@ export function analyzeFile(
     const code = readFileSync(filePath, "utf-8")
     const tree = parser.parse(code)
     if (!tree) {
+      logError(`Failed to parse file: "${filePath}"`)
       return null
     }
     return analyzeTree(tree, filePath)
-  } catch {
+  } catch (error) {
+    logError(`Error reading file: "${filePath}"`, error)
     return null
   }
 }
