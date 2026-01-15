@@ -104,6 +104,7 @@ export async function discoverFastAPIApps(
 
     let candidates: EntryPoint[]
 
+    // If user specified an entry point in settings, use that
     if (customEntryPoint) {
       const entryPath = isAbsolute(customEntryPoint)
         ? customEntryPoint
@@ -118,6 +119,7 @@ export async function discoverFastAPIApps(
 
       candidates = [{ filePath: entryPath }]
     } else {
+      // Otherwise, check pyproject.toml or auto-detect
       const pyprojectEntry = await parsePyprojectForEntryPoint(
         folder.uri.fsPath,
       )
@@ -126,6 +128,14 @@ export async function discoverFastAPIApps(
         : (await automaticDetectEntryPoints(folder.uri.fsPath)).map(
             (filePath) => ({ filePath }),
           )
+
+      // If no candidates found, try the active editor as a last resort
+      if (candidates.length === 0) {
+        const activeEditor = vscode.window.activeTextEditor
+        if (activeEditor?.document.languageId === "python") {
+          candidates = [{ filePath: activeEditor.document.uri.fsPath }]
+        }
+      }
     }
 
     for (const candidate of candidates) {
