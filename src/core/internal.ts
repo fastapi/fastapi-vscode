@@ -102,3 +102,8 @@ export interface RouterNode {
   }[]
   children: { router: RouterNode; prefix: string; tags: string[] }[]
 }
+
+export interface EntryPoint {
+  filePath: string
+  variableName?: string
+}

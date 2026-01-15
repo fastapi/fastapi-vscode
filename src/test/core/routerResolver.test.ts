@@ -239,5 +239,47 @@ suite("routerResolver", () => {
         "Router should have /items route",
       )
     })
+
+    test("selects specific app by targetVariable", () => {
+      // Without targetVariable, should pick first FastAPI app (public_app)
+      const defaultResult = buildRouterGraph(
+        fixtures.multiApp.mainPy,
+        parser,
+        fixtures.multiApp.root,
+      )
+
+      assert.ok(defaultResult)
+      assert.strictEqual(defaultResult.variableName, "public_app")
+
+      // With targetVariable, should select admin_app
+      const adminResult = buildRouterGraph(
+        fixtures.multiApp.mainPy,
+        parser,
+        fixtures.multiApp.root,
+        "admin_app",
+      )
+
+      assert.ok(adminResult)
+      assert.strictEqual(adminResult.variableName, "admin_app")
+      assert.strictEqual(adminResult.type, "FastAPI")
+
+      // admin_app has 3 routes: /, /users, /users/{user_id}
+      assert.strictEqual(adminResult.routes.length, 3)
+      const routePaths = adminResult.routes.map((r) => r.path)
+      assert.ok(routePaths.includes("/"))
+      assert.ok(routePaths.includes("/users"))
+      assert.ok(routePaths.includes("/users/{user_id}"))
+    })
+
+    test("returns null for non-existent targetVariable", () => {
+      const result = buildRouterGraph(
+        fixtures.multiApp.mainPy,
+        parser,
+        fixtures.multiApp.root,
+        "nonexistent_app",
+      )
+
+      assert.strictEqual(result, null)
+    })
   })
 })

@@ -129,7 +129,7 @@
     "package": "vsce package",
     "publish:marketplace": "vsce publish",
     "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/",
-    "test": "vscode-test",
+    "test": "bun run compile && vscode-test",
     "prepare": "husky"
   },
   "devDependencies": {
