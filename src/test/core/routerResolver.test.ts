@@ -1,4 +1,5 @@
 import * as assert from "node:assert"
+import * as vscode from "vscode"
 import { Parser } from "../../core/parser"
 import { buildRouterGraph } from "../../core/routerResolver"
 import { fixtures, fixturesPath, wasmPaths } from "../testUtils"
@@ -16,8 +17,8 @@ suite("routerResolver", () => {
   })
 
   suite("buildRouterGraph", () => {
-    test("builds graph from main.py entry point", () => {
-      const result = buildRouterGraph(
+    test("builds graph from main.py entry point", async () => {
+      const result = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
@@ -26,11 +27,11 @@ suite("routerResolver", () => {
       assert.ok(result)
       assert.strictEqual(result.type, "FastAPI")
       assert.strictEqual(result.variableName, "app")
-      assert.strictEqual(result.filePath, fixtures.standard.mainPy)
+      assert.strictEqual(result.filePath, fixtures.standard.mainPy.fsPath)
     })
 
-    test("includes direct routes on app", () => {
-      const result = buildRouterGraph(
+    test("includes direct routes on app", async () => {
+      const result = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
@@ -44,8 +45,8 @@ suite("routerResolver", () => {
       assert.strictEqual(healthRoute.function, "health")
     })
 
-    test("follows include_router to child routers", () => {
-      const result = buildRouterGraph(
+    test("follows include_router to child routers", async () => {
+      const result = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
@@ -59,8 +60,8 @@ suite("routerResolver", () => {
       )
     })
 
-    test("captures prefix from router definition", () => {
-      const result = buildRouterGraph(
+    test("captures prefix from router definition", async () => {
+      const result = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
@@ -74,17 +75,17 @@ suite("routerResolver", () => {
       assert.ok(usersChild, "Should have child with /users prefix")
     })
 
-    test("returns null for non-existent file", () => {
-      const result = buildRouterGraph(
-        "/nonexistent/file.py",
+    test("returns null for non-existent file", async () => {
+      const result = await buildRouterGraph(
+        vscode.Uri.file("/nonexistent/file.py"),
         parser,
-        fixturesPath,
+        vscode.Uri.file(fixturesPath),
       )
       assert.strictEqual(result, null)
     })
 
-    test("returns null for file without FastAPI/APIRouter", () => {
-      const result = buildRouterGraph(
+    test("returns null for file without FastAPI/APIRouter", async () => {
+      const result = await buildRouterGraph(
         fixtures.standard.initPy,
         parser,
         fixtures.standard.root,
@@ -94,8 +95,8 @@ suite("routerResolver", () => {
       assert.strictEqual(result, null)
     })
 
-    test("builds graph from APIRouter file", () => {
-      const result = buildRouterGraph(
+    test("builds graph from APIRouter file", async () => {
+      const result = await buildRouterGraph(
         fixtures.standard.usersPy,
         parser,
         fixtures.standard.root,
@@ -109,8 +110,8 @@ suite("routerResolver", () => {
       assert.ok(result.routes.length >= 3)
     })
 
-    test("includes line numbers for routes", () => {
-      const result = buildRouterGraph(
+    test("includes line numbers for routes", async () => {
+      const result = await buildRouterGraph(
         fixtures.standard.usersPy,
         parser,
         fixtures.standard.root,
@@ -123,22 +124,22 @@ suite("routerResolver", () => {
       }
     })
 
-    test("includes router location info", () => {
-      const result = buildRouterGraph(
+    test("includes router location info", async () => {
+      const result = await buildRouterGraph(
         fixtures.standard.usersPy,
         parser,
         fixtures.standard.root,
       )
 
       assert.ok(result)
-      assert.strictEqual(result.filePath, fixtures.standard.usersPy)
+      assert.strictEqual(result.filePath, fixtures.standard.usersPy.fsPath)
       assert.ok(result.line > 0)
       assert.ok(result.column >= 0)
     })
 
-    test("follows __init__.py re-exports to actual router file", () => {
+    test("follows __init__.py re-exports to actual router file", async () => {
       // Use reexport fixture which has integrations/__init__.py re-exporting from router.py
-      const result = buildRouterGraph(
+      const result = await buildRouterGraph(
         fixtures.reexport.initPy,
         parser,
         fixtures.reexport.root,
@@ -160,8 +161,8 @@ suite("routerResolver", () => {
       assert.ok(githubRoute, "Should find github route")
     })
 
-    test("includes router when following include_router chain", () => {
-      const result = buildRouterGraph(
+    test("includes router when following include_router chain", async () => {
+      const result = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
@@ -185,8 +186,8 @@ suite("routerResolver", () => {
       )
     })
 
-    test("prioritizes FastAPI over APIRouter in same file", () => {
-      const result = buildRouterGraph(
+    test("prioritizes FastAPI over APIRouter in same file", async () => {
+      const result = await buildRouterGraph(
         fixtures.sameFile.mainPy,
         parser,
         fixtures.sameFile.root,
@@ -197,8 +198,8 @@ suite("routerResolver", () => {
       assert.strictEqual(result.variableName, "app")
     })
 
-    test("assigns routes to correct owner in same file", () => {
-      const result = buildRouterGraph(
+    test("assigns routes to correct owner in same file", async () => {
+      const result = await buildRouterGraph(
         fixtures.sameFile.mainPy,
         parser,
         fixtures.sameFile.root,
@@ -214,8 +215,8 @@ suite("routerResolver", () => {
       )
     })
 
-    test("resolves local router as child in same file", () => {
-      const result = buildRouterGraph(
+    test("resolves local router as child in same file", async () => {
+      const result = await buildRouterGraph(
         fixtures.sameFile.mainPy,
         parser,
         fixtures.sameFile.root,

@@ -2,24 +2,35 @@
  * Parser service using Web Tree Sitter to parse Python code.
  */
 
-import { readFileSync } from "node:fs"
+import * as vscode from "vscode"
 import { Language, Parser as TreeSitterParser } from "web-tree-sitter"
 
 export class Parser {
   private parser: TreeSitterParser | null = null
-  async init(wasmPaths: { core: string; python: string }) {
+  async init(wasmPaths: { core: vscode.Uri; python: vscode.Uri }) {
     if (this.parser) {
       return
     }
 
-    const wasmBinary = readFileSync(wasmPaths.core)
-    await TreeSitterParser.init({ wasmBinary })
+    // Read WASM files via VS Code's virtual filesystem API
+    const [wasmBinary, pythonWasmBinary] = await Promise.all([
+      vscode.workspace.fs.readFile(wasmPaths.core),
+      vscode.workspace.fs.readFile(wasmPaths.python),
+    ])
 
-    this.parser = new TreeSitterParser()
+    // Initialize tree-sitter with the core WASM binary
+    await TreeSitterParser.init({
+      locateFile: () => wasmPaths.core.toString(),
+      wasmBinary,
+    })
 
-    const pythonWasmBinary = readFileSync(wasmPaths.python)
-    const pythonLanguage = await Language.load(pythonWasmBinary)
-    this.parser.setLanguage(pythonLanguage)
+    const parser = new TreeSitterParser()
+
+    // Load Python language from WASM binary
+    const pythonLanguage = await Language.load(new Uint8Array(pythonWasmBinary))
+    parser.setLanguage(pythonLanguage)
+
+    this.parser = parser
   }
 
   parse(code: string) {

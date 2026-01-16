@@ -2,7 +2,7 @@
  * Analyzer module to extract FastAPI-related information from syntax trees.
  */
 
-import { readFileSync } from "node:fs"
+import * as vscode from "vscode"
 import type { Tree } from "web-tree-sitter"
 import { logError } from "../utils/logger"
 import {
@@ -47,21 +47,22 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
   return { filePath, routes, routers, includeRouters, mounts, imports }
 }
 
-/** Analyze a file given its path and a parser instance */
-export function analyzeFile(
-  filePath: string,
+/** Analyze a file given its URI and a parser instance */
+export async function analyzeFile(
+  fileUri: vscode.Uri,
   parser: Parser,
-): FileAnalysis | null {
+): Promise<FileAnalysis | null> {
   try {
-    const code = readFileSync(filePath, "utf-8")
+    const content = await vscode.workspace.fs.readFile(fileUri)
+    const code = new TextDecoder().decode(content)
     const tree = parser.parse(code)
     if (!tree) {
-      logError(`Failed to parse file: "${filePath}"`)
+      logError(`Failed to parse file: "${fileUri.fsPath}"`)
       return null
     }
-    return analyzeTree(tree, filePath)
+    return analyzeTree(tree, fileUri.fsPath)
   } catch (error) {
-    logError(`Error reading file: "${filePath}"`, error)
+    logError(`Error reading file: "${fileUri.fsPath}"`, error)
     return null
   }
 }

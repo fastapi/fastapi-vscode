@@ -1,5 +1,4 @@
-import { existsSync } from "node:fs"
-import { dirname, join, relative, sep } from "node:path"
+import * as vscode from "vscode"
 
 /**
  * Strips leading dynamic segments (like {settings.API_V1_STR}) from a path.
@@ -15,13 +14,42 @@ export function stripLeadingDynamicSegments(path: string): string {
 }
 
 /**
- * Checks if a path is within or equal to a base directory.
- * Uses relative path calculation to avoid false positives from string prefix matching.
+ * Gets the directory (parent) of a URI.
+ * Equivalent to path.dirname() but works with URIs in all environments.
  */
-export function isWithinDirectory(filePath: string, baseDir: string): boolean {
-  const rel = relative(baseDir, filePath)
-  // If relative path starts with "..", the path is outside baseDir
-  return !rel.startsWith("..") && !rel.startsWith(sep)
+export function uriDirname(uri: vscode.Uri): vscode.Uri {
+  const path = uri.path
+  const lastSlash = path.lastIndexOf("/")
+  if (lastSlash <= 0) {
+    return uri.with({ path: "/" })
+  }
+  return uri.with({ path: path.slice(0, lastSlash) })
+}
+
+/**
+ * Checks if a URI is within or equal to a base directory URI.
+ * Uses URI path comparison to work across all platforms.
+ */
+export function isWithinDirectory(
+  fileUri: vscode.Uri,
+  baseDirUri: vscode.Uri,
+): boolean {
+  const normalizedFile = fileUri.path.replace(/\/+$/, "") || "/"
+  const normalizedBase = baseDirUri.path.replace(/\/+$/, "") || "/"
+
+  if (normalizedFile === normalizedBase) {
+    return true
+  }
+  return normalizedFile.startsWith(`${normalizedBase}/`)
+}
+
+export async function fileExists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -29,27 +57,30 @@ export function isWithinDirectory(filePath: string, baseDir: string): boolean {
  * until we find a directory without __init__.py (or hit the workspace root).
  * This is the directory from which absolute imports are resolved.
  */
-export function findProjectRoot(
-  entryPath: string,
-  workspaceRoot: string,
-): string {
-  let dir = dirname(entryPath)
+export async function findProjectRoot(
+  entryUri: vscode.Uri,
+  workspaceRootUri: vscode.Uri,
+): Promise<vscode.Uri> {
+  let dirUri = uriDirname(entryUri)
 
   // If the entry file's directory doesn't have __init__.py, it's a top-level script
-  if (!existsSync(join(dir, "__init__.py"))) {
-    return dir
+  if (!(await fileExists(vscode.Uri.joinPath(dirUri, "__init__.py")))) {
+    return dirUri
   }
 
   // Walk up until we find a directory whose parent doesn't have __init__.py
-  while (isWithinDirectory(dir, workspaceRoot) && dir !== workspaceRoot) {
-    const parent = dirname(dir)
-    if (!existsSync(join(parent, "__init__.py"))) {
-      return parent
+  while (
+    isWithinDirectory(dirUri, workspaceRootUri) &&
+    dirUri.path !== workspaceRootUri.path
+  ) {
+    const parentUri = uriDirname(dirUri)
+    if (!(await fileExists(vscode.Uri.joinPath(parentUri, "__init__.py")))) {
+      return parentUri
     }
-    dir = parent
+    dirUri = parentUri
   }
 
-  return workspaceRoot
+  return workspaceRootUri
 }
 
 /**

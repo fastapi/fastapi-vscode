@@ -11,25 +11,32 @@
  * 3. module/ without __init__.py (namespace package)
  */
 
-import { existsSync } from "node:fs"
-import { dirname, join } from "node:path"
+import * as vscode from "vscode"
 import { analyzeFile } from "./analyzer"
 import type { ImportInfo } from "./internal"
 import type { Parser } from "./parser"
+import { uriDirname } from "./pathUtils"
 
 /**
  * Cache for file existence checks to avoid repeated filesystem calls.
- * Maps file path -> exists (true/false).
+ * Maps URI string -> exists (true/false).
  */
 const fileExistsCache = new Map<string, boolean>()
 
-function cachedExistsSync(path: string): boolean {
-  if (fileExistsCache.has(path)) {
-    return fileExistsCache.get(path)!
+async function cachedExists(uri: vscode.Uri): Promise<boolean> {
+  const key = uri.toString()
+  const cached = fileExistsCache.get(key)
+  if (cached !== undefined) {
+    return cached
   }
-  const exists = existsSync(path)
-  fileExistsCache.set(path, exists)
-  return exists
+  try {
+    await vscode.workspace.fs.stat(uri)
+    fileExistsCache.set(key, true)
+    return true
+  } catch {
+    fileExistsCache.set(key, false)
+    return false
+  }
 }
 
 /** Clears the file existence cache. Call when files may have changed. */
@@ -42,14 +49,18 @@ export function clearImportCache(): void {
  * Checks for direct .py file first, then package __init__.py
  * (matching Python's import resolution order).
  */
-function resolvePythonModule(basePath: string): string | null {
-  const pyPath = `${basePath}.py`
-  if (cachedExistsSync(pyPath)) {
-    return pyPath
+async function resolvePythonModule(
+  baseUri: vscode.Uri,
+): Promise<vscode.Uri | null> {
+  // Try module.py
+  const pyUri = baseUri.with({ path: `${baseUri.path}.py` })
+  if (await cachedExists(pyUri)) {
+    return pyUri
   }
-  const initPath = join(basePath, "__init__.py")
-  if (cachedExistsSync(initPath)) {
-    return initPath
+  // Try module/__init__.py
+  const initUri = vscode.Uri.joinPath(baseUri, "__init__.py")
+  if (await cachedExists(initUri)) {
+    return initUri
   }
   return null
 }
@@ -67,7 +78,7 @@ function findImportByExportedName(
 }
 
 /**
- * Converts a Python module path to a filesystem directory path.
+ * Converts a Python module path to a filesystem directory URI.
  *
  * Examples (modulePath, relativeDots → result):
  *   Absolute: ("app.api.routes", 0) from projectRoot="/project" → "/project/app/api/routes"
@@ -76,28 +87,28 @@ function findImportByExportedName(
  */
 function modulePathToDir(
   importInfo: Pick<ImportInfo, "modulePath" | "isRelative" | "relativeDots">,
-  currentFilePath: string,
-  projectRoot: string,
-): string {
-  let baseDir: string
+  currentFileUri: vscode.Uri,
+  projectRootUri: vscode.Uri,
+): vscode.Uri {
+  let baseDirUri: vscode.Uri
   if (importInfo.isRelative) {
     // For relative imports, go up 'relativeDots' directories from current file
-    baseDir = dirname(currentFilePath)
+    baseDirUri = uriDirname(currentFileUri)
     for (let i = 1; i < importInfo.relativeDots; i++) {
-      baseDir = dirname(baseDir)
+      baseDirUri = uriDirname(baseDirUri)
     }
   } else {
-    baseDir = projectRoot
+    baseDirUri = projectRootUri
   }
 
   if (importInfo.modulePath) {
-    return join(baseDir, ...importInfo.modulePath.split("."))
+    return vscode.Uri.joinPath(baseDirUri, ...importInfo.modulePath.split("."))
   }
-  return baseDir
+  return baseDirUri
 }
 
 /**
- * Resolves a module import to its file path.
+ * Resolves a module import to its file URI.
  *
  * Examples:
  *   "from app.api import routes" → "/project/app/api/routes.py" or "/project/app/api/routes/__init__.py"
@@ -105,52 +116,64 @@ function modulePathToDir(
  *
  * Returns null if the module doesn't exist (may be a namespace package).
  */
-export function resolveImport(
+export async function resolveImport(
   importInfo: Pick<ImportInfo, "modulePath" | "isRelative" | "relativeDots">,
-  currentFilePath: string,
-  projectRoot: string,
-): string | null {
-  const resolvedPath = modulePathToDir(importInfo, currentFilePath, projectRoot)
-  return resolvePythonModule(resolvedPath)
+  currentFileUri: vscode.Uri,
+  projectRootUri: vscode.Uri,
+): Promise<vscode.Uri | null> {
+  const resolvedUri = modulePathToDir(
+    importInfo,
+    currentFileUri,
+    projectRootUri,
+  )
+  return resolvePythonModule(resolvedUri)
 }
 
 /**
- * Resolves a named import to its file path.
+ * Resolves a named import to its file URI.
  * For example, from .routes import users
  * will try to resolve to routes/users.py
  */
-export function resolveNamedImport(
+export async function resolveNamedImport(
   importInfo: Pick<
     ImportInfo,
     "modulePath" | "names" | "isRelative" | "relativeDots"
   >,
-  currentFilePath: string,
-  projectRoot: string,
+  currentFileUri: vscode.Uri,
+  projectRootUri: vscode.Uri,
   parser?: Parser,
-): string | null {
-  const basePath = resolveImport(importInfo, currentFilePath, projectRoot)
+): Promise<vscode.Uri | null> {
+  const baseUri = await resolveImport(
+    importInfo,
+    currentFileUri,
+    projectRootUri,
+  )
 
   // Calculate base directory for named import resolution.
-  // For namespace packages (directories without __init__.py), basePath will be null,
+  // For namespace packages (directories without __init__.py), baseUri will be null,
   // so we compute the directory path directly from the module path.
-  const baseDir = basePath
-    ? dirname(basePath)
-    : modulePathToDir(importInfo, currentFilePath, projectRoot)
+  const baseDirUri = baseUri
+    ? uriDirname(baseUri)
+    : modulePathToDir(importInfo, currentFileUri, projectRootUri)
 
   for (const name of importInfo.names) {
     // Try direct file: from .routes import users -> routes/users.py
-    const namedPath = join(baseDir, ...name.split("."))
-    const resolved = resolvePythonModule(namedPath)
+    const namedUri = vscode.Uri.joinPath(baseDirUri, ...name.split("."))
+    const resolved = await resolvePythonModule(namedUri)
     if (resolved) {
       return resolved
     }
 
     // Try re-exports: from .routes import users where routes/__init__.py re-exports users
-    if (basePath?.endsWith("__init__.py") && parser) {
-      const analysis = analyzeFile(basePath, parser)
+    if (baseUri?.path.endsWith("__init__.py") && parser) {
+      const analysis = await analyzeFile(baseUri, parser)
       const imp = analysis && findImportByExportedName(analysis.imports, name)
       if (imp) {
-        const reExportResolved = resolveImport(imp, basePath, projectRoot)
+        const reExportResolved = await resolveImport(
+          imp,
+          baseUri,
+          projectRootUri,
+        )
         if (reExportResolved) {
           return reExportResolved
         }
@@ -159,7 +182,7 @@ export function resolveNamedImport(
   }
 
   // Fall back to base module resolution
-  return basePath
+  return baseUri
 }
 
 /**
@@ -170,21 +193,21 @@ export function resolveNamedImport(
  *   from .router import router as router
  * This will return the path to integrations/router.py
  */
-export function resolveRouterFromInit(
-  initFilePath: string,
-  projectRoot: string,
+export async function resolveRouterFromInit(
+  initFileUri: vscode.Uri,
+  projectRootUri: vscode.Uri,
   parser: Parser,
-): string | null {
-  if (!initFilePath.endsWith("__init__.py")) {
+): Promise<vscode.Uri | null> {
+  if (!initFileUri.path.endsWith("__init__.py")) {
     return null
   }
 
-  const analysis = analyzeFile(initFilePath, parser)
+  const analysis = await analyzeFile(initFileUri, parser)
   // If file has routers defined, no need to follow re-exports
   if (!analysis || analysis.routers.length > 0) {
     return null
   }
 
   const imp = findImportByExportedName(analysis.imports, "router")
-  return imp ? resolveImport(imp, initFilePath, projectRoot) : null
+  return imp ? resolveImport(imp, initFileUri, projectRootUri) : null
 }

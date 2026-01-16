@@ -1,4 +1,5 @@
 import * as assert from "node:assert"
+import * as vscode from "vscode"
 import { analyzeFile, analyzeTree } from "../../core/analyzer"
 import { Parser } from "../../core/parser"
 import { fixtures, wasmPaths } from "../testUtils"
@@ -110,11 +111,11 @@ import os
   })
 
   suite("analyzeFile", () => {
-    test("analyzes main.py fixture", () => {
-      const result = analyzeFile(fixtures.standard.mainPy, parser)
+    test("analyzes main.py fixture", async () => {
+      const result = await analyzeFile(fixtures.standard.mainPy, parser)
 
       assert.ok(result)
-      assert.strictEqual(result.filePath, fixtures.standard.mainPy)
+      assert.strictEqual(result.filePath, fixtures.standard.mainPy.fsPath)
 
       // Should find FastAPI app
       const fastApiRouter = result.routers.find((r) => r.type === "FastAPI")
@@ -130,8 +131,8 @@ import os
       assert.strictEqual(healthRoute.method, "get")
     })
 
-    test("analyzes users.py fixture", () => {
-      const result = analyzeFile(fixtures.standard.usersPy, parser)
+    test("analyzes users.py fixture", async () => {
+      const result = await analyzeFile(fixtures.standard.usersPy, parser)
 
       assert.ok(result)
 
@@ -148,8 +149,11 @@ import os
       assert.ok(methods.includes("post"))
     })
 
-    test("returns null for non-existent file", () => {
-      const result = analyzeFile("/nonexistent/file.py", parser)
+    test("returns null for non-existent file", async () => {
+      const result = await analyzeFile(
+        vscode.Uri.file("/nonexistent/file.py"),
+        parser,
+      )
       assert.strictEqual(result, null)
     })
   })

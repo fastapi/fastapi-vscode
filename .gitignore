@@ -21,6 +21,7 @@ _.log
 # VS Code extension
 *.vsix
 .vscode-test
+.vscode-test-web
 
 /.agents/
 /.claude/

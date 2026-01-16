@@ -32,37 +32,57 @@ function copyWasmFiles() {
 async function main() {
   copyWasmFiles()
 
-  const entryPoints = ["src/extension.ts"]
-  if (!production) {
-    entryPoints.push(...globSync("src/test/**/*.test.ts"))
-  }
+  const testEntryPoints = !production ? globSync("src/test/**/*.test.ts") : []
 
-  const ctx = await esbuild.context({
-    entryPoints,
+  // Shared esbuild options
+  const sharedOptions = {
     bundle: true,
-    format: "cjs",
     minify: production,
     sourcemap: !production,
     sourcesContent: false,
-    platform: "node",
-    target: "node20",
     treeShaking: true,
-    outdir: "dist",
-    outbase: "src",
-    external: ["vscode", "web-tree-sitter"],
     logLevel: "info",
     define: {
       "process.env.NODE_ENV": production ? '"production"' : '"development"',
       __DIST_ROOT__: JSON.stringify(path.join(import.meta.dirname, "dist")),
     },
+  }
+
+  // Node build (desktop VS Code)
+  const nodeCtx = await esbuild.context({
+    ...sharedOptions,
+    entryPoints: ["src/extension.ts", ...testEntryPoints],
+    format: "cjs",
+    platform: "node",
+    target: "node20",
+    outdir: "dist",
+    outbase: "src",
+    external: ["vscode", "web-tree-sitter"],
+  })
+
+  // Browser build (vscode.dev)
+  const browserCtx = await esbuild.context({
+    ...sharedOptions,
+    entryPoints: ["src/extension.ts"],
+    format: "cjs",
+    platform: "browser",
+    target: "es2022",
+    outfile: "dist/web/extension.js",
+    // Polyfill/alias node modules for browser
+    alias: {
+      "node:path": "path-browserify",
+    },
+    // vscode is provided by the runtime; fs/promises and module are Node.js only
+    // (web-tree-sitter is bundled - it works in browsers)
+    external: ["vscode", "fs/promises", "module"],
   })
 
   if (watch) {
-    await ctx.watch()
+    await Promise.all([nodeCtx.watch(), browserCtx.watch()])
     console.log("Watching for changes...")
   } else {
-    await ctx.rebuild()
-    await ctx.dispose()
+    await Promise.all([nodeCtx.rebuild(), browserCtx.rebuild()])
+    await Promise.all([nodeCtx.dispose(), browserCtx.dispose()])
   }
 }
 

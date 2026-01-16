@@ -1,5 +1,5 @@
 import * as assert from "node:assert"
-import { join } from "node:path"
+import * as vscode from "vscode"
 import {
   countSegments,
   findProjectRoot,
@@ -115,53 +115,90 @@ suite("pathUtils", () => {
 
   suite("isWithinDirectory", () => {
     test("returns true for path inside directory", () => {
-      assert.strictEqual(isWithinDirectory("/foo/bar/baz", "/foo/bar"), true)
+      assert.strictEqual(
+        isWithinDirectory(
+          vscode.Uri.file("/foo/bar/baz"),
+          vscode.Uri.file("/foo/bar"),
+        ),
+        true,
+      )
     })
 
     test("returns true for path equal to directory", () => {
-      assert.strictEqual(isWithinDirectory("/foo/bar", "/foo/bar"), true)
+      assert.strictEqual(
+        isWithinDirectory(
+          vscode.Uri.file("/foo/bar"),
+          vscode.Uri.file("/foo/bar"),
+        ),
+        true,
+      )
     })
 
     test("returns false for path outside directory", () => {
-      assert.strictEqual(isWithinDirectory("/foo/baz", "/foo/bar"), false)
+      assert.strictEqual(
+        isWithinDirectory(
+          vscode.Uri.file("/foo/baz"),
+          vscode.Uri.file("/foo/bar"),
+        ),
+        false,
+      )
     })
 
     test("returns false for sibling with similar prefix", () => {
       // This is the key test - /foo/ba is NOT a parent of /foo/bar
-      assert.strictEqual(isWithinDirectory("/foo/bar", "/foo/ba"), false)
+      assert.strictEqual(
+        isWithinDirectory(
+          vscode.Uri.file("/foo/bar"),
+          vscode.Uri.file("/foo/ba"),
+        ),
+        false,
+      )
     })
 
     test("returns false for parent directory", () => {
-      assert.strictEqual(isWithinDirectory("/foo", "/foo/bar"), false)
+      assert.strictEqual(
+        isWithinDirectory(vscode.Uri.file("/foo"), vscode.Uri.file("/foo/bar")),
+        false,
+      )
     })
   })
 
   suite("findProjectRoot", () => {
-    test("returns entry dir when no __init__.py present", () => {
+    test("returns entry dir when no __init__.py present", async () => {
       // main.py is at fixtures/standard/main.py, and fixtures/standard has no __init__.py
-      const mainPyPath = join(standardRoot, "main.py")
-      const result = findProjectRoot(mainPyPath, standardRoot)
+      const mainPyUri = vscode.Uri.joinPath(standardRoot, "main.py")
+      const result = await findProjectRoot(mainPyUri, standardRoot)
 
-      assert.strictEqual(result, standardRoot)
+      assert.strictEqual(result.fsPath, standardRoot.fsPath)
     })
 
-    test("walks up to find project root from nested package", () => {
+    test("walks up to find project root from nested package", async () => {
       // users.py is in app/routes/users.py
       // app has __init__.py, routes has __init__.py
       // but fixtures/standard does not, so project root should be fixtures/standard
-      const usersPath = join(standardRoot, "app", "routes", "users.py")
-      const result = findProjectRoot(usersPath, standardRoot)
+      const usersUri = vscode.Uri.joinPath(
+        standardRoot,
+        "app",
+        "routes",
+        "users.py",
+      )
+      const result = await findProjectRoot(usersUri, standardRoot)
 
-      assert.strictEqual(result, standardRoot)
+      assert.strictEqual(result.fsPath, standardRoot.fsPath)
     })
 
-    test("returns workspace root when all dirs have __init__.py", () => {
+    test("returns workspace root when all dirs have __init__.py", async () => {
       // If we pretend the workspace root is app, it should return that
-      const usersPath = join(standardRoot, "app", "routes", "users.py")
-      const appRoot = join(standardRoot, "app")
-      const result = findProjectRoot(usersPath, appRoot)
+      const usersUri = vscode.Uri.joinPath(
+        standardRoot,
+        "app",
+        "routes",
+        "users.py",
+      )
+      const appRootUri = vscode.Uri.joinPath(standardRoot, "app")
+      const result = await findProjectRoot(usersUri, appRootUri)
 
-      assert.strictEqual(result, appRoot)
+      assert.strictEqual(result.fsPath, appRootUri.fsPath)
     })
   })
 

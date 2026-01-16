@@ -1,10 +1,10 @@
-import { existsSync } from "node:fs"
-import { isAbsolute, join } from "node:path"
+import type * as vscode from "vscode"
 import { log } from "../utils/logger"
 import { analyzeFile } from "./analyzer"
 import { resolveNamedImport, resolveRouterFromInit } from "./importResolver"
 import type { FileAnalysis, RouterInfo, RouterNode } from "./internal"
 import type { Parser } from "./parser"
+import { fileExists } from "./pathUtils"
 
 export type { RouterNode }
 
@@ -30,16 +30,16 @@ function findAppRouter(
  * Builds a router graph starting from the given entry file.
  * If targetVariable is specified, only that specific app/router will be used.
  */
-export function buildRouterGraph(
-  entryFile: string,
+export async function buildRouterGraph(
+  entryFileUri: vscode.Uri,
   parser: Parser,
-  projectRoot: string,
+  projectRootUri: vscode.Uri,
   targetVariable?: string,
-): RouterNode | null {
+): Promise<RouterNode | null> {
   return buildRouterGraphInternal(
-    entryFile,
+    entryFileUri,
     parser,
-    projectRoot,
+    projectRootUri,
     new Set(),
     targetVariable,
   )
@@ -48,62 +48,61 @@ export function buildRouterGraph(
 /**
  * Internal recursive function to build the router graph.
  */
-function buildRouterGraphInternal(
-  entryFile: string,
+async function buildRouterGraphInternal(
+  entryFileUri: vscode.Uri,
   parser: Parser,
-  projectRoot: string,
+  projectRootUri: vscode.Uri,
   visited: Set<string>,
   targetVariable?: string,
-): RouterNode | null {
-  // Resolve the full path of the entry file if necessary
-  let resolvedEntryFile = entryFile
-
-  if (!existsSync(resolvedEntryFile) && !isAbsolute(entryFile)) {
-    resolvedEntryFile = join(projectRoot, entryFile)
-  }
-
-  if (!existsSync(resolvedEntryFile)) {
-    log(`File not found: "${entryFile}"`)
+): Promise<RouterNode | null> {
+  // Check if file exists
+  if (!(await fileExists(entryFileUri))) {
+    log(`File not found: "${entryFileUri.fsPath}"`)
     return null
   }
+
   // Prevent infinite recursion on circular imports
-  if (visited.has(resolvedEntryFile)) {
-    log(`Skipping already visited file: "${resolvedEntryFile}"`)
+  const uriKey = entryFileUri.toString()
+  if (visited.has(uriKey)) {
+    log(`Skipping already visited file: "${entryFileUri.fsPath}"`)
     return null
   }
 
-  visited.add(resolvedEntryFile)
+  visited.add(uriKey)
 
   // Analyze the entry file
-  let analysis = analyzeFile(resolvedEntryFile, parser)
+  let analysis = await analyzeFile(entryFileUri, parser)
   if (!analysis) {
-    log(`Failed to analyze file: "${resolvedEntryFile}"`)
+    log(`Failed to analyze file: "${entryFileUri.fsPath}"`)
     return null
   }
 
+  // Track current resolved URI (may change if following re-exports)
+  let resolvedEntryUri = entryFileUri
+
   log(
-    `Analyzed "${resolvedEntryFile}": ${analysis.routes.length} routes, ${analysis.routers.length} routers, ${analysis.includeRouters.length} include_router calls`,
+    `Analyzed "${resolvedEntryUri.fsPath}": ${analysis.routes.length} routes, ${analysis.routers.length} routers, ${analysis.includeRouters.length} include_router calls`,
   )
 
   // Find FastAPI instantiation (filter by targetVariable if specified)
   let appRouter = findAppRouter(analysis.routers, targetVariable)
 
   // If no FastAPI/APIRouter found and this is an __init__.py, check for re-exports
-  if (!appRouter && resolvedEntryFile.endsWith("__init__.py")) {
-    const actualRouterFile = resolveRouterFromInit(
-      resolvedEntryFile,
-      projectRoot,
+  if (!appRouter && entryFileUri.path.endsWith("__init__.py")) {
+    const actualRouterUri = await resolveRouterFromInit(
+      entryFileUri,
+      projectRootUri,
       parser,
     )
-    if (actualRouterFile && !visited.has(actualRouterFile)) {
-      visited.add(actualRouterFile)
-      const actualAnalysis = analyzeFile(actualRouterFile, parser)
+    if (actualRouterUri && !visited.has(actualRouterUri.toString())) {
+      visited.add(actualRouterUri.toString())
+      const actualAnalysis = await analyzeFile(actualRouterUri, parser)
       if (actualAnalysis) {
         const actualRouter = findAppRouter(actualAnalysis.routers)
         if (actualRouter) {
           analysis = actualAnalysis
           appRouter = actualRouter
-          resolvedEntryFile = actualRouterFile
+          resolvedEntryUri = actualRouterUri
         }
       }
     }
@@ -119,7 +118,7 @@ function buildRouterGraphInternal(
     (r) => r.owner === appRouter.variableName,
   )
   const rootRouter: RouterNode = {
-    filePath: resolvedEntryFile,
+    filePath: resolvedEntryUri.fsPath,
     variableName: appRouter.variableName,
     type: appRouter.type,
     prefix: appRouter.prefix,
@@ -141,11 +140,11 @@ function buildRouterGraphInternal(
     log(
       `Resolving include_router: ${include.router} (prefix: ${include.prefix || "none"})`,
     )
-    const childRouter = resolveRouterReference(
+    const childRouter = await resolveRouterReference(
       include.router,
       analysis,
-      resolvedEntryFile,
-      projectRoot,
+      resolvedEntryUri,
+      projectRootUri,
       parser,
       visited,
     )
@@ -164,11 +163,11 @@ function buildRouterGraphInternal(
 
   // Process mount() calls for subapps
   for (const mount of analysis.mounts) {
-    const childRouter = resolveRouterReference(
+    const childRouter = await resolveRouterReference(
       mount.app,
       analysis,
-      resolvedEntryFile,
-      projectRoot,
+      resolvedEntryUri,
+      projectRootUri,
       parser,
       visited,
     )
@@ -187,17 +186,22 @@ function buildRouterGraphInternal(
 /**
  * Resolves a router/app reference to its RouterNode.
  * Used for include_router and mount calls.
+ *
+ * Handles both simple references (e.g., "router") and dotted references
+ * (e.g., "api_routes.router" where api_routes is an imported module).
  */
-function resolveRouterReference(
+async function resolveRouterReference(
   reference: string,
   analysis: FileAnalysis,
-  currentFile: string,
-  projectRoot: string,
+  currentFileUri: vscode.Uri,
+  projectRootUri: vscode.Uri,
   parser: Parser,
   visited: Set<string>,
-): RouterNode | null {
+): Promise<RouterNode | null> {
   const parts = reference.split(".")
   const moduleName = parts[0]
+  // For dotted references like "api_routes.router", extract the attribute name
+  const attributeName = parts.length > 1 ? parts.slice(1).join(".") : null
 
   // First, check if this is a local router defined in the same file
   const localRouter = analysis.routers.find(
@@ -207,7 +211,7 @@ function resolveRouterReference(
     // Filter routes that belong to this router (decorated with @router.method)
     const routerRoutes = analysis.routes.filter((r) => r.owner === moduleName)
     return {
-      filePath: currentFile,
+      filePath: currentFileUri.fsPath,
       variableName: localRouter.variableName,
       type: localRouter.type,
       prefix: localRouter.prefix,
@@ -235,27 +239,74 @@ function resolveRouterReference(
     return null
   }
 
-  const importedFilePath = resolveNamedImport(
+  // Resolve the imported module to a file URI
+  const importedFileUri = await resolveNamedImport(
     {
       modulePath: matchingImport.modulePath,
       names: [moduleName],
       isRelative: matchingImport.isRelative,
       relativeDots: matchingImport.relativeDots,
     },
-    currentFile,
-    projectRoot,
+    currentFileUri,
+    projectRootUri,
     parser,
   )
 
-  if (!importedFilePath) {
+  if (!importedFileUri) {
     log(`Could not resolve import: ${matchingImport.modulePath}`)
     return null
   }
 
+  // For dotted references (e.g., "api_routes.router"), we need to find
+  // the specific attribute within the resolved module
+  if (attributeName) {
+    // Analyze the imported file to find the router by attribute name
+    const importedAnalysis = await analyzeFile(importedFileUri, parser)
+    if (!importedAnalysis) {
+      return null
+    }
+
+    // Find the router with the matching variable name
+    const targetRouter = importedAnalysis.routers.find(
+      (r) => r.variableName === attributeName,
+    )
+    if (targetRouter) {
+      // Mark as visited to prevent infinite recursion
+      const importedKey = importedFileUri.toString()
+      if (visited.has(importedKey)) {
+        return null
+      }
+      visited.add(importedKey)
+
+      // Get routes belonging to this router
+      const routerRoutes = importedAnalysis.routes.filter(
+        (r) => r.owner === attributeName,
+      )
+      return {
+        filePath: importedFileUri.fsPath,
+        variableName: targetRouter.variableName,
+        type: targetRouter.type,
+        prefix: targetRouter.prefix,
+        tags: targetRouter.tags,
+        line: targetRouter.line,
+        column: targetRouter.column,
+        routes: routerRoutes.map((r) => ({
+          method: r.method,
+          path: r.path,
+          function: r.function,
+          line: r.line,
+          column: r.column,
+        })),
+        children: [],
+      }
+    }
+    // If not found as a router, fall through to try building from file
+  }
+
   return buildRouterGraphInternal(
-    importedFilePath,
+    importedFileUri,
     parser,
-    projectRoot,
+    projectRootUri,
     visited,
   )
 }

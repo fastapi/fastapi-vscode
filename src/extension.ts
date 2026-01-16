@@ -40,13 +40,13 @@ export async function activate(context: vscode.ExtensionContext) {
       "dist",
       "wasm",
       "web-tree-sitter.wasm",
-    ).fsPath,
+    ),
     python: vscode.Uri.joinPath(
       context.extensionUri,
       "dist",
       "wasm",
       "tree-sitter-python.wasm",
-    ).fsPath,
+    ),
   })
 
   // Discover apps and create providers
@@ -55,7 +55,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const codeLensProvider = new TestCodeLensProvider(parserService, apps)
 
   // File watcher for auto-refresh
-  let refreshTimeout: NodeJS.Timeout | null = null
+  let refreshTimeout: ReturnType<typeof setTimeout> | null = null
   const triggerRefresh = () => {
     if (refreshTimeout) clearTimeout(refreshTimeout)
     refreshTimeout = setTimeout(async () => {
@@ -63,13 +63,18 @@ export async function activate(context: vscode.ExtensionContext) {
       const newApps = await discoverFastAPIApps(parserService)
       endpointProvider.setApps(newApps)
       codeLensProvider.setApps(newApps)
-    }, 500)
+    }, 300)
   }
 
   const watcher = vscode.workspace.createFileSystemWatcher("**/*.py")
   watcher.onDidChange(triggerRefresh)
   watcher.onDidCreate(triggerRefresh)
   watcher.onDidDelete(triggerRefresh)
+
+  // Re-discover when workspace folders change (handles late folder availability in browser)
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(triggerRefresh),
+  )
 
   // Tree view
   const treeView = vscode.window.createTreeView("endpoint-explorer", {
