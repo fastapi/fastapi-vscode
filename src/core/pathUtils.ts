@@ -1,4 +1,7 @@
-import * as vscode from "vscode"
+/**
+ * Pure path utilities that don't require filesystem access.
+ * These work with URI strings and path strings.
+ */
 
 /**
  * Strips leading dynamic segments (like {settings.API_V1_STR}) from a path.
@@ -14,16 +17,32 @@ export function stripLeadingDynamicSegments(path: string): string {
 }
 
 /**
- * Gets the directory (parent) of a URI.
- * Equivalent to path.dirname() but works with URIs in all environments.
+ * Gets the directory (parent) of a URI string.
+ * Works with any URI scheme (file://, vscode-vfs://, etc.).
  */
-export function uriDirname(uri: vscode.Uri): vscode.Uri {
-  const path = uri.path
+export function uriDirname(uri: string): string {
+  // Parse the URI to separate scheme/authority from path
+  const match = uri.match(/^([^:]+:\/\/[^/]*)(.*)$/)
+  if (!match) {
+    // Fallback for simple paths
+    const lastSlash = uri.lastIndexOf("/")
+    return lastSlash <= 0 ? "/" : uri.slice(0, lastSlash)
+  }
+
+  const [, prefix, path] = match
   const lastSlash = path.lastIndexOf("/")
   if (lastSlash <= 0) {
-    return uri.with({ path: "/" })
+    return `${prefix}/`
   }
-  return uri.with({ path: path.slice(0, lastSlash) })
+  return `${prefix}${path.slice(0, lastSlash)}`
+}
+
+/**
+ * Extracts the path component from a URI string.
+ */
+export function uriPath(uri: string): string {
+  const match = uri.match(/^[^:]+:\/\/[^/]*(.*)$/)
+  return match ? match[1] : uri
 }
 
 /**
@@ -31,56 +50,16 @@ export function uriDirname(uri: vscode.Uri): vscode.Uri {
  * Uses URI path comparison to work across all platforms.
  */
 export function isWithinDirectory(
-  fileUri: vscode.Uri,
-  baseDirUri: vscode.Uri,
+  fileUri: string,
+  baseDirUri: string,
 ): boolean {
-  const normalizedFile = fileUri.path.replace(/\/+$/, "") || "/"
-  const normalizedBase = baseDirUri.path.replace(/\/+$/, "") || "/"
+  const filePath = uriPath(fileUri).replace(/\/+$/, "") || "/"
+  const basePath = uriPath(baseDirUri).replace(/\/+$/, "") || "/"
 
-  if (normalizedFile === normalizedBase) {
+  if (filePath === basePath) {
     return true
   }
-  return normalizedFile.startsWith(`${normalizedBase}/`)
-}
-
-export async function fileExists(uri: vscode.Uri): Promise<boolean> {
-  try {
-    await vscode.workspace.fs.stat(uri)
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * Finds the Python project root by walking up from the entry file
- * until we find a directory without __init__.py (or hit the workspace root).
- * This is the directory from which absolute imports are resolved.
- */
-export async function findProjectRoot(
-  entryUri: vscode.Uri,
-  workspaceRootUri: vscode.Uri,
-): Promise<vscode.Uri> {
-  let dirUri = uriDirname(entryUri)
-
-  // If the entry file's directory doesn't have __init__.py, it's a top-level script
-  if (!(await fileExists(vscode.Uri.joinPath(dirUri, "__init__.py")))) {
-    return dirUri
-  }
-
-  // Walk up until we find a directory whose parent doesn't have __init__.py
-  while (
-    isWithinDirectory(dirUri, workspaceRootUri) &&
-    dirUri.path !== workspaceRootUri.path
-  ) {
-    const parentUri = uriDirname(dirUri)
-    if (!(await fileExists(vscode.Uri.joinPath(parentUri, "__init__.py")))) {
-      return parentUri
-    }
-    dirUri = parentUri
-  }
-
-  return workspaceRootUri
+  return filePath.startsWith(`${basePath}/`)
 }
 
 /**
@@ -139,4 +118,39 @@ export function pathMatchesEndpoint(
     // Literal segments must match exactly
     return seg === testSegments[index]
   })
+}
+
+/**
+ * Finds the Python project root by walking up from the entry file
+ * until we find a directory without __init__.py (or hit the workspace root).
+ * This is the directory from which absolute imports are resolved.
+ */
+export async function findProjectRoot(
+  entryUri: string,
+  workspaceRootUri: string,
+  fs: {
+    exists(uri: string): Promise<boolean>
+    joinPath(base: string, ...segments: string[]): string
+  },
+): Promise<string> {
+  let dirUri = uriDirname(entryUri)
+
+  // If the entry file's directory doesn't have __init__.py, it's a top-level script
+  if (!(await fs.exists(fs.joinPath(dirUri, "__init__.py")))) {
+    return dirUri
+  }
+
+  // Walk up until we find a directory whose parent doesn't have __init__.py
+  while (
+    isWithinDirectory(dirUri, workspaceRootUri) &&
+    uriPath(dirUri) !== uriPath(workspaceRootUri)
+  ) {
+    const parentUri = uriDirname(dirUri)
+    if (!(await fs.exists(fs.joinPath(parentUri, "__init__.py")))) {
+      return parentUri
+    }
+    dirUri = parentUri
+  }
+
+  return workspaceRootUri
 }

@@ -1,10 +1,9 @@
-import type * as vscode from "vscode"
 import { log } from "../utils/logger"
 import { analyzeFile } from "./analyzer"
+import type { FileSystem } from "./filesystem"
 import { resolveNamedImport, resolveRouterFromInit } from "./importResolver"
 import type { FileAnalysis, RouterInfo, RouterNode } from "./internal"
 import type { Parser } from "./parser"
-import { fileExists } from "./pathUtils"
 
 export type { RouterNode }
 
@@ -31,15 +30,17 @@ function findAppRouter(
  * If targetVariable is specified, only that specific app/router will be used.
  */
 export async function buildRouterGraph(
-  entryFileUri: vscode.Uri,
+  entryFileUri: string,
   parser: Parser,
-  projectRootUri: vscode.Uri,
+  projectRootUri: string,
+  fs: FileSystem,
   targetVariable?: string,
 ): Promise<RouterNode | null> {
   return buildRouterGraphInternal(
     entryFileUri,
     parser,
     projectRootUri,
+    fs,
     new Set(),
     targetVariable,
   )
@@ -49,31 +50,34 @@ export async function buildRouterGraph(
  * Internal recursive function to build the router graph.
  */
 async function buildRouterGraphInternal(
-  entryFileUri: vscode.Uri,
+  entryFileUri: string,
   parser: Parser,
-  projectRootUri: vscode.Uri,
+  projectRootUri: string,
+  fs: FileSystem,
   visited: Set<string>,
   targetVariable?: string,
 ): Promise<RouterNode | null> {
   // Check if file exists
-  if (!(await fileExists(entryFileUri))) {
-    log(`File not found: "${entryFileUri.fsPath}"`)
+  if (!(await fs.exists(entryFileUri))) {
+    log(`File not found: "${entryFileUri}"`)
     return null
   }
 
   // Prevent infinite recursion on circular imports
-  const uriKey = entryFileUri.toString()
-  if (visited.has(uriKey)) {
-    log(`Skipping already visited file: "${entryFileUri.fsPath}"`)
+  if (visited.has(entryFileUri)) {
+    log(`Skipping already visited file: "${entryFileUri}"`)
     return null
   }
 
-  visited.add(uriKey)
+  visited.add(entryFileUri)
+
+  // Helper to analyze a file with the filesystem
+  const analyzeFileFn = (uri: string) => analyzeFile(uri, parser, fs)
 
   // Analyze the entry file
-  let analysis = await analyzeFile(entryFileUri, parser)
+  let analysis = await analyzeFileFn(entryFileUri)
   if (!analysis) {
-    log(`Failed to analyze file: "${entryFileUri.fsPath}"`)
+    log(`Failed to analyze file: "${entryFileUri}"`)
     return null
   }
 
@@ -81,22 +85,23 @@ async function buildRouterGraphInternal(
   let resolvedEntryUri = entryFileUri
 
   log(
-    `Analyzed "${resolvedEntryUri.fsPath}": ${analysis.routes.length} routes, ${analysis.routers.length} routers, ${analysis.includeRouters.length} include_router calls`,
+    `Analyzed "${resolvedEntryUri}": ${analysis.routes.length} routes, ${analysis.routers.length} routers, ${analysis.includeRouters.length} include_router calls`,
   )
 
   // Find FastAPI instantiation (filter by targetVariable if specified)
   let appRouter = findAppRouter(analysis.routers, targetVariable)
 
   // If no FastAPI/APIRouter found and this is an __init__.py, check for re-exports
-  if (!appRouter && entryFileUri.path.endsWith("__init__.py")) {
+  if (!appRouter && entryFileUri.endsWith("__init__.py")) {
     const actualRouterUri = await resolveRouterFromInit(
       entryFileUri,
       projectRootUri,
-      parser,
+      fs,
+      analyzeFileFn,
     )
-    if (actualRouterUri && !visited.has(actualRouterUri.toString())) {
-      visited.add(actualRouterUri.toString())
-      const actualAnalysis = await analyzeFile(actualRouterUri, parser)
+    if (actualRouterUri && !visited.has(actualRouterUri)) {
+      visited.add(actualRouterUri)
+      const actualAnalysis = await analyzeFileFn(actualRouterUri)
       if (actualAnalysis) {
         const actualRouter = findAppRouter(actualAnalysis.routers)
         if (actualRouter) {
@@ -118,7 +123,7 @@ async function buildRouterGraphInternal(
     (r) => r.owner === appRouter.variableName,
   )
   const rootRouter: RouterNode = {
-    filePath: resolvedEntryUri.fsPath,
+    filePath: resolvedEntryUri,
     variableName: appRouter.variableName,
     type: appRouter.type,
     prefix: appRouter.prefix,
@@ -146,6 +151,7 @@ async function buildRouterGraphInternal(
       resolvedEntryUri,
       projectRootUri,
       parser,
+      fs,
       visited,
     )
     if (childRouter) {
@@ -169,6 +175,7 @@ async function buildRouterGraphInternal(
       resolvedEntryUri,
       projectRootUri,
       parser,
+      fs,
       visited,
     )
     if (childRouter) {
@@ -193,9 +200,10 @@ async function buildRouterGraphInternal(
 async function resolveRouterReference(
   reference: string,
   analysis: FileAnalysis,
-  currentFileUri: vscode.Uri,
-  projectRootUri: vscode.Uri,
+  currentFileUri: string,
+  projectRootUri: string,
   parser: Parser,
+  fs: FileSystem,
   visited: Set<string>,
 ): Promise<RouterNode | null> {
   const parts = reference.split(".")
@@ -211,7 +219,7 @@ async function resolveRouterReference(
     // Filter routes that belong to this router (decorated with @router.method)
     const routerRoutes = analysis.routes.filter((r) => r.owner === moduleName)
     return {
-      filePath: currentFileUri.fsPath,
+      filePath: currentFileUri,
       variableName: localRouter.variableName,
       type: localRouter.type,
       prefix: localRouter.prefix,
@@ -239,6 +247,9 @@ async function resolveRouterReference(
     return null
   }
 
+  // Helper to analyze a file with the filesystem
+  const analyzeFileFn = (uri: string) => analyzeFile(uri, parser, fs)
+
   // Resolve the imported module to a file URI
   const importedFileUri = await resolveNamedImport(
     {
@@ -249,7 +260,8 @@ async function resolveRouterReference(
     },
     currentFileUri,
     projectRootUri,
-    parser,
+    fs,
+    analyzeFileFn,
   )
 
   if (!importedFileUri) {
@@ -261,7 +273,7 @@ async function resolveRouterReference(
   // the specific attribute within the resolved module
   if (attributeName) {
     // Analyze the imported file to find the router by attribute name
-    const importedAnalysis = await analyzeFile(importedFileUri, parser)
+    const importedAnalysis = await analyzeFileFn(importedFileUri)
     if (!importedAnalysis) {
       return null
     }
@@ -272,18 +284,17 @@ async function resolveRouterReference(
     )
     if (targetRouter) {
       // Mark as visited to prevent infinite recursion
-      const importedKey = importedFileUri.toString()
-      if (visited.has(importedKey)) {
+      if (visited.has(importedFileUri)) {
         return null
       }
-      visited.add(importedKey)
+      visited.add(importedFileUri)
 
       // Get routes belonging to this router
       const routerRoutes = importedAnalysis.routes.filter(
         (r) => r.owner === attributeName,
       )
       return {
-        filePath: importedFileUri.fsPath,
+        filePath: importedFileUri,
         variableName: targetRouter.variableName,
         type: targetRouter.type,
         prefix: targetRouter.prefix,
@@ -307,6 +318,7 @@ async function resolveRouterReference(
     importedFileUri,
     parser,
     projectRootUri,
+    fs,
     visited,
   )
 }

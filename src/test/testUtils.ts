@@ -1,18 +1,23 @@
-import { join } from "node:path"
-import * as vscode from "vscode"
+import { existsSync, readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import type { FileSystem } from "../core/filesystem"
 
 declare const __DIST_ROOT__: string
 
 export const wasmDir = join(__DIST_ROOT__, "wasm")
-export const wasmPaths = {
-  core: vscode.Uri.file(join(wasmDir, "web-tree-sitter.wasm")),
-  python: vscode.Uri.file(join(wasmDir, "tree-sitter-python.wasm")),
+
+// Read WASM files as Uint8Array for the new parser API
+export const wasmBinaries = {
+  core: new Uint8Array(readFileSync(join(wasmDir, "web-tree-sitter.wasm"))),
+  python: new Uint8Array(
+    readFileSync(join(wasmDir, "tree-sitter-python.wasm")),
+  ),
 }
 
 export const fixturesPath = join(__DIST_ROOT__, "..", "src", "test", "fixtures")
 
-// Helper to convert string path to URI
-const uri = (path: string) => vscode.Uri.file(path)
+// Helper to convert string path to file:// URI string
+const uri = (path: string) => `file://${path}`
 
 export const fixtures = {
   standard: {
@@ -43,5 +48,40 @@ export const fixtures = {
   multiApp: {
     root: join(fixturesPath, "multi-app"),
     mainPy: join(fixturesPath, "multi-app", "main.py"),
+  },
+}
+
+/**
+ * Extract file path from a file:// URI string
+ */
+function uriToPath(uri: string): string {
+  if (uri.startsWith("file://")) {
+    return uri.slice(7)
+  }
+  return uri
+}
+
+/**
+ * Node.js FileSystem implementation for tests.
+ */
+export const nodeFileSystem: FileSystem = {
+  async readFile(uri: string): Promise<Uint8Array> {
+    const path = uriToPath(uri)
+    return new Uint8Array(readFileSync(path))
+  },
+
+  async exists(uri: string): Promise<boolean> {
+    const path = uriToPath(uri)
+    return existsSync(path)
+  },
+
+  joinPath(base: string, ...segments: string[]): string {
+    const basePath = uriToPath(base)
+    return `file://${join(basePath, ...segments)}`
+  },
+
+  dirname(uri: string): string {
+    const path = uriToPath(uri)
+    return `file://${dirname(path)}`
   },
 }

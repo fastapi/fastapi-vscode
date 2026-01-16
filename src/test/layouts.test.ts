@@ -8,7 +8,7 @@ import type {
   RouteDefinition,
   RouterDefinition,
 } from "../core/types"
-import { fixtures, wasmPaths } from "./testUtils"
+import { fixtures, nodeFileSystem, wasmBinaries } from "./testUtils"
 
 /** Collects all routes from an AppDefinition (direct routes + routes from all routers) */
 function collectAllRoutes(appDef: AppDefinition): RouteDefinition[] {
@@ -25,7 +25,7 @@ suite("Project Layouts", () => {
 
   suiteSetup(async () => {
     parser = new Parser()
-    await parser.init(wasmPaths)
+    await parser.init(wasmBinaries)
   })
 
   suiteTeardown(() => {
@@ -36,19 +36,18 @@ suite("Project Layouts", () => {
     const projectRoot = await findProjectRoot(
       fixtures.standard.mainPy,
       fixtures.standard.root,
+      nodeFileSystem,
     )
 
     const graph = await buildRouterGraph(
       fixtures.standard.mainPy,
       parser,
       projectRoot,
+      nodeFileSystem,
     )
     assert.ok(graph, "Should find FastAPI app")
 
-    const appDef = routerNodeToAppDefinition(
-      graph,
-      fixtures.standard.root.fsPath,
-    )
+    const appDef = routerNodeToAppDefinition(graph, fixtures.standard.root)
     const allRoutes = collectAllRoutes(appDef)
 
     // Should have: GET /, GET /health, GET /users/, GET /users/{user_id}, POST /users/, GET /items/, GET /items/{item_id}
@@ -81,16 +80,18 @@ suite("Project Layouts", () => {
     const projectRoot = await findProjectRoot(
       fixtures.flat.mainPy,
       fixtures.flat.root,
+      nodeFileSystem,
     )
 
     const graph = await buildRouterGraph(
       fixtures.flat.mainPy,
       parser,
       projectRoot,
+      nodeFileSystem,
     )
     assert.ok(graph, "Should find FastAPI app")
 
-    const appDef = routerNodeToAppDefinition(graph, fixtures.flat.root.fsPath)
+    const appDef = routerNodeToAppDefinition(graph, fixtures.flat.root)
     const allRoutes = collectAllRoutes(appDef)
 
     // Should have: GET /, GET /api/users, GET /api/items
@@ -119,19 +120,18 @@ suite("Project Layouts", () => {
     const projectRoot = await findProjectRoot(
       fixtures.namespace.mainPy,
       fixtures.namespace.root,
+      nodeFileSystem,
     )
 
     const graph = await buildRouterGraph(
       fixtures.namespace.mainPy,
       parser,
       projectRoot,
+      nodeFileSystem,
     )
     assert.ok(graph, "Should find FastAPI app")
 
-    const appDef = routerNodeToAppDefinition(
-      graph,
-      fixtures.namespace.root.fsPath,
-    )
+    const appDef = routerNodeToAppDefinition(graph, fixtures.namespace.root)
     const allRoutes = collectAllRoutes(appDef)
 
     // Should have: GET /, GET /users/, GET /users/{user_id}, GET /items/
@@ -160,19 +160,18 @@ suite("Project Layouts", () => {
     const projectRoot = await findProjectRoot(
       fixtures.reexport.mainPy,
       fixtures.reexport.root,
+      nodeFileSystem,
     )
 
     const graph = await buildRouterGraph(
       fixtures.reexport.mainPy,
       parser,
       projectRoot,
+      nodeFileSystem,
     )
     assert.ok(graph, "Should find FastAPI app")
 
-    const appDef = routerNodeToAppDefinition(
-      graph,
-      fixtures.reexport.root.fsPath,
-    )
+    const appDef = routerNodeToAppDefinition(graph, fixtures.reexport.root)
     const allRoutes = collectAllRoutes(appDef)
 
     // Should have: GET /, GET /integrations/github, GET /integrations/slack, POST /integrations/webhook

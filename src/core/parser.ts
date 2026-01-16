@@ -2,32 +2,43 @@
  * Parser service using Web Tree Sitter to parse Python code.
  */
 
-import * as vscode from "vscode"
 import { Language, Parser as TreeSitterParser } from "web-tree-sitter"
 
 export class Parser {
   private parser: TreeSitterParser | null = null
-  async init(wasmPaths: { core: vscode.Uri; python: vscode.Uri }) {
+
+  /**
+   * Initialize the parser with WASM binaries.
+   * @param wasmBinaries.core - The web-tree-sitter.wasm binary
+   * @param wasmBinaries.python - The tree-sitter-python.wasm binary
+   */
+  async init(wasmBinaries: { core: Uint8Array; python: Uint8Array }) {
     if (this.parser) {
       return
     }
 
-    // Read WASM files via VS Code's virtual filesystem API
-    const [wasmBinary, pythonWasmBinary] = await Promise.all([
-      vscode.workspace.fs.readFile(wasmPaths.core),
-      vscode.workspace.fs.readFile(wasmPaths.python),
-    ])
+    // Pre-compile the WASM module from the binary
+    const wasmModule = await WebAssembly.compile(wasmBinaries.core)
 
-    // Initialize tree-sitter with the core WASM binary
+    // Use instantiateWasm to provide custom WASM instantiation.
+    // This bypasses tree-sitter's default URL-based loading which fails
+    // in VS Code web extensions where import.meta.url is not available.
     await TreeSitterParser.init({
-      locateFile: () => wasmPaths.core.toString(),
-      wasmBinary,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      instantiateWasm(imports: any, successCallback: any) {
+        WebAssembly.instantiate(wasmModule, imports).then(
+          (instance: WebAssembly.Instance) => {
+            successCallback(instance, wasmModule)
+          },
+        )
+        return {}
+      },
     })
 
     const parser = new TreeSitterParser()
 
     // Load Python language from WASM binary
-    const pythonLanguage = await Language.load(new Uint8Array(pythonWasmBinary))
+    const pythonLanguage = await Language.load(wasmBinaries.python)
     parser.setLanguage(pythonLanguage)
 
     this.parser = parser

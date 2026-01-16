@@ -1,15 +1,19 @@
 import * as assert from "node:assert"
-import * as vscode from "vscode"
 import { Parser } from "../../core/parser"
 import { buildRouterGraph } from "../../core/routerResolver"
-import { fixtures, fixturesPath, wasmPaths } from "../testUtils"
+import {
+  fixtures,
+  fixturesPath,
+  nodeFileSystem,
+  wasmBinaries,
+} from "../testUtils"
 
 suite("routerResolver", () => {
   let parser: Parser
 
   suiteSetup(async () => {
     parser = new Parser()
-    await parser.init(wasmPaths)
+    await parser.init(wasmBinaries)
   })
 
   suiteTeardown(() => {
@@ -22,12 +26,13 @@ suite("routerResolver", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
       assert.strictEqual(result.type, "FastAPI")
       assert.strictEqual(result.variableName, "app")
-      assert.strictEqual(result.filePath, fixtures.standard.mainPy.fsPath)
+      assert.strictEqual(result.filePath, fixtures.standard.mainPy)
     })
 
     test("includes direct routes on app", async () => {
@@ -35,6 +40,7 @@ suite("routerResolver", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
@@ -50,6 +56,7 @@ suite("routerResolver", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
@@ -65,6 +72,7 @@ suite("routerResolver", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
@@ -77,9 +85,10 @@ suite("routerResolver", () => {
 
     test("returns null for non-existent file", async () => {
       const result = await buildRouterGraph(
-        vscode.Uri.file("/nonexistent/file.py"),
+        "file:///nonexistent/file.py",
         parser,
-        vscode.Uri.file(fixturesPath),
+        `file://${fixturesPath}`,
+        nodeFileSystem,
       )
       assert.strictEqual(result, null)
     })
@@ -89,6 +98,7 @@ suite("routerResolver", () => {
         fixtures.standard.initPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
 
       // __init__.py has no FastAPI or APIRouter
@@ -100,6 +110,7 @@ suite("routerResolver", () => {
         fixtures.standard.usersPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
@@ -115,6 +126,7 @@ suite("routerResolver", () => {
         fixtures.standard.usersPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
@@ -129,10 +141,11 @@ suite("routerResolver", () => {
         fixtures.standard.usersPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
-      assert.strictEqual(result.filePath, fixtures.standard.usersPy.fsPath)
+      assert.strictEqual(result.filePath, fixtures.standard.usersPy)
       assert.ok(result.line > 0)
       assert.ok(result.column >= 0)
     })
@@ -143,6 +156,7 @@ suite("routerResolver", () => {
         fixtures.reexport.initPy,
         parser,
         fixtures.reexport.root,
+        nodeFileSystem,
       )
 
       assert.ok(result, "Should find router via re-export")
@@ -166,6 +180,7 @@ suite("routerResolver", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
@@ -191,6 +206,7 @@ suite("routerResolver", () => {
         fixtures.sameFile.mainPy,
         parser,
         fixtures.sameFile.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
@@ -203,6 +219,7 @@ suite("routerResolver", () => {
         fixtures.sameFile.mainPy,
         parser,
         fixtures.sameFile.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)
@@ -220,6 +237,7 @@ suite("routerResolver", () => {
         fixtures.sameFile.mainPy,
         parser,
         fixtures.sameFile.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)

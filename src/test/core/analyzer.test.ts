@@ -1,8 +1,7 @@
 import * as assert from "node:assert"
-import * as vscode from "vscode"
 import { analyzeFile, analyzeTree } from "../../core/analyzer"
 import { Parser } from "../../core/parser"
-import { fixtures, wasmPaths } from "../testUtils"
+import { fixtures, nodeFileSystem, wasmBinaries } from "../testUtils"
 
 suite("analyzer", () => {
   let parser: Parser
@@ -15,7 +14,7 @@ suite("analyzer", () => {
 
   suiteSetup(async () => {
     parser = new Parser()
-    await parser.init(wasmPaths)
+    await parser.init(wasmBinaries)
   })
 
   suiteTeardown(() => {
@@ -112,10 +111,14 @@ import os
 
   suite("analyzeFile", () => {
     test("analyzes main.py fixture", async () => {
-      const result = await analyzeFile(fixtures.standard.mainPy, parser)
+      const result = await analyzeFile(
+        fixtures.standard.mainPy,
+        parser,
+        nodeFileSystem,
+      )
 
       assert.ok(result)
-      assert.strictEqual(result.filePath, fixtures.standard.mainPy.fsPath)
+      assert.strictEqual(result.filePath, fixtures.standard.mainPy)
 
       // Should find FastAPI app
       const fastApiRouter = result.routers.find((r) => r.type === "FastAPI")
@@ -132,7 +135,11 @@ import os
     })
 
     test("analyzes users.py fixture", async () => {
-      const result = await analyzeFile(fixtures.standard.usersPy, parser)
+      const result = await analyzeFile(
+        fixtures.standard.usersPy,
+        parser,
+        nodeFileSystem,
+      )
 
       assert.ok(result)
 
@@ -151,8 +158,9 @@ import os
 
     test("returns null for non-existent file", async () => {
       const result = await analyzeFile(
-        vscode.Uri.file("/nonexistent/file.py"),
+        "file:///nonexistent/file.py",
         parser,
+        nodeFileSystem,
       )
       assert.strictEqual(result, null)
     })

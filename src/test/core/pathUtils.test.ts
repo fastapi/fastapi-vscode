@@ -1,5 +1,4 @@
 import * as assert from "node:assert"
-import * as vscode from "vscode"
 import {
   countSegments,
   findProjectRoot,
@@ -8,7 +7,7 @@ import {
   pathMatchesEndpoint,
   stripLeadingDynamicSegments,
 } from "../../core/pathUtils"
-import { fixtures } from "../testUtils"
+import { fixtures, nodeFileSystem } from "../testUtils"
 
 const standardRoot = fixtures.standard.root
 
@@ -116,30 +115,21 @@ suite("pathUtils", () => {
   suite("isWithinDirectory", () => {
     test("returns true for path inside directory", () => {
       assert.strictEqual(
-        isWithinDirectory(
-          vscode.Uri.file("/foo/bar/baz"),
-          vscode.Uri.file("/foo/bar"),
-        ),
+        isWithinDirectory("file:///foo/bar/baz", "file:///foo/bar"),
         true,
       )
     })
 
     test("returns true for path equal to directory", () => {
       assert.strictEqual(
-        isWithinDirectory(
-          vscode.Uri.file("/foo/bar"),
-          vscode.Uri.file("/foo/bar"),
-        ),
+        isWithinDirectory("file:///foo/bar", "file:///foo/bar"),
         true,
       )
     })
 
     test("returns false for path outside directory", () => {
       assert.strictEqual(
-        isWithinDirectory(
-          vscode.Uri.file("/foo/baz"),
-          vscode.Uri.file("/foo/bar"),
-        ),
+        isWithinDirectory("file:///foo/baz", "file:///foo/bar"),
         false,
       )
     })
@@ -147,17 +137,14 @@ suite("pathUtils", () => {
     test("returns false for sibling with similar prefix", () => {
       // This is the key test - /foo/ba is NOT a parent of /foo/bar
       assert.strictEqual(
-        isWithinDirectory(
-          vscode.Uri.file("/foo/bar"),
-          vscode.Uri.file("/foo/ba"),
-        ),
+        isWithinDirectory("file:///foo/bar", "file:///foo/ba"),
         false,
       )
     })
 
     test("returns false for parent directory", () => {
       assert.strictEqual(
-        isWithinDirectory(vscode.Uri.file("/foo"), vscode.Uri.file("/foo/bar")),
+        isWithinDirectory("file:///foo", "file:///foo/bar"),
         false,
       )
     })
@@ -166,39 +153,47 @@ suite("pathUtils", () => {
   suite("findProjectRoot", () => {
     test("returns entry dir when no __init__.py present", async () => {
       // main.py is at fixtures/standard/main.py, and fixtures/standard has no __init__.py
-      const mainPyUri = vscode.Uri.joinPath(standardRoot, "main.py")
-      const result = await findProjectRoot(mainPyUri, standardRoot)
+      const mainPyUri = nodeFileSystem.joinPath(standardRoot, "main.py")
+      const result = await findProjectRoot(
+        mainPyUri,
+        standardRoot,
+        nodeFileSystem,
+      )
 
-      assert.strictEqual(result.fsPath, standardRoot.fsPath)
+      assert.strictEqual(result, standardRoot)
     })
 
     test("walks up to find project root from nested package", async () => {
       // users.py is in app/routes/users.py
       // app has __init__.py, routes has __init__.py
       // but fixtures/standard does not, so project root should be fixtures/standard
-      const usersUri = vscode.Uri.joinPath(
+      const usersUri = nodeFileSystem.joinPath(
         standardRoot,
         "app",
         "routes",
         "users.py",
       )
-      const result = await findProjectRoot(usersUri, standardRoot)
+      const result = await findProjectRoot(
+        usersUri,
+        standardRoot,
+        nodeFileSystem,
+      )
 
-      assert.strictEqual(result.fsPath, standardRoot.fsPath)
+      assert.strictEqual(result, standardRoot)
     })
 
     test("returns workspace root when all dirs have __init__.py", async () => {
       // If we pretend the workspace root is app, it should return that
-      const usersUri = vscode.Uri.joinPath(
+      const appRootUri = nodeFileSystem.joinPath(standardRoot, "app")
+      const usersUri = nodeFileSystem.joinPath(
         standardRoot,
         "app",
         "routes",
         "users.py",
       )
-      const appRootUri = vscode.Uri.joinPath(standardRoot, "app")
-      const result = await findProjectRoot(usersUri, appRootUri)
+      const result = await findProjectRoot(usersUri, appRootUri, nodeFileSystem)
 
-      assert.strictEqual(result.fsPath, appRootUri.fsPath)
+      assert.strictEqual(result, appRootUri)
     })
   })
 

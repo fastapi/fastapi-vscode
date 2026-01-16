@@ -8,7 +8,7 @@ import {
   routerExtractor,
 } from "../../core/extractors"
 import { Parser } from "../../core/parser"
-import { wasmPaths } from "../testUtils"
+import { wasmBinaries } from "../testUtils"
 
 suite("Extractors", () => {
   let parser: Parser
@@ -22,7 +22,7 @@ suite("Extractors", () => {
 
   suiteSetup(async () => {
     parser = new Parser()
-    await parser.init(wasmPaths)
+    await parser.init(wasmBinaries)
   })
 
   suiteTeardown(() => {

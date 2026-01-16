@@ -2,14 +2,14 @@ import * as assert from "node:assert"
 import { Parser } from "../../core/parser"
 import { buildRouterGraph } from "../../core/routerResolver"
 import { routerNodeToAppDefinition } from "../../core/transformer"
-import { fixtures, wasmPaths } from "../testUtils"
+import { fixtures, nodeFileSystem, wasmBinaries } from "../testUtils"
 
 suite("transformer", () => {
   let parser: Parser
 
   suiteSetup(async () => {
     parser = new Parser()
-    await parser.init(wasmPaths)
+    await parser.init(wasmBinaries)
   })
 
   suiteTeardown(() => {
@@ -22,6 +22,7 @@ suite("transformer", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -29,7 +30,7 @@ suite("transformer", () => {
 
       assert.ok(result)
       assert.strictEqual(result.name, "app")
-      assert.strictEqual(result.filePath, fixtures.standard.mainPy.fsPath)
+      assert.strictEqual(result.filePath, fixtures.standard.mainPy)
       assert.strictEqual(result.workspaceFolder, "/workspace")
     })
 
@@ -38,6 +39,7 @@ suite("transformer", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -55,6 +57,7 @@ suite("transformer", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -69,6 +72,7 @@ suite("transformer", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -91,6 +95,7 @@ suite("transformer", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -120,6 +125,7 @@ suite("transformer", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -137,6 +143,7 @@ suite("transformer", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -154,6 +161,7 @@ suite("transformer", () => {
         fixtures.standard.usersPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -166,6 +174,7 @@ suite("transformer", () => {
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 

@@ -76,7 +76,7 @@ export class TestCodeLensProvider implements CodeLensProvider {
         const locations = matchingRoutes.map(
           (loc) =>
             new Location(
-              Uri.file(loc.filePath),
+              Uri.parse(loc.filePath),
               new Position(loc.line - 1, loc.column),
             ),
         )
