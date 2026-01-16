@@ -21,8 +21,8 @@ export class Parser {
     const wasmModule = await WebAssembly.compile(wasmBinaries.core)
 
     // Use instantiateWasm to provide custom WASM instantiation.
-    // This bypasses tree-sitter's default URL-based loading which fails
-    // in VS Code web extensions where import.meta.url is not available.
+    // This bypasses tree-sitter's default URL-based loading which relies
+    // on import.meta.url - unavailable in bundled or non-ESM environments.
     await TreeSitterParser.init({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       instantiateWasm(imports: any, successCallback: any) {
