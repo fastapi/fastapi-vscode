@@ -37,7 +37,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   parserService = new Parser()
 
-  // Read WASM files via VS Code's virtual filesystem API
+  // Read Wasm files via VS Code's virtual filesystem API
   const [coreWasm, pythonWasm] = await Promise.all([
     vscode.workspace.fs.readFile(
       vscode.Uri.joinPath(

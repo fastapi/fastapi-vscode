@@ -6,7 +6,7 @@ declare const __DIST_ROOT__: string
 
 export const wasmDir = join(__DIST_ROOT__, "wasm")
 
-// Read WASM files as Uint8Array for the new parser API
+// Read Wasm files as Uint8Array for the new parser API
 export const wasmBinaries = {
   core: new Uint8Array(readFileSync(join(wasmDir, "web-tree-sitter.wasm"))),
   python: new Uint8Array(

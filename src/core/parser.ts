@@ -8,7 +8,7 @@ export class Parser {
   private parser: TreeSitterParser | null = null
 
   /**
-   * Initialize the parser with WASM binaries.
+   * Initialize the parser with Wasm binaries.
    * @param wasmBinaries.core - The web-tree-sitter.wasm binary
    * @param wasmBinaries.python - The tree-sitter-python.wasm binary
    */
@@ -17,10 +17,10 @@ export class Parser {
       return
     }
 
-    // Pre-compile the WASM module from the binary
+    // Pre-compile the Wasm module from the binary
     const wasmModule = await WebAssembly.compile(wasmBinaries.core)
 
-    // Use instantiateWasm to provide custom WASM instantiation.
+    // Use instantiateWasm to provide custom Wasm instantiation.
     // This bypasses tree-sitter's default URL-based loading which relies
     // on import.meta.url - unavailable in bundled or non-ESM environments.
     await TreeSitterParser.init({
@@ -37,7 +37,7 @@ export class Parser {
 
     const parser = new TreeSitterParser()
 
-    // Load Python language from WASM binary
+    // Load Python language from Wasm binary
     const pythonLanguage = await Language.load(wasmBinaries.python)
     parser.setLanguage(pythonLanguage)
 
