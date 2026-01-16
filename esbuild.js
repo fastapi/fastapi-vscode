@@ -72,8 +72,8 @@ async function main() {
     alias: {
       "node:path": "path-browserify",
     },
-    // vscode is provided by the runtime; fs/promises and module are Node.js only
-    // (web-tree-sitter is bundled - it works in browsers)
+    // vscode is provided by the runtime; web-tree-sitter is bundled but
+    // internally references these Node.js modules for environment detection
     external: ["vscode", "fs/promises", "module"],
   })
 
