@@ -341,5 +341,37 @@ suite("pathUtils", () => {
         false,
       )
     })
+
+    test("strips query strings from test path", () => {
+      // Query strings should be stripped before matching
+      // /teams/ has 1 segment ["teams"], should match /teams
+      assert.strictEqual(
+        pathMatchesEndpoint("/teams/?owner=true&order_by=created_at", "/teams"),
+        true,
+      )
+      assert.strictEqual(
+        pathMatchesEndpoint(
+          "{settings.API_V1_STR}/teams/?owner=true&order=desc",
+          "/teams",
+        ),
+        true,
+      )
+      // Should NOT match path with extra parameters when there's a query string
+      // /teams/ has 1 segment, /{team_id}/details has 2 segments
+      assert.strictEqual(
+        pathMatchesEndpoint("/teams/?owner=true", "/{team_id}/details"),
+        false,
+      )
+      // Query string with path parameters
+      assert.strictEqual(
+        pathMatchesEndpoint(
+          "/users/123/posts?limit=10",
+          "/users/{user_id}/posts",
+        ),
+        true,
+      )
+      // Root path with just query string
+      assert.strictEqual(pathMatchesEndpoint("/?page=1", "/"), true)
+    })
   })
 })
