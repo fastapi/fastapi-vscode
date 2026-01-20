@@ -315,7 +315,6 @@ suite("routerResolver", () => {
       assert.strictEqual(result.type, "FastAPI")
       assert.strictEqual(result.variableName, "app")
 
-      // Should have one child router from the aliased import
       assert.strictEqual(
         result.children.length,
         1,
@@ -326,13 +325,11 @@ suite("routerResolver", () => {
       assert.strictEqual(tokensRouter.router.type, "APIRouter")
       assert.strictEqual(tokensRouter.router.prefix, "/tokens")
 
-      // Should have routes from tokens.py (3 routes: list, create, delete)
       assert.ok(
         tokensRouter.router.routes.length >= 3,
         `Expected at least 3 routes, got ${tokensRouter.router.routes.length}`,
       )
 
-      // Verify the router file path points to the actual tokens.py, not some other file
       assert.ok(
         tokensRouter.router.filePath.endsWith("tokens.py"),
         `Expected filePath to end with tokens.py, got ${tokensRouter.router.filePath}`,

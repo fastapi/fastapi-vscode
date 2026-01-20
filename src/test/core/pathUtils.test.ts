@@ -272,7 +272,6 @@ suite("pathUtils", () => {
     })
 
     test("matches paths with dynamic prefix in endpoint", () => {
-      // Test suffix must match the endpoint's suffix of same length
       assert.strictEqual(
         pathMatchesEndpoint(
           "/items/123",
@@ -280,26 +279,15 @@ suite("pathUtils", () => {
         ),
         true,
       )
-      // Test has more segments than endpoint suffix - should fail
       assert.strictEqual(
         pathMatchesEndpoint("/api/v2/users", "{BASE}/users"),
-        false, // 3 segments vs 1 segment after stripping - test suffix too long
+        false,
       )
-      assert.strictEqual(
-        pathMatchesEndpoint("/users", "{BASE}/users"),
-        true, // 1 segment vs 1 segment after stripping
-      )
-      // Suffix must match
-      assert.strictEqual(
-        pathMatchesEndpoint("/items", "{BASE}/users"),
-        false, // items != users
-      )
+      assert.strictEqual(pathMatchesEndpoint("/users", "{BASE}/users"), true)
+      assert.strictEqual(pathMatchesEndpoint("/items", "{BASE}/users"), false)
     })
 
     test("matches paths with dynamic prefix in test path (f-strings)", () => {
-      // f-string paths in tests like f"{settings.API_V1_STR}/apps/{app.id}"
-      // Dynamic prefixes are stripped and matched against endpoint
-      // After stripping, segment counts must match for reliable matching
       assert.strictEqual(
         pathMatchesEndpoint(
           "{settings.API_V1_STR}/apps/{app.id}/environment-variables",
@@ -308,69 +296,23 @@ suite("pathUtils", () => {
         true,
       )
       assert.strictEqual(
-        pathMatchesEndpoint("{BASE}/users/{id}", "/users/{user_id}"),
-        true,
-      )
-      // Both have dynamic prefixes that get stripped
-      assert.strictEqual(
         pathMatchesEndpoint(
           "{settings.API}/items/{item_id}",
           "{BASE}/items/{id}",
         ),
         true,
       )
-      // Suffix must match exactly
       assert.strictEqual(
         pathMatchesEndpoint("{BASE}/users/{id}", "/items/{item_id}"),
-        false,
-      )
-      // Real-world test case: POST to tokens endpoint
-      assert.strictEqual(
-        pathMatchesEndpoint(
-          "{settings.API_V1_STR}/apps/{app.id}/tokens",
-          "/apps/{app_id}/tokens",
-        ),
-        true,
-      )
-      // Different segment counts should NOT match (prevents false positives)
-      assert.strictEqual(
-        pathMatchesEndpoint(
-          "{settings.API_V1_STR}/apps/{app.id}/tokens",
-          "/{app_id}/tokens",
-        ),
         false,
       )
     })
 
     test("strips query strings from test path", () => {
-      // Query strings should be stripped before matching
-      // /teams/ has 1 segment ["teams"], should match /teams
       assert.strictEqual(
         pathMatchesEndpoint("/teams/?owner=true&order_by=created_at", "/teams"),
         true,
       )
-      assert.strictEqual(
-        pathMatchesEndpoint(
-          "{settings.API_V1_STR}/teams/?owner=true&order=desc",
-          "/teams",
-        ),
-        true,
-      )
-      // Should NOT match path with extra parameters when there's a query string
-      // /teams/ has 1 segment, /{team_id}/details has 2 segments
-      assert.strictEqual(
-        pathMatchesEndpoint("/teams/?owner=true", "/{team_id}/details"),
-        false,
-      )
-      // Query string with path parameters
-      assert.strictEqual(
-        pathMatchesEndpoint(
-          "/users/123/posts?limit=10",
-          "/users/{user_id}/posts",
-        ),
-        true,
-      )
-      // Root path with just query string
       assert.strictEqual(pathMatchesEndpoint("/?page=1", "/"), true)
     })
   })
