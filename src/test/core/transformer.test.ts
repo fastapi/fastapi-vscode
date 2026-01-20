@@ -2,14 +2,14 @@ import * as assert from "node:assert"
 import { Parser } from "../../core/parser"
 import { buildRouterGraph } from "../../core/routerResolver"
 import { routerNodeToAppDefinition } from "../../core/transformer"
-import { fixtures, wasmPaths } from "../testUtils"
+import { fixtures, nodeFileSystem, wasmBinaries } from "../testUtils"
 
 suite("transformer", () => {
   let parser: Parser
 
   suiteSetup(async () => {
     parser = new Parser()
-    await parser.init(wasmPaths)
+    await parser.init(wasmBinaries)
   })
 
   suiteTeardown(() => {
@@ -17,11 +17,12 @@ suite("transformer", () => {
   })
 
   suite("routerNodeToAppDefinition", () => {
-    test("transforms router graph to AppDefinition", () => {
-      const routerNode = buildRouterGraph(
+    test("transforms router graph to AppDefinition", async () => {
+      const routerNode = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -33,11 +34,12 @@ suite("transformer", () => {
       assert.strictEqual(result.workspaceFolder, "/workspace")
     })
 
-    test("includes direct routes on app", () => {
-      const routerNode = buildRouterGraph(
+    test("includes direct routes on app", async () => {
+      const routerNode = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -50,11 +52,12 @@ suite("transformer", () => {
       assert.strictEqual(healthRoute.functionName, "health")
     })
 
-    test("flattens nested routers", () => {
-      const routerNode = buildRouterGraph(
+    test("flattens nested routers", async () => {
+      const routerNode = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -64,11 +67,12 @@ suite("transformer", () => {
       assert.ok(result.routers.length > 0)
     })
 
-    test("computes full path with prefixes", () => {
-      const routerNode = buildRouterGraph(
+    test("computes full path with prefixes", async () => {
+      const routerNode = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -86,11 +90,12 @@ suite("transformer", () => {
       )
     })
 
-    test("normalizes HTTP methods to uppercase", () => {
-      const routerNode = buildRouterGraph(
+    test("normalizes HTTP methods to uppercase", async () => {
+      const routerNode = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -115,11 +120,12 @@ suite("transformer", () => {
       }
     })
 
-    test("includes location info for routes", () => {
-      const routerNode = buildRouterGraph(
+    test("includes location info for routes", async () => {
+      const routerNode = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -132,11 +138,12 @@ suite("transformer", () => {
       }
     })
 
-    test("includes location info for routers", () => {
-      const routerNode = buildRouterGraph(
+    test("includes location info for routers", async () => {
+      const routerNode = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -149,11 +156,12 @@ suite("transformer", () => {
       }
     })
 
-    test("includes tags from routers", () => {
-      const routerNode = buildRouterGraph(
+    test("includes tags from routers", async () => {
+      const routerNode = await buildRouterGraph(
         fixtures.standard.usersPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 
@@ -161,11 +169,12 @@ suite("transformer", () => {
       assert.ok(routerNode.tags.includes("users"))
     })
 
-    test("skips routers with no routes or children", () => {
-      const routerNode = buildRouterGraph(
+    test("skips routers with no routes or children", async () => {
+      const routerNode = await buildRouterGraph(
         fixtures.standard.mainPy,
         parser,
         fixtures.standard.root,
+        nodeFileSystem,
       )
       assert.ok(routerNode)
 

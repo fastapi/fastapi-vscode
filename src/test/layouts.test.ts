@@ -8,7 +8,7 @@ import type {
   RouteDefinition,
   RouterDefinition,
 } from "../core/types"
-import { fixtures, wasmPaths } from "./testUtils"
+import { fixtures, nodeFileSystem, wasmBinaries } from "./testUtils"
 
 /** Collects all routes from an AppDefinition (direct routes + routes from all routers) */
 function collectAllRoutes(appDef: AppDefinition): RouteDefinition[] {
@@ -25,23 +25,25 @@ suite("Project Layouts", () => {
 
   suiteSetup(async () => {
     parser = new Parser()
-    await parser.init(wasmPaths)
+    await parser.init(wasmBinaries)
   })
 
   suiteTeardown(() => {
     parser.dispose()
   })
 
-  test("standard: discovers routes from package layout", () => {
-    const projectRoot = findProjectRoot(
+  test("standard: discovers routes from package layout", async () => {
+    const projectRoot = await findProjectRoot(
       fixtures.standard.mainPy,
       fixtures.standard.root,
+      nodeFileSystem,
     )
 
-    const graph = buildRouterGraph(
+    const graph = await buildRouterGraph(
       fixtures.standard.mainPy,
       parser,
       projectRoot,
+      nodeFileSystem,
     )
     assert.ok(graph, "Should find FastAPI app")
 
@@ -74,13 +76,19 @@ suite("Project Layouts", () => {
     )
   })
 
-  test("flat: discovers routes from flat layout", () => {
-    const projectRoot = findProjectRoot(
+  test("flat: discovers routes from flat layout", async () => {
+    const projectRoot = await findProjectRoot(
       fixtures.flat.mainPy,
       fixtures.flat.root,
+      nodeFileSystem,
     )
 
-    const graph = buildRouterGraph(fixtures.flat.mainPy, parser, projectRoot)
+    const graph = await buildRouterGraph(
+      fixtures.flat.mainPy,
+      parser,
+      projectRoot,
+      nodeFileSystem,
+    )
     assert.ok(graph, "Should find FastAPI app")
 
     const appDef = routerNodeToAppDefinition(graph, fixtures.flat.root)
@@ -108,16 +116,18 @@ suite("Project Layouts", () => {
     )
   })
 
-  test("namespace: discovers routes from namespace package (no __init__.py)", () => {
-    const projectRoot = findProjectRoot(
+  test("namespace: discovers routes from namespace package (no __init__.py)", async () => {
+    const projectRoot = await findProjectRoot(
       fixtures.namespace.mainPy,
       fixtures.namespace.root,
+      nodeFileSystem,
     )
 
-    const graph = buildRouterGraph(
+    const graph = await buildRouterGraph(
       fixtures.namespace.mainPy,
       parser,
       projectRoot,
+      nodeFileSystem,
     )
     assert.ok(graph, "Should find FastAPI app")
 
@@ -146,16 +156,18 @@ suite("Project Layouts", () => {
     )
   })
 
-  test("reexport: discovers routes from __init__.py re-exports", () => {
-    const projectRoot = findProjectRoot(
+  test("reexport: discovers routes from __init__.py re-exports", async () => {
+    const projectRoot = await findProjectRoot(
       fixtures.reexport.mainPy,
       fixtures.reexport.root,
+      nodeFileSystem,
     )
 
-    const graph = buildRouterGraph(
+    const graph = await buildRouterGraph(
       fixtures.reexport.mainPy,
       parser,
       projectRoot,
+      nodeFileSystem,
     )
     assert.ok(graph, "Should find FastAPI app")
 

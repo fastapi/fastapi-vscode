@@ -17,12 +17,19 @@
     "vscode": "^1.85.0"
   },
   "main": "./dist/extension.js",
+  "browser": "./dist/web/extension.js",
   "activationEvents": [
     "workspaceContains:**/*.py"
   ],
   "categories": [
     "Other"
   ],
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
   "contributes": {
     "commands": [
       {
@@ -112,11 +119,13 @@
         "fastapi.entryPoint": {
           "type": "string",
           "default": "",
+          "scope": "resource",
           "description": "Path to the main FastAPI application file (e.g., 'src/main.py'). If not set, the extension will search common locations."
         },
         "fastapi.showTestCodeLenses": {
           "type": "boolean",
           "default": true,
+          "scope": "resource",
           "description": "Show CodeLens links above test client calls (e.g., client.get('/items')) to navigate to the corresponding route definition."
         }
       }
@@ -130,6 +139,7 @@
     "publish:marketplace": "vsce publish",
     "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/",
     "test": "bun run compile && vscode-test",
+    "test:web": "bun run compile && bunx @vscode/test-web --extensionDevelopmentPath=. --browserType=none",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -143,6 +153,7 @@
     "esbuild": "^0.27.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
+    "path-browserify": "^1.0.1",
     "typescript": "^5.0.0"
   },
   "dependencies": {

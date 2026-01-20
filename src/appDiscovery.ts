@@ -3,38 +3,38 @@
  * Handles finding FastAPI apps via pyproject.toml, VS Code settings, or automatic detection.
  */
 
-import { existsSync } from "node:fs"
-import { isAbsolute, sep } from "node:path"
 import * as toml from "toml"
 import * as vscode from "vscode"
 import type { EntryPoint } from "./core/internal"
 import type { Parser } from "./core/parser"
-import { findProjectRoot } from "./core/pathUtils"
+import { findProjectRoot, uriPath } from "./core/pathUtils"
 import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
 import type { AppDefinition } from "./core/types"
+import { vscodeFileSystem } from "./providers/vscodeFileSystem"
+import { log } from "./utils/logger"
 
 export type { EntryPoint }
 
 /**
  * Scans for common FastAPI entry point files (main.py, __init__.py).
- * Returns paths sorted by depth (shallower first).
+ * Returns URI strings sorted by depth (shallower first).
  */
 async function automaticDetectEntryPoints(
-  folderPath: string,
+  folder: vscode.WorkspaceFolder,
 ): Promise<string[]> {
   const [mainFiles, initFiles] = await Promise.all([
     vscode.workspace.findFiles(
-      new vscode.RelativePattern(folderPath, "**/main.py"),
+      new vscode.RelativePattern(folder, "**/main.py"),
     ),
     vscode.workspace.findFiles(
-      new vscode.RelativePattern(folderPath, "**/__init__.py"),
+      new vscode.RelativePattern(folder, "**/__init__.py"),
     ),
   ])
 
   return [...mainFiles, ...initFiles]
-    .map((uri) => uri.fsPath)
-    .sort((a, b) => a.split(sep).length - b.split(sep).length)
+    .map((uri) => uri.toString())
+    .sort((a, b) => uriPath(a).split("/").length - uriPath(b).split("/").length)
 }
 
 /**
@@ -42,19 +42,16 @@ async function automaticDetectEntryPoints(
  * Supports module:variable notation, e.g. "my_app.main:app"
  */
 async function parsePyprojectForEntryPoint(
-  folderPath: string,
+  folderUri: vscode.Uri,
 ): Promise<EntryPoint | null> {
-  const pyprojectPath = vscode.Uri.joinPath(
-    vscode.Uri.file(folderPath),
-    "pyproject.toml",
-  )
+  const pyprojectUri = vscode.Uri.joinPath(folderUri, "pyproject.toml")
 
-  if (!existsSync(pyprojectPath.fsPath)) {
+  if (!(await vscodeFileSystem.exists(pyprojectUri.toString()))) {
     return null
   }
 
   try {
-    const document = await vscode.workspace.openTextDocument(pyprojectPath)
+    const document = await vscode.workspace.openTextDocument(pyprojectUri)
     const contents = toml.parse(document.getText()) as Record<string, unknown>
 
     const entrypoint = (contents.tool as Record<string, unknown> | undefined)
@@ -73,13 +70,12 @@ async function parsePyprojectForEntryPoint(
       colonIndex === -1 ? undefined : entrypointValue.slice(colonIndex + 1)
 
     // Convert module path to file path: my_app.main -> my_app/main.py
-    const relativePath = `${modulePath.replace(/\./g, sep)}.py`
-    const fullPath = vscode.Uri.joinPath(
-      vscode.Uri.file(folderPath),
-      relativePath,
-    ).fsPath
+    const relativePath = `${modulePath.replace(/\./g, "/")}.py`
+    const fullUri = vscode.Uri.joinPath(folderUri, relativePath)
 
-    return existsSync(fullPath) ? { filePath: fullPath, variableName } : null
+    return (await vscodeFileSystem.exists(fullUri.toString()))
+      ? { filePath: fullUri.toString(), variableName }
+      : null
   } catch {
     // Invalid TOML syntax - silently fall back to auto-detection
     return null
@@ -94,7 +90,14 @@ export async function discoverFastAPIApps(
   parser: Parser,
 ): Promise<AppDefinition[]> {
   const workspaceFolders = vscode.workspace.workspaceFolders
-  if (!workspaceFolders) return []
+  if (!workspaceFolders) {
+    log("No workspace folders found")
+    return []
+  }
+
+  log(
+    `Discovering FastAPI apps in ${workspaceFolders.length} workspace folder(s)...`,
+  )
 
   const apps: AppDefinition[] = []
 
@@ -106,52 +109,76 @@ export async function discoverFastAPIApps(
 
     // If user specified an entry point in settings, use that
     if (customEntryPoint) {
-      const entryPath = isAbsolute(customEntryPoint)
-        ? customEntryPoint
-        : vscode.Uri.joinPath(folder.uri, customEntryPoint).fsPath
+      const entryUri = customEntryPoint.startsWith("/")
+        ? vscode.Uri.file(customEntryPoint)
+        : vscode.Uri.joinPath(folder.uri, customEntryPoint)
 
-      if (!existsSync(entryPath)) {
+      if (!(await vscodeFileSystem.exists(entryUri.toString()))) {
+        log(`Custom entry point not found: ${customEntryPoint}`)
         vscode.window.showWarningMessage(
           `FastAPI entry point not found: ${customEntryPoint}`,
         )
         continue
       }
 
-      candidates = [{ filePath: entryPath }]
+      log(`Using custom entry point: ${customEntryPoint}`)
+      candidates = [{ filePath: entryUri.toString() }]
     } else {
       // Otherwise, check pyproject.toml or auto-detect
-      const pyprojectEntry = await parsePyprojectForEntryPoint(
-        folder.uri.fsPath,
-      )
-      candidates = pyprojectEntry
-        ? [pyprojectEntry]
-        : (await automaticDetectEntryPoints(folder.uri.fsPath)).map(
-            (filePath) => ({ filePath }),
-          )
+      const pyprojectEntry = await parsePyprojectForEntryPoint(folder.uri)
+      if (pyprojectEntry) {
+        candidates = [pyprojectEntry]
+      } else {
+        const detected = await automaticDetectEntryPoints(folder)
+        candidates = detected.map((filePath) => ({ filePath }))
+        log(
+          `Found ${candidates.length} candidate entry file(s) in ${folder.name}`,
+        )
+      }
 
       // If no candidates found, try the active editor as a last resort
       if (candidates.length === 0) {
         const activeEditor = vscode.window.activeTextEditor
         if (activeEditor?.document.languageId === "python") {
-          candidates = [{ filePath: activeEditor.document.uri.fsPath }]
+          candidates = [{ filePath: activeEditor.document.uri.toString() }]
         }
       }
     }
 
     for (const candidate of candidates) {
-      const projectRoot = findProjectRoot(candidate.filePath, folder.uri.fsPath)
-      const routerNode = buildRouterGraph(
+      const projectRoot = await findProjectRoot(
+        candidate.filePath,
+        folder.uri.toString(),
+        vscodeFileSystem,
+      )
+      const routerNode = await buildRouterGraph(
         candidate.filePath,
         parser,
         projectRoot,
+        vscodeFileSystem,
         candidate.variableName,
       )
 
       if (routerNode) {
-        apps.push(routerNodeToAppDefinition(routerNode, folder.uri.fsPath))
+        const app = routerNodeToAppDefinition(routerNode, folder.uri.fsPath)
+        // Count all routes: direct routes + routes in all routers (recursively)
+        const countRoutes = (routers: typeof app.routers): number =>
+          routers.reduce(
+            (sum, r) => sum + r.routes.length + countRoutes(r.children),
+            0,
+          )
+        const totalRoutes = app.routes.length + countRoutes(app.routers)
+        log(
+          `Found FastAPI app "${app.name}" with ${totalRoutes} route(s) in ${app.routers.length} router(s)`,
+        )
+        apps.push(app)
         break
       }
     }
+  }
+
+  if (apps.length === 0) {
+    log("No FastAPI apps found in workspace")
   }
 
   return apps

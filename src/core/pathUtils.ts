@@ -1,5 +1,7 @@
-import { existsSync } from "node:fs"
-import { dirname, join, relative, sep } from "node:path"
+/**
+ * Pure path utilities that don't require filesystem access.
+ * These work with URI strings and path strings.
+ */
 
 /**
  * Strips leading dynamic segments (like {settings.API_V1_STR}) from a path.
@@ -15,41 +17,49 @@ export function stripLeadingDynamicSegments(path: string): string {
 }
 
 /**
- * Checks if a path is within or equal to a base directory.
- * Uses relative path calculation to avoid false positives from string prefix matching.
+ * Gets the directory (parent) of a URI string.
+ * Works with any URI scheme (file://, vscode-vfs://, etc.).
  */
-export function isWithinDirectory(filePath: string, baseDir: string): boolean {
-  const rel = relative(baseDir, filePath)
-  // If relative path starts with "..", the path is outside baseDir
-  return !rel.startsWith("..") && !rel.startsWith(sep)
+export function uriDirname(uri: string): string {
+  // Parse the URI to separate scheme/authority from path
+  const match = uri.match(/^([^:]+:\/\/[^/]*)(.*)$/)
+  if (!match) {
+    // Fallback for simple paths
+    const lastSlash = uri.lastIndexOf("/")
+    return lastSlash <= 0 ? "/" : uri.slice(0, lastSlash)
+  }
+
+  const [, prefix, path] = match
+  const lastSlash = path.lastIndexOf("/")
+  if (lastSlash <= 0) {
+    return `${prefix}/`
+  }
+  return `${prefix}${path.slice(0, lastSlash)}`
 }
 
 /**
- * Finds the Python project root by walking up from the entry file
- * until we find a directory without __init__.py (or hit the workspace root).
- * This is the directory from which absolute imports are resolved.
+ * Extracts the path component from a URI string.
  */
-export function findProjectRoot(
-  entryPath: string,
-  workspaceRoot: string,
-): string {
-  let dir = dirname(entryPath)
+export function uriPath(uri: string): string {
+  const match = uri.match(/^[^:]+:\/\/[^/]*(.*)$/)
+  return match ? match[1] : uri
+}
 
-  // If the entry file's directory doesn't have __init__.py, it's a top-level script
-  if (!existsSync(join(dir, "__init__.py"))) {
-    return dir
+/**
+ * Checks if a URI is within or equal to a base directory URI.
+ * Uses URI path comparison to work across all platforms.
+ */
+export function isWithinDirectory(
+  fileUri: string,
+  baseDirUri: string,
+): boolean {
+  const filePath = uriPath(fileUri).replace(/\/+$/, "") || "/"
+  const basePath = uriPath(baseDirUri).replace(/\/+$/, "") || "/"
+
+  if (filePath === basePath) {
+    return true
   }
-
-  // Walk up until we find a directory whose parent doesn't have __init__.py
-  while (isWithinDirectory(dir, workspaceRoot) && dir !== workspaceRoot) {
-    const parent = dirname(dir)
-    if (!existsSync(join(parent, "__init__.py"))) {
-      return parent
-    }
-    dir = parent
-  }
-
-  return workspaceRoot
+  return filePath.startsWith(`${basePath}/`)
 }
 
 /**
@@ -108,4 +118,39 @@ export function pathMatchesEndpoint(
     // Literal segments must match exactly
     return seg === testSegments[index]
   })
+}
+
+/**
+ * Finds the Python project root by walking up from the entry file
+ * until we find a directory without __init__.py (or hit the workspace root).
+ * This is the directory from which absolute imports are resolved.
+ */
+export async function findProjectRoot(
+  entryUri: string,
+  workspaceRootUri: string,
+  fs: {
+    exists(uri: string): Promise<boolean>
+    joinPath(base: string, ...segments: string[]): string
+  },
+): Promise<string> {
+  let dirUri = uriDirname(entryUri)
+
+  // If the entry file's directory doesn't have __init__.py, it's a top-level script
+  if (!(await fs.exists(fs.joinPath(dirUri, "__init__.py")))) {
+    return dirUri
+  }
+
+  // Walk up until we find a directory whose parent doesn't have __init__.py
+  while (
+    isWithinDirectory(dirUri, workspaceRootUri) &&
+    uriPath(dirUri) !== uriPath(workspaceRootUri)
+  ) {
+    const parentUri = uriDirname(dirUri)
+    if (!(await fs.exists(fs.joinPath(parentUri, "__init__.py")))) {
+      return parentUri
+    }
+    dirUri = parentUri
+  }
+
+  return workspaceRootUri
 }

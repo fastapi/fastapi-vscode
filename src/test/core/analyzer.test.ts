@@ -1,7 +1,7 @@
 import * as assert from "node:assert"
 import { analyzeFile, analyzeTree } from "../../core/analyzer"
 import { Parser } from "../../core/parser"
-import { fixtures, wasmPaths } from "../testUtils"
+import { fixtures, nodeFileSystem, wasmBinaries } from "../testUtils"
 
 suite("analyzer", () => {
   let parser: Parser
@@ -14,7 +14,7 @@ suite("analyzer", () => {
 
   suiteSetup(async () => {
     parser = new Parser()
-    await parser.init(wasmPaths)
+    await parser.init(wasmBinaries)
   })
 
   suiteTeardown(() => {
@@ -110,8 +110,12 @@ import os
   })
 
   suite("analyzeFile", () => {
-    test("analyzes main.py fixture", () => {
-      const result = analyzeFile(fixtures.standard.mainPy, parser)
+    test("analyzes main.py fixture", async () => {
+      const result = await analyzeFile(
+        fixtures.standard.mainPy,
+        parser,
+        nodeFileSystem,
+      )
 
       assert.ok(result)
       assert.strictEqual(result.filePath, fixtures.standard.mainPy)
@@ -130,8 +134,12 @@ import os
       assert.strictEqual(healthRoute.method, "get")
     })
 
-    test("analyzes users.py fixture", () => {
-      const result = analyzeFile(fixtures.standard.usersPy, parser)
+    test("analyzes users.py fixture", async () => {
+      const result = await analyzeFile(
+        fixtures.standard.usersPy,
+        parser,
+        nodeFileSystem,
+      )
 
       assert.ok(result)
 
@@ -148,8 +156,12 @@ import os
       assert.ok(methods.includes("post"))
     })
 
-    test("returns null for non-existent file", () => {
-      const result = analyzeFile("/nonexistent/file.py", parser)
+    test("returns null for non-existent file", async () => {
+      const result = await analyzeFile(
+        "file:///nonexistent/file.py",
+        parser,
+        nodeFileSystem,
+      )
       assert.strictEqual(result, null)
     })
   })

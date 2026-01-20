@@ -11,14 +11,16 @@ import type { SourceLocation } from "./core/types"
 import {
   type EndpointTreeItem,
   EndpointTreeProvider,
-} from "./providers/EndpointTreeProvider"
-import { TestCodeLensProvider } from "./providers/TestCodeLensProvider"
+} from "./providers/endpointTreeProvider"
+import { TestCodeLensProvider } from "./providers/testCodeLensProvider"
+import { vscodeFileSystem } from "./providers/vscodeFileSystem"
 import { disposeLogger, log } from "./utils/logger"
 
 let parserService: Parser | null = null
 
 function navigateToLocation(location: SourceLocation): void {
-  const uri = vscode.Uri.file(location.filePath)
+  // filePath is now a URI string, parse it back to vscode.Uri
+  const uri = vscode.Uri.parse(location.filePath)
   const position = new vscode.Position(location.line - 1, location.column)
   vscode.window.showTextDocument(uri, {
     selection: new vscode.Range(position, position),
@@ -34,19 +36,30 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   parserService = new Parser()
+
+  // Read Wasm files via VS Code's virtual filesystem API
+  const [coreWasm, pythonWasm] = await Promise.all([
+    vscode.workspace.fs.readFile(
+      vscode.Uri.joinPath(
+        context.extensionUri,
+        "dist",
+        "wasm",
+        "web-tree-sitter.wasm",
+      ),
+    ),
+    vscode.workspace.fs.readFile(
+      vscode.Uri.joinPath(
+        context.extensionUri,
+        "dist",
+        "wasm",
+        "tree-sitter-python.wasm",
+      ),
+    ),
+  ])
+
   await parserService.init({
-    core: vscode.Uri.joinPath(
-      context.extensionUri,
-      "dist",
-      "wasm",
-      "web-tree-sitter.wasm",
-    ).fsPath,
-    python: vscode.Uri.joinPath(
-      context.extensionUri,
-      "dist",
-      "wasm",
-      "tree-sitter-python.wasm",
-    ).fsPath,
+    core: coreWasm,
+    python: pythonWasm,
   })
 
   // Discover apps and create providers
@@ -55,7 +68,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const codeLensProvider = new TestCodeLensProvider(parserService, apps)
 
   // File watcher for auto-refresh
-  let refreshTimeout: NodeJS.Timeout | null = null
+  let refreshTimeout: ReturnType<typeof setTimeout> | null = null
   const triggerRefresh = () => {
     if (refreshTimeout) clearTimeout(refreshTimeout)
     refreshTimeout = setTimeout(async () => {
@@ -63,13 +76,18 @@ export async function activate(context: vscode.ExtensionContext) {
       const newApps = await discoverFastAPIApps(parserService)
       endpointProvider.setApps(newApps)
       codeLensProvider.setApps(newApps)
-    }, 500)
+    }, 300)
   }
 
   const watcher = vscode.workspace.createFileSystemWatcher("**/*.py")
   watcher.onDidChange(triggerRefresh)
   watcher.onDidCreate(triggerRefresh)
   watcher.onDidDelete(triggerRefresh)
+
+  // Re-discover when workspace folders change (handles late folder availability in browser)
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(triggerRefresh),
+  )
 
   // Tree view
   const treeView = vscode.window.createTreeView("endpoint-explorer", {

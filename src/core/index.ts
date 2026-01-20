@@ -4,8 +4,11 @@
  */
 
 export { analyzeFile, analyzeTree } from "./analyzer"
+export type { FileSystem } from "./filesystem"
+export { clearImportCache } from "./importResolver"
 export type { FileAnalysis } from "./internal"
 export { Parser } from "./parser"
+export { findProjectRoot } from "./pathUtils"
 export { buildRouterGraph, type RouterNode } from "./routerResolver"
 export { routerNodeToAppDefinition } from "./transformer"
 export type {
