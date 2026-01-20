@@ -304,11 +304,12 @@ suite("routerResolver", () => {
       assert.strictEqual(result, null)
     })
 
-    test("resolves aliased import (from .tokens import router as tokens_router)", () => {
-      const result = buildRouterGraph(
+    test("resolves aliased import (from .tokens import router as tokens_router)", async () => {
+      const result = await buildRouterGraph(
         fixtures.aliasedImport.mainPy,
         parser,
         fixtures.aliasedImport.root,
+        nodeFileSystem,
       )
 
       assert.ok(result)

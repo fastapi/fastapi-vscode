@@ -49,6 +49,13 @@ export const fixtures = {
     root: uri(join(fixturesPath, "multi-app")),
     mainPy: uri(join(fixturesPath, "multi-app", "main.py")),
   },
+  aliasedImport: {
+    root: uri(join(fixturesPath, "aliased-import")),
+    mainPy: uri(join(fixturesPath, "aliased-import", "app", "main.py")),
+    tokensPy: uri(
+      join(fixturesPath, "aliased-import", "app", "routes", "tokens.py"),
+    ),
+  },
 }
 
 /**
@@ -83,16 +90,5 @@ export const nodeFileSystem: FileSystem = {
   dirname(uri: string): string {
     const path = uriToPath(uri)
     return `file://${dirname(path)}`
-  },
-  aliasedImport: {
-    root: join(fixturesPath, "aliased-import"),
-    mainPy: join(fixturesPath, "aliased-import", "app", "main.py"),
-    tokensPy: join(
-      fixturesPath,
-      "aliased-import",
-      "app",
-      "routes",
-      "tokens.py",
-    ),
   },
 }
