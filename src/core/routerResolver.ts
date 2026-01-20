@@ -250,11 +250,19 @@ async function resolveRouterReference(
   // Helper to analyze a file with the filesystem
   const analyzeFileFn = (uri: string) => analyzeFile(uri, parser, fs)
 
+  // Find the original import name (in case moduleName is an alias)
+  // e.g., "from .api_tokens import router as api_tokens_router"
+  // moduleName = "api_tokens_router", originalName = "router"
+  const namedImport = matchingImport.namedImports.find(
+    (ni) => (ni.alias ?? ni.name) === moduleName,
+  )
+  const originalName = namedImport?.name ?? moduleName
+
   // Resolve the imported module to a file URI
   const importedFileUri = await resolveNamedImport(
     {
       modulePath: matchingImport.modulePath,
-      names: [moduleName],
+      names: [originalName],
       isRelative: matchingImport.isRelative,
       relativeDots: matchingImport.relativeDots,
     },

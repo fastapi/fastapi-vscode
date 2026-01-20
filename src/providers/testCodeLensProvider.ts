@@ -14,7 +14,7 @@ import {
   Uri,
 } from "vscode"
 import type { Node } from "web-tree-sitter"
-import { extractStringValue, findNodesByType } from "../core/extractors"
+import { extractPathFromNode, findNodesByType } from "../core/extractors"
 import { ROUTE_METHODS } from "../core/internal"
 import type { Parser } from "../core/parser"
 import {
@@ -132,9 +132,8 @@ export class TestCodeLensProvider implements CodeLensProvider {
       }
 
       const pathArg = args[0]
-      // Only handle string literals for now
-      const path = extractStringValue(pathArg)
-      if (path === null) {
+      const path = extractPathFromNode(pathArg)
+      if (!path) {
         continue
       }
 
