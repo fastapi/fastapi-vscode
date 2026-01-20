@@ -129,7 +129,7 @@
     "package": "vsce package",
     "publish:marketplace": "vsce publish",
     "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/",
-    "test": "vscode-test",
+    "test": "bun run compile && vscode-test",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -146,6 +146,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "toml": "^3.0.0",
     "web-tree-sitter": "^0.26.3"
   },
   "lint-staged": {

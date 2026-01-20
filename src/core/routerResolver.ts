@@ -9,9 +9,16 @@ export type { RouterNode }
 
 /**
  * Finds the main FastAPI app or APIRouter in the list of routers.
- * We want to prioritize FastAPI apps over APIRouters.
+ * If targetVariable is specified, only returns the router with that variable name.
+ * Otherwise, prioritizes FastAPI apps over APIRouters.
  */
-function findAppRouter(routers: RouterInfo[]): RouterInfo | undefined {
+function findAppRouter(
+  routers: RouterInfo[],
+  targetVariable?: string,
+): RouterInfo | undefined {
+  if (targetVariable) {
+    return routers.find((r) => r.variableName === targetVariable)
+  }
   return (
     routers.find((r) => r.type === "FastAPI") ??
     routers.find((r) => r.type === "APIRouter")
@@ -20,13 +27,21 @@ function findAppRouter(routers: RouterInfo[]): RouterInfo | undefined {
 
 /**
  * Builds a router graph starting from the given entry file.
+ * If targetVariable is specified, only that specific app/router will be used.
  */
 export function buildRouterGraph(
   entryFile: string,
   parser: Parser,
   projectRoot: string,
+  targetVariable?: string,
 ): RouterNode | null {
-  return buildRouterGraphInternal(entryFile, parser, projectRoot, new Set())
+  return buildRouterGraphInternal(
+    entryFile,
+    parser,
+    projectRoot,
+    new Set(),
+    targetVariable,
+  )
 }
 
 /**
@@ -37,6 +52,7 @@ function buildRouterGraphInternal(
   parser: Parser,
   projectRoot: string,
   visited: Set<string>,
+  targetVariable?: string,
 ): RouterNode | null {
   // Resolve the full path of the entry file if necessary
   let resolvedEntryFile = entryFile
@@ -61,8 +77,8 @@ function buildRouterGraphInternal(
     return null
   }
 
-  // Find FastAPI instantiation
-  let appRouter = findAppRouter(analysis.routers)
+  // Find FastAPI instantiation (filter by targetVariable if specified)
+  let appRouter = findAppRouter(analysis.routers, targetVariable)
 
   // If no FastAPI/APIRouter found and this is an __init__.py, check for re-exports
   if (!appRouter && resolvedEntryFile.endsWith("__init__.py")) {

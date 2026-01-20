@@ -2,76 +2,19 @@
  * VSCode extension entry point for FastAPI endpoint discovery.
  */
 
-import { existsSync } from "node:fs"
-import { sep } from "node:path"
 import * as vscode from "vscode"
+import { discoverFastAPIApps } from "./appDiscovery"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
-import { findProjectRoot, stripLeadingDynamicSegments } from "./core/pathUtils"
-import { buildRouterGraph } from "./core/routerResolver"
-import { routerNodeToAppDefinition } from "./core/transformer"
-import type { AppDefinition, SourceLocation } from "./core/types"
+import { stripLeadingDynamicSegments } from "./core/pathUtils"
+import type { SourceLocation } from "./core/types"
 import {
   type EndpointTreeItem,
   EndpointTreeProvider,
 } from "./providers/EndpointTreeProvider"
 import { TestCodeLensProvider } from "./providers/TestCodeLensProvider"
 
-async function discoverFastAPIApps(parser: Parser): Promise<AppDefinition[]> {
-  const apps: AppDefinition[] = []
-  const workspaceFolders = vscode.workspace.workspaceFolders
-
-  if (!workspaceFolders) {
-    return apps
-  }
-
-  for (const folder of workspaceFolders) {
-    const config = vscode.workspace.getConfiguration("fastapi", folder.uri)
-    const customEntryPoint = config.get<string>("entryPoint")
-
-    let candidates: string[] = []
-
-    if (customEntryPoint) {
-      // Use custom entry point if specified
-      const entryPath = customEntryPoint.startsWith("/")
-        ? customEntryPoint
-        : vscode.Uri.joinPath(folder.uri, customEntryPoint).fsPath
-
-      if (!existsSync(entryPath)) {
-        vscode.window.showWarningMessage(
-          `FastAPI entry point not found: ${customEntryPoint}`,
-        )
-        continue
-      }
-
-      candidates = [entryPath]
-    } else {
-      // Scan for main.py and __init__.py files (likely FastAPI entry points)
-      const mainFiles = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(folder, "**/main.py"),
-      )
-      const initFiles = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(folder, "**/__init__.py"),
-      )
-      // Prefer main.py, then __init__.py, sorted by path depth (shallower first)
-      candidates = [...mainFiles, ...initFiles]
-        .map((uri) => uri.fsPath)
-        .sort((a, b) => a.split(sep).length - b.split(sep).length)
-    }
-
-    for (const entryPath of candidates) {
-      const projectRoot = findProjectRoot(entryPath, folder.uri.fsPath)
-      const routerNode = buildRouterGraph(entryPath, parser, projectRoot)
-
-      if (routerNode) {
-        apps.push(routerNodeToAppDefinition(routerNode, folder.uri.fsPath))
-        break
-      }
-    }
-  }
-
-  return apps
-}
+let parserService: Parser | null = null
 
 function navigateToLocation(location: SourceLocation): void {
   const uri = vscode.Uri.file(location.filePath)
@@ -81,9 +24,8 @@ function navigateToLocation(location: SourceLocation): void {
   })
 }
 
-let parserService: Parser | null = null
-
 export async function activate(context: vscode.ExtensionContext) {
+  // Initialize parser
   parserService = new Parser()
   await parserService.init({
     core: vscode.Uri.joinPath(
@@ -100,60 +42,61 @@ export async function activate(context: vscode.ExtensionContext) {
     ).fsPath,
   })
 
-  // Discover FastAPI endpoints from workspace
+  // Discover apps and create providers
   const apps = await discoverFastAPIApps(parserService)
   const endpointProvider = new EndpointTreeProvider(apps)
   const codeLensProvider = new TestCodeLensProvider(parserService, apps)
 
+  // File watcher for auto-refresh
   let refreshTimeout: NodeJS.Timeout | null = null
-
   const triggerRefresh = () => {
-    if (refreshTimeout) {
-      clearTimeout(refreshTimeout)
-    }
+    if (refreshTimeout) clearTimeout(refreshTimeout)
     refreshTimeout = setTimeout(async () => {
-      if (!parserService) {
-        return
-      }
+      if (!parserService) return
       const newApps = await discoverFastAPIApps(parserService)
       endpointProvider.setApps(newApps)
       codeLensProvider.setApps(newApps)
     }, 500)
   }
 
-  // Watch for changes in Python files to refresh endpoints
   const watcher = vscode.workspace.createFileSystemWatcher("**/*.py")
   watcher.onDidChange(triggerRefresh)
   watcher.onDidCreate(triggerRefresh)
   watcher.onDidDelete(triggerRefresh)
-  context.subscriptions.push(watcher)
 
+  // Tree view
   const treeView = vscode.window.createTreeView("endpoint-explorer", {
     treeDataProvider: endpointProvider,
   })
 
-  // Register CodeLens provider for test files
+  // CodeLens provider (optional)
   const config = vscode.workspace.getConfiguration("fastapi")
   if (config.get<boolean>("showTestCodeLenses", true)) {
     context.subscriptions.push(
       vscode.languages.registerCodeLensProvider(
-        // Covers common test file patterns
-        // e.g., test_*.py, *_test.py, tests/*.py
         { language: "python", pattern: "**/*test*.py" },
         codeLensProvider,
       ),
     )
   }
 
+  // Register disposables and commands
   context.subscriptions.push(
+    watcher,
     treeView,
+    registerCommands(endpointProvider, codeLensProvider),
+  )
+}
 
+function registerCommands(
+  endpointProvider: EndpointTreeProvider,
+  codeLensProvider: TestCodeLensProvider,
+): vscode.Disposable {
+  return vscode.Disposable.from(
     vscode.commands.registerCommand(
       "fastapi-vscode.refreshEndpoints",
       async () => {
-        if (!parserService) {
-          return
-        }
+        if (!parserService) return
         clearImportCache()
         const newApps = await discoverFastAPIApps(parserService)
         endpointProvider.setApps(newApps)
