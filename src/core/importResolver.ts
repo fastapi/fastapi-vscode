@@ -157,11 +157,18 @@ export async function resolveNamedImport(
     : modulePathToDir(importInfo, currentFileUri, projectRootUri, fs)
 
   for (const name of importInfo.names) {
-    // Try direct file: from .routes import users -> routes/users.py
-    const namedUri = fs.joinPath(baseDirUri, ...name.split("."))
-    const resolved = await resolvePythonModule(namedUri, fs)
-    if (resolved) {
-      return resolved
+    // Only try submodule resolution if baseUri is a package (__init__.py) or namespace package (null).
+    // For regular .py files, the name is a variable inside the file, not a submodule.
+    // Example: "from .neon import router" where neon.py defines router
+    // should resolve to neon.py, not look for router.py
+    const isPackage = baseUri === null || baseUri.endsWith("__init__.py")
+    if (isPackage) {
+      // Try direct file: from .routes import users -> routes/users.py
+      const namedUri = fs.joinPath(baseDirUri, ...name.split("."))
+      const resolved = await resolvePythonModule(namedUri, fs)
+      if (resolved) {
+        return resolved
+      }
     }
 
     // Try re-exports: from .routes import users where routes/__init__.py re-exports users

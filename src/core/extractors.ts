@@ -59,7 +59,7 @@ export function extractStringValue(node: Node): string | null {
  * Extracts a path string from various AST node types.
  * Handles: plain strings, f-strings, concatenation, identifiers.
  */
-function extractPathFromNode(node: Node): string {
+export function extractPathFromNode(node: Node): string {
   switch (node.type) {
     case "string":
       return extractStringValue(node) ?? ""

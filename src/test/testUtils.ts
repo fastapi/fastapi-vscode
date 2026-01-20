@@ -49,6 +49,26 @@ export const fixtures = {
     root: uri(join(fixturesPath, "multi-app")),
     mainPy: uri(join(fixturesPath, "multi-app", "main.py")),
   },
+  aliasedImport: {
+    root: uri(join(fixturesPath, "aliased-import")),
+    mainPy: uri(join(fixturesPath, "aliased-import", "app", "main.py")),
+    tokensPy: uri(
+      join(fixturesPath, "aliased-import", "app", "routes", "tokens.py"),
+    ),
+  },
+  nestedRouter: {
+    root: uri(join(fixturesPath, "nested-router")),
+    mainPy: uri(join(fixturesPath, "nested-router", "app", "main.py")),
+    appsPy: uri(
+      join(fixturesPath, "nested-router", "app", "routes", "apps.py"),
+    ),
+    tokensPy: uri(
+      join(fixturesPath, "nested-router", "app", "routes", "tokens.py"),
+    ),
+    settingsPy: uri(
+      join(fixturesPath, "nested-router", "app", "routes", "settings.py"),
+    ),
+  },
 }
 
 /**

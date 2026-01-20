@@ -90,33 +90,52 @@ export function countSegments(path: string): number {
 
 /**
  * Checks if a test path matches an endpoint path pattern.
- * Endpoint paths may contain path parameters like {item_id} which match any segment.
+ * Both paths may contain dynamic segments like {item_id} or {settings.API_V1_STR}
+ * which match any segment.
+ *
+ * Leading dynamic prefixes (like {settings.API_V1_STR}) and query strings are stripped
+ * before comparison.
  *
  * Examples:
  *   pathMatchesEndpoint("/items/123", "/items/{item_id}") -> true
  *   pathMatchesEndpoint("/items/123/details", "/items/{item_id}") -> false
  *   pathMatchesEndpoint("/users/abc/posts/456", "/users/{user_id}/posts/{post_id}") -> true
  *   pathMatchesEndpoint("/items/", "/items/{item_id}") -> false
+ *   pathMatchesEndpoint("{settings.API}/apps/{id}", "/apps/{app_id}") -> true
+ *   pathMatchesEndpoint("{BASE}/users/{id}", "/users/{user_id}") -> true
+ *   pathMatchesEndpoint("/teams/?owner=true", "/teams") -> true (query string stripped)
  */
 export function pathMatchesEndpoint(
   testPath: string,
   endpointPath: string,
 ): boolean {
-  const testSegments = testPath.split("/").filter(Boolean)
-  const endpointSegments = endpointPath.split("/").filter(Boolean)
+  // Strip query string from test path (e.g., "/teams/?owner=true" -> "/teams/")
+  const testPathWithoutQuery = testPath.split("?")[0]
+
+  // Strip leading dynamic segments (e.g., {settings.API_V1_STR}) for comparison
+  const testSegments = stripLeadingDynamicSegments(testPathWithoutQuery)
+    .split("/")
+    .filter(Boolean)
+  const endpointSegments = stripLeadingDynamicSegments(endpointPath)
+    .split("/")
+    .filter(Boolean)
 
   // Segment counts must match
   if (testSegments.length !== endpointSegments.length) {
     return false
   }
 
-  return endpointSegments.every((seg, index) => {
-    // Path parameter (e.g., {item_id}) matches any segment
-    if (seg.startsWith("{") && seg.endsWith("}")) {
+  // Compare each segment positionally
+  return testSegments.every((testSeg, i) => {
+    const endpointSeg = endpointSegments[i]
+    // Dynamic segments (e.g., {id}, {app.id}) match any value
+    const testIsDynamic = testSeg.startsWith("{") && testSeg.endsWith("}")
+    const endpointIsDynamic =
+      endpointSeg.startsWith("{") && endpointSeg.endsWith("}")
+    if (testIsDynamic || endpointIsDynamic) {
       return true
     }
-    // Literal segments must match exactly
-    return seg === testSegments[index]
+    return testSeg === endpointSeg
   })
 }
 

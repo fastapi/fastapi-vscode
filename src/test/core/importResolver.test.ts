@@ -241,5 +241,32 @@ suite("importResolver", () => {
       assert.ok(result)
       assert.ok(result.endsWith("api_routes.py"))
     })
+
+    test("resolves variable import from .py file (not submodule)", async () => {
+      // This tests "from .neon import router" where router is a variable in neon.py,
+      // NOT a submodule. Should return neon.py, not look for router.py
+      const reexportRoot = fixtures.reexport.root
+      const currentFile = nodeFileSystem.joinPath(
+        reexportRoot,
+        "app",
+        "integrations",
+        "router.py",
+      )
+
+      const result = await resolveNamedImport(
+        {
+          modulePath: "neon",
+          names: ["router"],
+          isRelative: true,
+          relativeDots: 1,
+        },
+        currentFile,
+        reexportRoot,
+        nodeFileSystem,
+      )
+
+      assert.ok(result, "Should resolve import")
+      assert.ok(result.endsWith("neon.py"), `Expected neon.py, got ${result}`)
+    })
   })
 })

@@ -271,19 +271,49 @@ suite("pathUtils", () => {
       )
     })
 
-    test("matches paths with dynamic prefix", () => {
-      // Dynamic prefixes like {settings.API_V1_STR} match any segment (same as path params)
+    test("matches paths with dynamic prefix in endpoint", () => {
       assert.strictEqual(
         pathMatchesEndpoint(
-          "/v1/items/123",
+          "/items/123",
           "{settings.API_V1_STR}/items/{item_id}",
         ),
         true,
       )
       assert.strictEqual(
         pathMatchesEndpoint("/api/v2/users", "{BASE}/users"),
-        false, // segment count differs
+        false,
       )
+      assert.strictEqual(pathMatchesEndpoint("/users", "{BASE}/users"), true)
+      assert.strictEqual(pathMatchesEndpoint("/items", "{BASE}/users"), false)
+    })
+
+    test("matches paths with dynamic prefix in test path (f-strings)", () => {
+      assert.strictEqual(
+        pathMatchesEndpoint(
+          "{settings.API_V1_STR}/apps/{app.id}/environment-variables",
+          "/apps/{app_id}/environment-variables",
+        ),
+        true,
+      )
+      assert.strictEqual(
+        pathMatchesEndpoint(
+          "{settings.API}/items/{item_id}",
+          "{BASE}/items/{id}",
+        ),
+        true,
+      )
+      assert.strictEqual(
+        pathMatchesEndpoint("{BASE}/users/{id}", "/items/{item_id}"),
+        false,
+      )
+    })
+
+    test("strips query strings from test path", () => {
+      assert.strictEqual(
+        pathMatchesEndpoint("/teams/?owner=true&order_by=created_at", "/teams"),
+        true,
+      )
+      assert.strictEqual(pathMatchesEndpoint("/?page=1", "/"), true)
     })
   })
 })
