@@ -2,8 +2,6 @@
  * VSCode extension entry point for FastAPI endpoint discovery.
  */
 
-import { existsSync } from "node:fs"
-import { basename, sep } from "node:path"
 import * as vscode from "vscode"
 import { discoverFastAPIApps } from "./appDiscovery"
 import { clearImportCache } from "./core/importResolver"
