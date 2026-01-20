@@ -13,6 +13,7 @@ import {
   EndpointTreeProvider,
 } from "./providers/EndpointTreeProvider"
 import { TestCodeLensProvider } from "./providers/TestCodeLensProvider"
+import { disposeLogger, log } from "./utils/logger"
 
 let parserService: Parser | null = null
 
@@ -25,7 +26,13 @@ function navigateToLocation(location: SourceLocation): void {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-  // Initialize parser
+  const extensionVersion =
+    vscode.extensions.getExtension("FastAPILabs.fastapi-vscode")?.packageJSON
+      ?.version ?? "unknown"
+  log(
+    `FastAPI extension ${extensionVersion} activated (VS Code ${vscode.version})`,
+  )
+
   parserService = new Parser()
   await parserService.init({
     core: vscode.Uri.joinPath(
@@ -166,7 +173,9 @@ function registerCommands(
 }
 
 export function deactivate() {
+  log("Extension deactivated")
   parserService?.dispose()
   parserService = null
   clearImportCache()
+  disposeLogger()
 }
