@@ -174,11 +174,12 @@ suite("Project Layouts", () => {
     const appDef = routerNodeToAppDefinition(graph, fixtures.reexport.root)
     const allRoutes = collectAllRoutes(appDef)
 
-    // Should have: GET /, GET /integrations/github, GET /integrations/slack, POST /integrations/webhook
+    // Should have: GET /, GET /integrations/github, GET /integrations/slack, POST /integrations/webhook,
+    // and nested neon routes: GET /integrations/neon/, POST /integrations/neon/connect
     assert.strictEqual(
       allRoutes.length,
-      4,
-      `Expected 4 routes, got ${allRoutes.length}`,
+      6,
+      `Expected 6 routes, got ${allRoutes.length}`,
     )
 
     const paths = allRoutes.map((r) => `${r.method} ${r.path}`)
@@ -197,6 +198,14 @@ suite("Project Layouts", () => {
     assert.ok(
       paths.some((p) => p === "POST /integrations/webhook"),
       "Should have POST /integrations/webhook",
+    )
+    assert.ok(
+      paths.some((p) => p === "GET /integrations/neon/"),
+      "Should have GET /integrations/neon/",
+    )
+    assert.ok(
+      paths.some((p) => p === "POST /integrations/neon/connect"),
+      "Should have POST /integrations/neon/connect",
     )
   })
 })

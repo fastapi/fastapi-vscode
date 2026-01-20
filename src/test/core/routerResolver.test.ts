@@ -151,7 +151,6 @@ suite("routerResolver", () => {
     })
 
     test("follows __init__.py re-exports to actual router file", async () => {
-      // Use reexport fixture which has integrations/__init__.py re-exporting from router.py
       const result = await buildRouterGraph(
         fixtures.reexport.initPy,
         parser,
@@ -163,16 +162,26 @@ suite("routerResolver", () => {
       assert.strictEqual(result.type, "APIRouter")
       assert.strictEqual(result.variableName, "router")
 
-      // Should point to router.py, not __init__.py
       assert.ok(
         result.filePath.endsWith("router.py"),
         `Expected filePath to end with router.py, got ${result.filePath}`,
       )
 
-      // Should have the routes defined in router.py (3 routes: github, slack, webhook)
       assert.ok(result.routes.length >= 3, "Should have routes from router.py")
       const githubRoute = result.routes.find((r) => r.path === "/github")
       assert.ok(githubRoute, "Should find github route")
+
+      assert.strictEqual(
+        result.children.length,
+        1,
+        "Should have one nested router (neon)",
+      )
+      const neonChild = result.children[0]
+      assert.strictEqual(neonChild.router.prefix, "/neon")
+      assert.ok(
+        neonChild.router.routes.length >= 2,
+        "neon router should have routes",
+      )
     })
 
     test("includes router when following include_router chain", async () => {
@@ -334,6 +343,114 @@ suite("routerResolver", () => {
       assert.ok(
         tokensRouter.router.filePath.endsWith("tokens.py"),
         `Expected filePath to end with tokens.py, got ${tokensRouter.router.filePath}`,
+      )
+    })
+
+    test("discovers nested routers (router.include_router)", async () => {
+      const result = await buildRouterGraph(
+        fixtures.nestedRouter.mainPy,
+        parser,
+        fixtures.nestedRouter.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.variableName, "app")
+
+      // App includes apps_router with /api prefix
+      assert.strictEqual(
+        result.children.length,
+        1,
+        "Should have one child router (apps)",
+      )
+
+      const appsChild = result.children[0]
+      assert.strictEqual(appsChild.prefix, "/api")
+      assert.strictEqual(appsChild.router.prefix, "/apps")
+      assert.strictEqual(appsChild.router.variableName, "router")
+
+      // Apps router should have its direct routes
+      const appsRoutes = appsChild.router.routes.map((r) => r.path)
+      assert.ok(appsRoutes.includes("/"), "apps router should have / route")
+      assert.ok(
+        appsRoutes.includes("/{app_id}"),
+        "apps router should have /{app_id} route",
+      )
+
+      // Apps router includes tokens_router and settings_router (nested)
+      assert.strictEqual(
+        appsChild.router.children.length,
+        2,
+        "apps router should have 2 nested routers",
+      )
+
+      const childPrefixes = appsChild.router.children.map(
+        (c) => c.router.prefix,
+      )
+      assert.ok(
+        childPrefixes.includes("/{app_id}/tokens"),
+        "Should have tokens router",
+      )
+      assert.ok(
+        childPrefixes.includes("/{app_id}/settings"),
+        "Should have settings router",
+      )
+
+      // Verify nested routers have their routes
+      const tokensChild = appsChild.router.children.find(
+        (c) => c.router.prefix === "/{app_id}/tokens",
+      )
+      assert.ok(tokensChild)
+      assert.ok(
+        tokensChild.router.routes.length >= 2,
+        "tokens router should have routes",
+      )
+
+      const settingsChild = appsChild.router.children.find(
+        (c) => c.router.prefix === "/{app_id}/settings",
+      )
+      assert.ok(settingsChild)
+      assert.ok(
+        settingsChild.router.routes.length >= 2,
+        "settings router should have routes",
+      )
+    })
+
+    test("discovers nested routers via __init__.py re-export", async () => {
+      // This tests the pattern: main.py imports from integrations (package),
+      // integrations/__init__.py re-exports router from router.py,
+      // router.py has include_router calls for nested routers
+      const result = await buildRouterGraph(
+        fixtures.reexport.mainPy,
+        parser,
+        fixtures.reexport.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+
+      assert.strictEqual(
+        result.children.length,
+        1,
+        "Should have one child router (integrations)",
+      )
+
+      const integrationsChild = result.children[0]
+      assert.strictEqual(integrationsChild.router.prefix, "/integrations")
+
+      assert.strictEqual(
+        integrationsChild.router.children.length,
+        1,
+        "integrations router should have nested neon router",
+      )
+
+      const neonChild = integrationsChild.router.children[0]
+      assert.strictEqual(neonChild.router.prefix, "/neon")
+      assert.ok(
+        neonChild.router.routes.length >= 2,
+        "neon router should have routes",
       )
     })
   })

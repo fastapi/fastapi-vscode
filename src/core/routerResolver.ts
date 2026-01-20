@@ -218,7 +218,7 @@ async function resolveRouterReference(
   if (localRouter) {
     // Filter routes that belong to this router (decorated with @router.method)
     const routerRoutes = analysis.routes.filter((r) => r.owner === moduleName)
-    return {
+    const routerNode: RouterNode = {
       filePath: currentFileUri,
       variableName: localRouter.variableName,
       type: localRouter.type,
@@ -235,6 +235,39 @@ async function resolveRouterReference(
       })),
       children: [],
     }
+
+    // Process include_router calls owned by this router (nested routers)
+    const routerIncludes = analysis.includeRouters.filter(
+      (inc) => inc.owner === moduleName,
+    )
+    for (const include of routerIncludes) {
+      log(
+        `Resolving nested include_router: ${include.router} (owner: ${moduleName}, prefix: ${include.prefix || "none"})`,
+      )
+      const childRouter = await resolveRouterReference(
+        include.router,
+        analysis,
+        currentFileUri,
+        projectRootUri,
+        parser,
+        fs,
+        visited,
+      )
+      if (childRouter) {
+        if (include.tags.length > 0) {
+          childRouter.tags = [
+            ...new Set([...childRouter.tags, ...include.tags]),
+          ]
+        }
+        routerNode.children.push({
+          router: childRouter,
+          prefix: include.prefix,
+          tags: include.tags,
+        })
+      }
+    }
+
+    return routerNode
   }
 
   // Otherwise, look for an imported router
@@ -301,7 +334,7 @@ async function resolveRouterReference(
       const routerRoutes = importedAnalysis.routes.filter(
         (r) => r.owner === attributeName,
       )
-      return {
+      const routerNode: RouterNode = {
         filePath: importedFileUri,
         variableName: targetRouter.variableName,
         type: targetRouter.type,
@@ -318,6 +351,39 @@ async function resolveRouterReference(
         })),
         children: [],
       }
+
+      // Process include_router calls owned by this router (nested routers)
+      const routerIncludes = importedAnalysis.includeRouters.filter(
+        (inc) => inc.owner === attributeName,
+      )
+      for (const include of routerIncludes) {
+        log(
+          `Resolving nested include_router: ${include.router} (owner: ${attributeName}, prefix: ${include.prefix || "none"})`,
+        )
+        const childRouter = await resolveRouterReference(
+          include.router,
+          importedAnalysis,
+          importedFileUri,
+          projectRootUri,
+          parser,
+          fs,
+          visited,
+        )
+        if (childRouter) {
+          if (include.tags.length > 0) {
+            childRouter.tags = [
+              ...new Set([...childRouter.tags, ...include.tags]),
+            ]
+          }
+          routerNode.children.push({
+            router: childRouter,
+            prefix: include.prefix,
+            tags: include.tags,
+          })
+        }
+      }
+
+      return routerNode
     }
     // If not found as a router, fall through to try building from file
   }

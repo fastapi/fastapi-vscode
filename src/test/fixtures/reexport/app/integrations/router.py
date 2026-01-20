@@ -1,6 +1,11 @@
 from fastapi import APIRouter
 
+from .neon import router as neon_router
+
 router = APIRouter(prefix="/integrations", tags=["integrations"])
+
+# Nested router
+router.include_router(neon_router)
 
 
 @router.get("/github")
