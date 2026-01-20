@@ -46,8 +46,8 @@ export const fixtures = {
     mainPy: uri(join(fixturesPath, "same-file", "main.py")),
   },
   multiApp: {
-    root: join(fixturesPath, "multi-app"),
-    mainPy: join(fixturesPath, "multi-app", "main.py"),
+    root: uri(join(fixturesPath, "multi-app")),
+    mainPy: uri(join(fixturesPath, "multi-app", "main.py")),
   },
 }
 

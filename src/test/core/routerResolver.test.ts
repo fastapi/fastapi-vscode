@@ -259,22 +259,24 @@ suite("routerResolver", () => {
       )
     })
 
-    test("selects specific app by targetVariable", () => {
+    test("selects specific app by targetVariable", async () => {
       // Without targetVariable, should pick first FastAPI app (public_app)
-      const defaultResult = buildRouterGraph(
+      const defaultResult = await buildRouterGraph(
         fixtures.multiApp.mainPy,
         parser,
         fixtures.multiApp.root,
+        nodeFileSystem,
       )
 
       assert.ok(defaultResult)
       assert.strictEqual(defaultResult.variableName, "public_app")
 
       // With targetVariable, should select admin_app
-      const adminResult = buildRouterGraph(
+      const adminResult = await buildRouterGraph(
         fixtures.multiApp.mainPy,
         parser,
         fixtures.multiApp.root,
+        nodeFileSystem,
         "admin_app",
       )
 
@@ -290,11 +292,12 @@ suite("routerResolver", () => {
       assert.ok(routePaths.includes("/users/{user_id}"))
     })
 
-    test("returns null for non-existent targetVariable", () => {
-      const result = buildRouterGraph(
+    test("returns null for non-existent targetVariable", async () => {
+      const result = await buildRouterGraph(
         fixtures.multiApp.mainPy,
         parser,
         fixtures.multiApp.root,
+        nodeFileSystem,
         "nonexistent_app",
       )
 
