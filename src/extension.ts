@@ -11,15 +11,14 @@ import type { SourceLocation } from "./core/types"
 import {
   type EndpointTreeItem,
   EndpointTreeProvider,
+  METHOD_ICONS,
 } from "./providers/endpointTreeProvider"
 import { TestCodeLensProvider } from "./providers/testCodeLensProvider"
-import { vscodeFileSystem } from "./providers/vscodeFileSystem"
 import { disposeLogger, log } from "./utils/logger"
 
 let parserService: Parser | null = null
 
 function navigateToLocation(location: SourceLocation): void {
-  // filePath is now a URI string, parse it back to vscode.Uri
   const uri = vscode.Uri.parse(location.filePath)
   const position = new vscode.Position(location.line - 1, location.column)
   vscode.window.showTextDocument(uri, {
@@ -134,6 +133,43 @@ function registerCommands(
       (item: EndpointTreeItem) => {
         if (item.type === "route") {
           navigateToLocation(item.route.location)
+        }
+      },
+    ),
+
+    vscode.commands.registerCommand(
+      "fastapi-vscode.searchEndpoints",
+      async () => {
+        const workspacePrefix =
+          vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
+        const items = endpointProvider
+          .getAllRoutes()
+          .map((route) => {
+            const path = stripLeadingDynamicSegments(route.path)
+            return {
+              label: `$(${METHOD_ICONS[route.method]}) ${route.method.toUpperCase()} ${path}`,
+              description: route.functionName,
+              detail: vscode.Uri.parse(route.location.filePath)
+                .fsPath.replace(workspacePrefix, "")
+                .replace(/^\//, ""),
+              route,
+              sortKey: `${path} ${route.method}`,
+            }
+          })
+          .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+
+        if (items.length === 0) {
+          vscode.window.showInformationMessage(
+            "No FastAPI endpoints found in the workspace.",
+          )
+          return
+        }
+
+        const selected = await vscode.window.showQuickPick(items, {
+          placeHolder: "Search FastAPI endpoints...",
+        })
+        if (selected) {
+          navigateToLocation(selected.route.location)
         }
       },
     ),
