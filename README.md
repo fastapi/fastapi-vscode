@@ -14,7 +14,7 @@ A VS Code extension for FastAPI development that discovers and displays your API
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `fastapi.entryPoint` | Path to the main FastAPI application file (e.g., `src/main.py`). If not set, the extension searches common locations: `main.py`, `app/main.py`, `api/main.py`, `src/main.py`, `backend/app/main.py`. | `""` (auto-detect) |
-| `fastapi.showTestCodeLenses` | Show CodeLens links above test client calls (e.g., `client.get('/items')`) to navigate to the corresponding route definition. | `true` |
+| `fastapi.codeLens.enabled` | Show CodeLens links above test client calls (e.g., `client.get('/items')`) to navigate to the corresponding route definition. | `true` |
 
 **Note:** Currently the extension discovers one FastAPI app per workspace folder. If you have multiple apps, use separate workspace folders or configure `fastapi.entryPoint` to point to your primary app.
 
@@ -59,3 +59,7 @@ A VS Code extension for FastAPI development that discovers and displays your API
 - esbuild
 - Bun (package manager)
 - VS Code Extension API
+
+## Data and telemetry
+
+The FastAPI extension collects anonymous usage data and sends it to FastAPI to help improve the extension. You can disable telemetry by setting `fastapi.telemetry.enabled` to `false`. Read our [TELEMETRY.md](TELEMETRY.md) for details on what we collect and what we don't.

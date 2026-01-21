@@ -15,6 +15,20 @@ import {
 } from "./providers/endpointTreeProvider"
 import { TestCodeLensProvider } from "./providers/testCodeLensProvider"
 import { disposeLogger, log } from "./utils/logger"
+import {
+  countRoutes,
+  createTimer,
+  flushSessionSummary,
+  incrementCodeLensClicked,
+  incrementRouteCopied,
+  incrementRouteNavigated,
+  initVSCodeTelemetry,
+  client as telemetryClient,
+  trackActivation,
+  trackActivationFailed,
+  trackSearchExecuted,
+  trackTreeViewVisible,
+} from "./utils/telemetry"
 
 let parserService: Parser | null = null
 
@@ -27,6 +41,7 @@ function navigateToLocation(location: SourceLocation): void {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+  const elapsed = createTimer()
   const extensionVersion =
     vscode.extensions.getExtension("FastAPILabs.fastapi-vscode")?.packageJSON
       ?.version ?? "unknown"
@@ -34,35 +49,62 @@ export async function activate(context: vscode.ExtensionContext) {
     `FastAPI extension ${extensionVersion} activated (VS Code ${vscode.version})`,
   )
 
-  parserService = new Parser()
+  // Initialize telemetry
+  await initVSCodeTelemetry(context)
 
-  // Read Wasm files via VS Code's virtual filesystem API
-  const [coreWasm, pythonWasm] = await Promise.all([
-    vscode.workspace.fs.readFile(
-      vscode.Uri.joinPath(
-        context.extensionUri,
-        "dist",
-        "wasm",
-        "web-tree-sitter.wasm",
-      ),
-    ),
-    vscode.workspace.fs.readFile(
-      vscode.Uri.joinPath(
-        context.extensionUri,
-        "dist",
-        "wasm",
-        "tree-sitter-python.wasm",
-      ),
-    ),
-  ])
+  let apps: Awaited<ReturnType<typeof discoverFastAPIApps>> = []
+  let success = true
 
-  await parserService.init({
-    core: coreWasm,
-    python: pythonWasm,
+  try {
+    parserService = new Parser()
+
+    // Read Wasm files via VS Code's virtual filesystem API
+    const [coreWasm, pythonWasm] = await Promise.all([
+      vscode.workspace.fs.readFile(
+        vscode.Uri.joinPath(
+          context.extensionUri,
+          "dist",
+          "wasm",
+          "web-tree-sitter.wasm",
+        ),
+      ),
+      vscode.workspace.fs.readFile(
+        vscode.Uri.joinPath(
+          context.extensionUri,
+          "dist",
+          "wasm",
+          "tree-sitter-python.wasm",
+        ),
+      ),
+    ])
+
+    await parserService.init({
+      core: coreWasm,
+      python: pythonWasm,
+    })
+  } catch (error) {
+    success = false
+    trackActivationFailed(error, "parser_init")
+    throw error
+  }
+
+  try {
+    // Discover apps and create providers
+    apps = await discoverFastAPIApps(parserService)
+  } catch (error) {
+    success = false
+    trackActivationFailed(error, "discovery")
+    throw error
+  }
+
+  trackActivation({
+    duration_ms: elapsed(),
+    success,
+    routes_count: countRoutes(apps),
+    apps_count: apps.length,
+    workspace_folder_count: vscode.workspace.workspaceFolders?.length ?? 0,
   })
 
-  // Discover apps and create providers
-  const apps = await discoverFastAPIApps(parserService)
   const endpointProvider = new EndpointTreeProvider(apps)
   const codeLensProvider = new TestCodeLensProvider(parserService, apps)
 
@@ -93,9 +135,15 @@ export async function activate(context: vscode.ExtensionContext) {
     treeDataProvider: endpointProvider,
   })
 
+  treeView.onDidChangeVisibility((e) => {
+    if (e.visible) {
+      trackTreeViewVisible()
+    }
+  })
+
   // CodeLens provider (optional)
   const config = vscode.workspace.getConfiguration("fastapi")
-  if (config.get<boolean>("showTestCodeLenses", true)) {
+  if (config.get<boolean>("codeLens.enabled", true)) {
     context.subscriptions.push(
       vscode.languages.registerCodeLensProvider(
         { language: "python", pattern: "**/*test*.py" },
@@ -104,11 +152,15 @@ export async function activate(context: vscode.ExtensionContext) {
     )
   }
 
+  // Periodic telemetry flush (every 5 minutes)
+  const telemetryFlushInterval = setInterval(flushSessionSummary, 5 * 60 * 1000)
+
   // Register disposables and commands
   context.subscriptions.push(
     watcher,
     treeView,
     registerCommands(endpointProvider, codeLensProvider),
+    { dispose: () => clearInterval(telemetryFlushInterval) },
   )
 }
 
@@ -132,6 +184,7 @@ function registerCommands(
       "fastapi-vscode.goToEndpoint",
       (item: EndpointTreeItem) => {
         if (item.type === "route") {
+          incrementRouteNavigated()
           navigateToLocation(item.route.location)
         }
       },
@@ -159,6 +212,7 @@ function registerCommands(
           .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
 
         if (items.length === 0) {
+          trackSearchExecuted(0, false)
           vscode.window.showInformationMessage(
             "No FastAPI endpoints found in the workspace.",
           )
@@ -168,6 +222,7 @@ function registerCommands(
         const selected = await vscode.window.showQuickPick(items, {
           placeHolder: "Search FastAPI endpoints...",
         })
+        trackSearchExecuted(items.length, selected !== undefined)
         if (selected) {
           navigateToLocation(selected.route.location)
         }
@@ -178,6 +233,7 @@ function registerCommands(
       "fastapi-vscode.copyEndpointPath",
       (item: EndpointTreeItem) => {
         if (item.type === "route") {
+          incrementRouteCopied()
           vscode.env.clipboard.writeText(
             stripLeadingDynamicSegments(item.route.path),
           )
@@ -213,6 +269,7 @@ function registerCommands(
         fromUri: vscode.Uri,
         fromPosition: vscode.Position,
       ) => {
+        incrementCodeLensClicked()
         vscode.commands.executeCommand(
           "editor.action.goToLocations",
           fromUri,
@@ -226,8 +283,10 @@ function registerCommands(
   )
 }
 
-export function deactivate() {
+export async function deactivate() {
   log("Extension deactivated")
+  flushSessionSummary()
+  await telemetryClient.shutdown()
   parserService?.dispose()
   parserService = null
   clearImportCache()

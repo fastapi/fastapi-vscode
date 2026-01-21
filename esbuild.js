@@ -1,6 +1,28 @@
-import { copyFileSync, globSync, mkdirSync } from "node:fs"
+import {
+  copyFileSync,
+  existsSync,
+  globSync,
+  mkdirSync,
+  readFileSync,
+} from "node:fs"
 import path from "node:path"
 import esbuild from "esbuild"
+
+// Load .env file if it exists
+const envPath = path.join(import.meta.dirname, ".env")
+if (existsSync(envPath)) {
+  const envContent = readFileSync(envPath, "utf-8")
+  for (const line of envContent.split("\n")) {
+    const trimmed = line.trim()
+    if (trimmed && !trimmed.startsWith("#")) {
+      const [key, ...valueParts] = trimmed.split("=")
+      const value = valueParts.join("=")
+      if (key && value !== undefined && !process.env[key]) {
+        process.env[key] = value
+      }
+    }
+  }
+}
 
 const production = process.argv.includes("--production")
 const watch = process.argv.includes("--watch")
@@ -44,6 +66,9 @@ async function main() {
     logLevel: "info",
     define: {
       "process.env.NODE_ENV": production ? '"production"' : '"development"',
+      "process.env.POSTHOG_API_KEY": JSON.stringify(
+        process.env.POSTHOG_API_KEY || "",
+      ),
       __DIST_ROOT__: JSON.stringify(path.join(import.meta.dirname, "dist")),
     },
   }
@@ -74,7 +99,8 @@ async function main() {
     },
     // vscode is provided by the runtime; web-tree-sitter is bundled but
     // internally references these Node.js modules for environment detection
-    external: ["vscode", "fs/promises", "module"],
+    // posthog-node uses Node.js APIs, so telemetry is disabled in browser
+    external: ["vscode", "fs/promises", "module", "posthog-node"],
   })
 
   if (watch) {

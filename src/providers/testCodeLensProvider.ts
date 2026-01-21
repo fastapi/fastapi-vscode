@@ -27,6 +27,7 @@ import type {
   RouterDefinition,
   SourceLocation,
 } from "../core/types"
+import { trackCodeLensProvided } from "../utils/telemetry"
 
 interface TestClientCall {
   method: string
@@ -40,6 +41,7 @@ export class TestCodeLensProvider implements CodeLensProvider {
   private parser: Parser
   private _onDidChangeCodeLenses = new EventEmitter<void>()
   readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event
+  private trackedFiles = new Set<string>()
 
   constructor(parser: Parser, apps: AppDefinition[]) {
     this.parser = parser
@@ -48,6 +50,7 @@ export class TestCodeLensProvider implements CodeLensProvider {
 
   setApps(apps: AppDefinition[]): void {
     this.apps = apps
+    this.trackedFiles.clear()
     this._onDidChangeCodeLenses.fire()
   }
 
@@ -92,6 +95,13 @@ export class TestCodeLensProvider implements CodeLensProvider {
           }),
         )
       }
+    }
+
+    // Track once per file per session
+    const fileKey = document.uri.toString()
+    if (testClientCalls.length > 0 && !this.trackedFiles.has(fileKey)) {
+      this.trackedFiles.add(fileKey)
+      trackCodeLensProvided(testClientCalls.length, codeLenses.length)
     }
 
     return codeLenses

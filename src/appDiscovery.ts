@@ -13,6 +13,12 @@ import { routerNodeToAppDefinition } from "./core/transformer"
 import type { AppDefinition } from "./core/types"
 import { vscodeFileSystem } from "./providers/vscodeFileSystem"
 import { log } from "./utils/logger"
+import {
+  countRouters,
+  countRoutes,
+  createTimer,
+  trackEntrypointDetected,
+} from "./utils/telemetry"
 
 export type { EntryPoint }
 
@@ -89,6 +95,7 @@ async function parsePyprojectForEntryPoint(
 export async function discoverFastAPIApps(
   parser: Parser,
 ): Promise<AppDefinition[]> {
+  const elapsed = createTimer()
   const workspaceFolders = vscode.workspace.workspaceFolders
   if (!workspaceFolders) {
     log("No workspace folders found")
@@ -100,6 +107,7 @@ export async function discoverFastAPIApps(
   )
 
   const apps: AppDefinition[] = []
+  let detectionMethod: "config" | "pyproject" | "heuristic" = "heuristic"
 
   for (const folder of workspaceFolders) {
     const config = vscode.workspace.getConfiguration("fastapi", folder.uri)
@@ -123,14 +131,17 @@ export async function discoverFastAPIApps(
 
       log(`Using custom entry point: ${customEntryPoint}`)
       candidates = [{ filePath: entryUri.toString() }]
+      detectionMethod = "config"
     } else {
       // Otherwise, check pyproject.toml or auto-detect
       const pyprojectEntry = await parsePyprojectForEntryPoint(folder.uri)
       if (pyprojectEntry) {
         candidates = [pyprojectEntry]
+        detectionMethod = "pyproject"
       } else {
         const detected = await automaticDetectEntryPoints(folder)
         candidates = detected.map((filePath) => ({ filePath }))
+        detectionMethod = "heuristic"
         log(
           `Found ${candidates.length} candidate entry file(s) in ${folder.name}`,
         )
@@ -180,6 +191,14 @@ export async function discoverFastAPIApps(
   if (apps.length === 0) {
     log("No FastAPI apps found in workspace")
   }
+
+  trackEntrypointDetected({
+    duration_ms: elapsed(),
+    method: detectionMethod,
+    success: apps.length > 0,
+    routes_count: countRoutes(apps),
+    routers_count: countRouters(apps),
+  })
 
   return apps
 }

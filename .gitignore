@@ -26,3 +26,5 @@ _.log
 /.agents/
 /.claude/
 CLAUDE.local.md
+
+.env

@@ -135,11 +135,17 @@
           "scope": "resource",
           "description": "Path to the main FastAPI application file (e.g., 'src/main.py'). If not set, the extension will search common locations."
         },
-        "fastapi.showTestCodeLenses": {
+        "fastapi.codeLens.enabled": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "description": "Show CodeLens links above test client calls (e.g., client.get('/items')) to navigate to the corresponding route definition."
+        },
+        "fastapi.telemetry.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "machine",
+          "description": "Enable telemetry to help improve the extension. No personal data is collected."
         }
       }
     }
@@ -170,6 +176,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "posthog-node": "^5.24.1",
     "toml": "^3.0.0",
     "web-tree-sitter": "^0.26.3"
   },
