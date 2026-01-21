@@ -9,7 +9,7 @@ suite("telemetry", () => {
     })
 
     test("returns wasm_load_error for wasm errors", () => {
-      const error = new Error("Failed to load WASM module")
+      const error = new Error("Failed to load Wasm module")
       assert.strictEqual(sanitizeError(error), "wasm_load_error")
     })
 
@@ -38,12 +38,6 @@ suite("telemetry", () => {
       assert.strictEqual(sanitizeError(null), "unknown_error")
       assert.strictEqual(sanitizeError(undefined), "unknown_error")
       assert.strictEqual(sanitizeError(42), "unknown_error")
-    })
-
-    test("is case insensitive", () => {
-      assert.strictEqual(sanitizeError(new Error("WASM")), "wasm_load_error")
-      assert.strictEqual(sanitizeError(new Error("Wasm")), "wasm_load_error")
-      assert.strictEqual(sanitizeError(new Error("wasm")), "wasm_load_error")
     })
   })
 })

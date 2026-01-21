@@ -97,7 +97,7 @@ export class TestCodeLensProvider implements CodeLensProvider {
       }
     }
 
-    // Track once per file per session
+    // Track once per file per session (first open only, edits won't update the count)
     const fileKey = document.uri.toString()
     if (testClientCalls.length > 0 && !this.trackedFiles.has(fileKey)) {
       this.trackedFiles.add(fileKey)

@@ -45,6 +45,7 @@ We collect anonymous usage metrics. We do **not** collect:
 | Routes navigated | Count of navigations (cumulative) | Helps us understand feature usage depth |
 | Routes copied | Count of copies (cumulative) | Helps us understand feature usage depth |
 | CodeLens clicked | Count of clicks (cumulative) | Helps us understand feature usage depth |
+
 ### Identifiers
 
 - A random UUID is generated and stored locally in VS Code's extension storage

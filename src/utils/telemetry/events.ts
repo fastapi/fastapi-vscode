@@ -5,13 +5,11 @@ import type {
   EntrypointDetectedEventProps,
 } from "./types"
 
-/** Creates a timer that returns elapsed milliseconds when called. */
 export function createTimer(): () => number {
   const start = performance.now()
   return () => Math.round(performance.now() - start)
 }
 
-// Event name constants
 export const Events = {
   ACTIVATED: "extension_activated",
   ACTIVATION_FAILED: "extension_activation_failed",
@@ -100,8 +98,6 @@ export function sanitizeError(error: unknown): string {
   }
   return "unknown_error"
 }
-
-// Typed event tracking functions
 
 export function trackActivation(props: ActivationEventProps): void {
   client.capture(Events.ACTIVATED, { ...props })
