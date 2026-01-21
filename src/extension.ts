@@ -131,23 +131,23 @@ function registerCommands(
     vscode.commands.registerCommand(
       "fastapi-vscode.searchEndpoints",
       async () => {
-        const workspaceFolder =
-          vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+        const workspacePrefix =
+          vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
         const items = endpointProvider
           .getAllRoutes()
           .map((route) => {
-            const fullPath = vscode.Uri.parse(route.location.filePath).fsPath
-            const relativePath = workspaceFolder
-              ? fullPath.replace(workspaceFolder, "").replace(/^\//, "")
-              : fullPath
+            const path = stripLeadingDynamicSegments(route.path)
             return {
-              label: `$(${METHOD_ICONS[route.method]}) ${route.method.toUpperCase()} ${stripLeadingDynamicSegments(route.path)}`,
+              label: `$(${METHOD_ICONS[route.method]}) ${route.method.toUpperCase()} ${path}`,
               description: route.functionName,
-              detail: relativePath,
+              detail: vscode.Uri.parse(route.location.filePath)
+                .fsPath.replace(workspacePrefix, "")
+                .replace(/^\//, ""),
               route,
+              sortKey: `${path} ${route.method}`,
             }
           })
-          .sort((a, b) => a.label.localeCompare(b.label))
+          .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
 
         if (items.length === 0) {
           vscode.window.showInformationMessage(
