@@ -58,6 +58,19 @@
         "command": "fastapi-vscode.reportIssue",
         "title": "Report Issue...",
         "category": "FastAPI"
+      },
+      {
+        "command": "fastapi-vscode.searchEndpoints",
+        "title": "Search Endpoints...",
+        "category": "FastAPI",
+        "icon": "$(search)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "fastapi-vscode.searchEndpoints",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e"
       }
     ],
     "menus": {

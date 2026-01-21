@@ -28,7 +28,7 @@ const defaultGrouping: GroupingFunction = (apps) =>
   apps.map((app) => ({ type: "app" as const, app }))
 
 /** Method icons for route display */
-const METHOD_ICONS: Record<RouteMethod, string> = {
+export const METHOD_ICONS: Record<RouteMethod, string> = {
   GET: "arrow-right",
   POST: "plus",
   PUT: "edit",
@@ -54,6 +54,23 @@ export class EndpointTreeProvider
   constructor(apps: AppDefinition[] = [], groupApps?: GroupingFunction) {
     this.apps = apps
     this.groupApps = groupApps ?? defaultGrouping
+  }
+
+  getApps(): AppDefinition[] {
+    return this.apps
+  }
+
+  /** Returns all routes from all apps, including nested router routes. */
+  getAllRoutes(): RouteDefinition[] {
+    const collectFromRouters = (
+      routers: RouterDefinition[],
+    ): RouteDefinition[] =>
+      routers.flatMap((r) => [...r.routes, ...collectFromRouters(r.children)])
+
+    return this.apps.flatMap((app) => [
+      ...app.routes,
+      ...collectFromRouters(app.routers),
+    ])
   }
 
   setApps(apps: AppDefinition[], groupApps?: GroupingFunction): void {
