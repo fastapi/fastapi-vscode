@@ -129,6 +129,15 @@ function registerCommands(
     ),
 
     vscode.commands.registerCommand(
+      "fastapi-vscode.goToEndpoint",
+      (item: EndpointTreeItem) => {
+        if (item.type === "route") {
+          navigateToLocation(item.route.location)
+        }
+      },
+    ),
+
+    vscode.commands.registerCommand(
       "fastapi-vscode.searchEndpoints",
       async () => {
         const workspacePrefix =
