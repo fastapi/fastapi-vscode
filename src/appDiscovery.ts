@@ -98,7 +98,6 @@ async function parsePyprojectForEntryPoint(
 export async function discoverFastAPIApps(
   parser: Parser,
 ): Promise<AppDefinition[]> {
-  const elapsed = createTimer()
   const workspaceFolders = vscode.workspace.workspaceFolders
   if (!workspaceFolders) {
     log("No workspace folders found")
@@ -110,9 +109,11 @@ export async function discoverFastAPIApps(
   )
 
   const apps: AppDefinition[] = []
-  let detectionMethod: "config" | "pyproject" | "heuristic" = "heuristic"
 
   for (const folder of workspaceFolders) {
+    const folderTimer = createTimer()
+    let detectionMethod: "config" | "pyproject" | "heuristic" = "heuristic"
+    const folderApps: AppDefinition[] = []
     const config = vscode.workspace.getConfiguration("fastapi", folder.uri)
     const customEntryPoint = config.get<string>("entryPoint")
 
@@ -185,23 +186,25 @@ export async function discoverFastAPIApps(
         log(
           `Found FastAPI app "${app.name}" with ${totalRoutes} route(s) in ${app.routers.length} router(s)`,
         )
+        folderApps.push(app)
         apps.push(app)
-        break
+        break // Only use first successful app per workspace folder
       }
     }
+
+    // Track entrypoint detection per workspace folder
+    trackEntrypointDetected({
+      duration_ms: folderTimer(),
+      method: detectionMethod,
+      success: folderApps.length > 0,
+      routes_count: countRoutes(folderApps),
+      routers_count: countRouters(folderApps),
+    })
   }
 
   if (apps.length === 0) {
     log("No FastAPI apps found in workspace")
   }
-
-  trackEntrypointDetected({
-    duration_ms: elapsed(),
-    method: detectionMethod,
-    success: apps.length > 0,
-    routes_count: countRoutes(apps),
-    routers_count: countRouters(apps),
-  })
 
   return apps
 }
