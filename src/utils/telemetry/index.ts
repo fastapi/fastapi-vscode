@@ -13,6 +13,7 @@ export {
   trackActivation,
   trackActivationFailed,
   trackCodeLensProvided,
+  trackDeactivation,
   trackEntrypointDetected,
   trackSearchExecuted,
   trackTreeViewVisible,
@@ -25,6 +26,7 @@ export type {
 } from "./types"
 export {
   getClientInfo,
+  getInstalledVersions,
   getOrCreateUserId,
   initVSCodeTelemetry,
   isTelemetryEnabled,

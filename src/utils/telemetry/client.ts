@@ -14,12 +14,18 @@ export class TelemetryClient {
   private userId: string | null = null
   private config: TelemetryConfig | null = null
   private initialized = false
+  private pythonVersion: string | undefined = undefined
+  private fastapiVersion: string | undefined = undefined
+  private sessionId: string | null = null
+  private sessionStartTime: number | null = null
 
   init(config: TelemetryConfig): void {
     if (this.initialized || !config.isEnabled() || !POSTHOG_API_KEY) return
 
     this.config = config
     this.userId = config.userId
+    this.sessionId = crypto.randomUUID()
+    this.sessionStartTime = Date.now()
 
     this.posthog = new PostHog(POSTHOG_API_KEY, {
       host: POSTHOG_HOST,
@@ -43,6 +49,20 @@ export class TelemetryClient {
     this.initialized = true
   }
 
+  /**
+   * Set Python and FastAPI versions to include in all events.
+   * Call this after detecting versions from the Python extension.
+   */
+  setVersions(pythonVersion?: string, fastapiVersion?: string): void {
+    this.pythonVersion = pythonVersion
+    this.fastapiVersion = fastapiVersion
+  }
+
+  getSessionDuration(): number | null {
+    if (!this.sessionStartTime) return null
+    return Date.now() - this.sessionStartTime
+  }
+
   async shutdown(): Promise<void> {
     if (this.posthog) {
       await this.posthog.shutdown()
@@ -51,20 +71,38 @@ export class TelemetryClient {
     this.initialized = false
     this.userId = null
     this.config = null
+    this.pythonVersion = undefined
+    this.fastapiVersion = undefined
+    this.sessionId = null
+    this.sessionStartTime = null
   }
 
   capture(event: string, properties?: Record<string, unknown>): void {
     if (!this.posthog || !this.userId || !this.config?.isEnabled()) return
 
-    this.posthog.capture({
-      distinctId: this.userId,
-      event,
-      properties: {
-        ...properties,
-        client: this.config.clientInfo.client,
-        extension_version: this.config.extensionVersion,
-      },
-    })
+    try {
+      this.posthog.capture({
+        distinctId: this.userId,
+        event,
+        properties: {
+          ...properties,
+          client: this.config.clientInfo.client,
+          platform: this.config.clientInfo.platform,
+          arch: this.config.clientInfo.arch,
+          extension_version: this.config.extensionVersion,
+          python_version: this.pythonVersion,
+          fastapi_version: this.fastapiVersion,
+          $session_id: this.sessionId,
+        },
+      })
+    } catch (error) {
+      // Log telemetry errors but don't throw - telemetry should never break the extension
+      console.error(
+        "[FastAPI Telemetry] Failed to capture event:",
+        event,
+        error,
+      )
+    }
   }
 }
 

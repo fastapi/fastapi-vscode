@@ -20,6 +20,7 @@ import {
   countRoutes,
   createTimer,
   flushSessionSummary,
+  getInstalledVersions,
   incrementCodeLensClicked,
   incrementRouteCopied,
   incrementRouteNavigated,
@@ -27,6 +28,7 @@ import {
   client as telemetryClient,
   trackActivation,
   trackActivationFailed,
+  trackDeactivation,
   trackSearchExecuted,
   trackTreeViewVisible,
 } from "./utils/telemetry"
@@ -97,6 +99,15 @@ export async function activate(context: vscode.ExtensionContext) {
     trackActivationFailed(error, "discovery")
     throw error
   }
+
+  // Get actual installed Python and FastAPI versions from the active interpreter
+  const installedVersions = await getInstalledVersions()
+
+  // Set versions on telemetry client so they're included in all events
+  telemetryClient.setVersions(
+    installedVersions.pythonVersion,
+    installedVersions.fastapiVersion,
+  )
 
   trackActivation({
     duration_ms: elapsed(),
@@ -317,6 +328,7 @@ function registerCommands(
 export async function deactivate() {
   log("Extension deactivated")
   flushSessionSummary()
+  trackDeactivation()
   await telemetryClient.shutdown()
   parserService?.dispose()
   parserService = null

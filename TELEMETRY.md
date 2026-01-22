@@ -26,17 +26,20 @@ This disables only the FastAPI extension's telemetry while leaving other telemet
 
 ## What we collect
 
-We collect anonymous usage metrics. We do **not** collect:
+We collect anonymous usage metrics to improve the extension. We do **not** collect:
 - File paths or file contents
 - Route paths or endpoint names
 - Any code from your project
 - IP addresses (geo-IP is disabled)
 
+**Note:** All events include contextual information: client type (VS Code, Cursor, etc.), OS platform, CPU architecture, extension version, and if available, the installed Python and FastAPI versions from your active interpreter.
+
 ### Events
 
 | Event | Data | Why |
 |-------|------|-----|
-| Extension activated | Activation duration, success/failure, number of routes/apps discovered, workspace folder count | Helps us understand startup performance and project sizes |
+| Extension activated | Activation duration, success/failure, number of routes/routers/apps discovered, workspace folder count | Helps us understand startup performance, project sizes, and environment compatibility |
+| Extension deactivated | Session duration (time from activation to deactivation) | Helps us understand how long users keep VS Code open with the extension active |
 | Activation failed | Error category (e.g., "parse_error", "wasm_load_error"), failure stage | Helps us debug issues users encounter |
 | Entrypoint detected | Detection duration, method used (config/pyproject/heuristic), success/failure, routes and routers count | Helps us understand which detection methods work best |
 | Tree view visible | _(none)_ | Know if users see the endpoint explorer |

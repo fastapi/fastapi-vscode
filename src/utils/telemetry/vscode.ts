@@ -5,7 +5,7 @@
 
 import * as vscode from "vscode"
 import { client } from "./client"
-import type { ClientInfo, TelemetryConfig } from "./types"
+import type { ClientInfo } from "./types"
 
 const USER_ID_KEY = "fastapi.telemetry.userId"
 
@@ -40,6 +40,8 @@ export function getClientInfo(): ClientInfo {
     app_host: appHost,
     is_remote: remoteName !== undefined,
     remote_name: remoteName,
+    platform: process.platform,
+    arch: process.arch,
   }
 }
 
@@ -87,4 +89,73 @@ export async function initVSCodeTelemetry(
     extensionVersion,
     isEnabled: isTelemetryEnabled,
   })
+}
+
+/**
+ * Get actual Python and FastAPI versions from the active interpreter.
+ * Uses the Python extension API if available and already active.
+ * If not active, events will not have version info.
+ */
+export async function getInstalledVersions(): Promise<{
+  pythonVersion?: string
+  fastapiVersion?: string
+}> {
+  try {
+    // Get Python extension API
+    const pythonExtension = vscode.extensions.getExtension("ms-python.python")
+
+    // Don't activate the extension just for telemetry - only use it if already active
+    if (!pythonExtension || !pythonExtension.isActive) {
+      return {}
+    }
+
+    const pythonApi = pythonExtension.exports
+
+    // Get active interpreter details
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+    if (!workspaceFolder) {
+      return {}
+    }
+
+    const environment = await pythonApi.environments.resolveEnvironment(
+      await pythonApi.environments.getActiveEnvironmentPath(
+        workspaceFolder.uri,
+      ),
+    )
+
+    if (!environment?.version?.major) {
+      return {}
+    }
+
+    // Extract Python version including patch version (e.g., "3.11.5")
+    const pythonVersion = environment.version.micro
+      ? `${environment.version.major}.${environment.version.minor}.${environment.version.micro}`
+      : `${environment.version.major}.${environment.version.minor}`
+
+    // Get FastAPI version by running python command
+    let fastapiVersion: string | undefined
+    if (environment.executable?.uri) {
+      try {
+        const pythonPath = environment.executable.uri.fsPath
+        const { promisify } = await import("util")
+        const { execFile } = await import("child_process")
+        const execFileAsync = promisify(execFile)
+
+        const { stdout } = await execFileAsync(
+          pythonPath,
+          ["-c", "import fastapi; print(fastapi.__version__)"],
+          { timeout: 5000 },
+        )
+
+        fastapiVersion = stdout.trim() || undefined
+      } catch {
+        // FastAPI not installed or execution failed
+      }
+    }
+
+    return { pythonVersion, fastapiVersion }
+  } catch {
+    // Python extension not available or error
+    return {}
+  }
 }

@@ -13,6 +13,7 @@ export function createTimer(): () => number {
 export const Events = {
   ACTIVATED: "extension_activated",
   ACTIVATION_FAILED: "extension_activation_failed",
+  DEACTIVATED: "extension_deactivated",
   ENTRYPOINT_DETECTED: "extension_entrypoint_detected",
   CODELENS_PROVIDED: "extension_codelens_provided",
   CODELENS_CLICKED: "extension_codelens_clicked",
@@ -23,7 +24,14 @@ export const Events = {
 } as const
 
 // Session counters for aggregated tracking
+// Track both session total and last flushed count to send deltas
 const sessionCounters = {
+  routes_navigated: 0,
+  routes_copied: 0,
+  codelens_clicks: 0,
+}
+
+const lastFlushedCounters = {
   routes_navigated: 0,
   routes_copied: 0,
   codelens_clicks: 0,
@@ -42,22 +50,31 @@ export function incrementCodeLensClicked(): void {
 }
 
 export function flushSessionSummary(): void {
-  // Cumulative counts - don't reset, so each flush shows running total
-  // In PostHog, take max(count) per session to get final total
-  if (sessionCounters.routes_navigated > 0) {
+  // Send incremental changes since last flush
+  const routesNavigatedDelta =
+    sessionCounters.routes_navigated - lastFlushedCounters.routes_navigated
+  const routesCopiedDelta =
+    sessionCounters.routes_copied - lastFlushedCounters.routes_copied
+  const codelensClicksDelta =
+    sessionCounters.codelens_clicks - lastFlushedCounters.codelens_clicks
+
+  if (routesNavigatedDelta > 0) {
     client.capture(Events.ROUTE_NAVIGATED, {
-      count: sessionCounters.routes_navigated,
+      count: routesNavigatedDelta,
     })
+    lastFlushedCounters.routes_navigated = sessionCounters.routes_navigated
   }
-  if (sessionCounters.routes_copied > 0) {
+  if (routesCopiedDelta > 0) {
     client.capture(Events.ROUTE_COPIED, {
-      count: sessionCounters.routes_copied,
+      count: routesCopiedDelta,
     })
+    lastFlushedCounters.routes_copied = sessionCounters.routes_copied
   }
-  if (sessionCounters.codelens_clicks > 0) {
+  if (codelensClicksDelta > 0) {
     client.capture(Events.CODELENS_CLICKED, {
-      count: sessionCounters.codelens_clicks,
+      count: codelensClicksDelta,
     })
+    lastFlushedCounters.codelens_clicks = sessionCounters.codelens_clicks
   }
 }
 
@@ -87,15 +104,26 @@ export function countRouters(apps: AppDefinition[]): number {
 }
 
 export function sanitizeError(error: unknown): string {
-  if (error instanceof Error) {
-    const msg = error.message.toLowerCase()
-    if (msg.includes("enoent")) return "file_not_found"
-    if (msg.includes("wasm")) return "wasm_load_error"
-    if (msg.includes("parse")) return "parse_error"
-    if (msg.includes("timeout")) return "timeout_error"
-    if (msg.includes("permission")) return "permission_error"
+  if (!(error instanceof Error)) {
     return "unknown_error"
   }
+
+  // Check Node.js error code if available (e.g., ENOENT, EACCES)
+  const code = (error as NodeJS.ErrnoException).code
+  if (code) {
+    return code.toLowerCase()
+  }
+
+  // Check error constructor name for built-in error types
+  const errorType = error.constructor.name
+  if (errorType !== "Error") {
+    return errorType
+      .replace(/Error$/, "")
+      .replace(/([A-Z])/g, "_$1")
+      .toLowerCase()
+      .slice(1)
+  }
+
   return "unknown_error"
 }
 
@@ -142,4 +170,13 @@ export function trackCodeLensProvided(
     matched_count: matchedCount,
     match_rate: testCallsCount > 0 ? matchedCount / testCallsCount : 0,
   })
+}
+
+export function trackDeactivation(): void {
+  const duration = client.getSessionDuration()
+  if (duration !== null) {
+    client.capture(Events.DEACTIVATED, {
+      session_duration_ms: duration,
+    })
+  }
 }

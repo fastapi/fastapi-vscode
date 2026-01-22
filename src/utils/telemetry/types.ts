@@ -11,6 +11,8 @@ export interface ClientInfo {
   app_host: string
   is_remote: boolean
   remote_name: string | undefined
+  platform: string // 'win32' | 'darwin' | 'linux'
+  arch: string // 'x64' | 'arm64'
 }
 
 // Event property types
