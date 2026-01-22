@@ -18,6 +18,7 @@ export interface ActivationEventProps {
   duration_ms: number
   success: boolean
   routes_count: number
+  routers_count: number
   apps_count: number
   workspace_folder_count: number
 }

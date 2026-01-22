@@ -16,6 +16,7 @@ import {
 import { TestCodeLensProvider } from "./providers/testCodeLensProvider"
 import { disposeLogger, log } from "./utils/logger"
 import {
+  countRouters,
   countRoutes,
   createTimer,
   flushSessionSummary,
@@ -101,6 +102,7 @@ export async function activate(context: vscode.ExtensionContext) {
     duration_ms: elapsed(),
     success,
     routes_count: countRoutes(apps),
+    routers_count: countRouters(apps),
     apps_count: apps.length,
     workspace_folder_count: vscode.workspace.workspaceFolders?.length ?? 0,
   })
@@ -182,7 +184,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     watcher,
     treeView,
-    registerCommands(endpointProvider, codeLensProvider),
+    registerCommands(endpointProvider, codeLensProvider, groupApps),
     { dispose: () => clearInterval(telemetryFlushInterval) },
   )
 }
@@ -190,6 +192,12 @@ export async function activate(context: vscode.ExtensionContext) {
 function registerCommands(
   endpointProvider: EndpointTreeProvider,
   codeLensProvider: TestCodeLensProvider,
+  groupApps: (
+    apps: AppDefinition[],
+  ) => Array<
+    | { type: "app"; app: AppDefinition }
+    | { type: "workspace"; label: string; apps: AppDefinition[] }
+  >,
 ): vscode.Disposable {
   return vscode.Disposable.from(
     vscode.commands.registerCommand(
@@ -198,7 +206,7 @@ function registerCommands(
         if (!parserService) return
         clearImportCache()
         const newApps = await discoverFastAPIApps(parserService)
-        endpointProvider.setApps(newApps)
+        endpointProvider.setApps(newApps, groupApps)
         codeLensProvider.setApps(newApps)
       },
     ),
