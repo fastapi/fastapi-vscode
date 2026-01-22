@@ -7,7 +7,7 @@ import { discoverFastAPIApps } from "./appDiscovery"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
-import type { SourceLocation } from "./core/types"
+import type { AppDefinition, SourceLocation } from "./core/types"
 import {
   type EndpointTreeItem,
   EndpointTreeProvider,
@@ -63,7 +63,36 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Discover apps and create providers
   const apps = await discoverFastAPIApps(parserService)
-  const endpointProvider = new EndpointTreeProvider(apps)
+
+  // Create grouping function that groups by workspace folder if there are multiple folders
+  const groupApps = (apps: AppDefinition[]) => {
+    const workspaceFolders = vscode.workspace.workspaceFolders
+    if (!workspaceFolders || workspaceFolders.length <= 1) {
+      // Single workspace folder: show apps directly at root
+      return apps.map((app) => ({ type: "app" as const, app }))
+    }
+
+    // Multi-root workspace: group by workspace folder
+    const grouped = new Map<string, typeof apps>()
+    for (const app of apps) {
+      const folder = app.workspaceFolder
+      const existingApps = grouped.get(folder)
+      if (existingApps) {
+        existingApps.push(app)
+      } else {
+        grouped.set(folder, [app])
+      }
+    }
+
+    // Create workspace items with folder names
+    return Array.from(grouped.entries()).map(([folderPath, apps]) => {
+      const folder = workspaceFolders.find((f) => f.uri.fsPath === folderPath)
+      const label = folder?.name ?? folderPath.split("/").pop() ?? folderPath
+      return { type: "workspace" as const, label, apps }
+    })
+  }
+
+  const endpointProvider = new EndpointTreeProvider(apps, groupApps)
   const codeLensProvider = new TestCodeLensProvider(parserService, apps)
 
   // File watcher for auto-refresh
@@ -73,7 +102,7 @@ export async function activate(context: vscode.ExtensionContext) {
     refreshTimeout = setTimeout(async () => {
       if (!parserService) return
       const newApps = await discoverFastAPIApps(parserService)
-      endpointProvider.setApps(newApps)
+      endpointProvider.setApps(newApps, groupApps)
       codeLensProvider.setApps(newApps)
     }, 300)
   }
