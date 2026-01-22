@@ -73,16 +73,11 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     // Multi-root workspace: group by workspace folder
-    const grouped = new Map<string, typeof apps>()
-    for (const app of apps) {
-      const folder = app.workspaceFolder
-      const existingApps = grouped.get(folder)
-      if (existingApps) {
-        existingApps.push(app)
-      } else {
-        grouped.set(folder, [app])
-      }
-    }
+    const grouped = apps.reduce((acc, app) => {
+      const existing = acc.get(app.workspaceFolder) ?? []
+      acc.set(app.workspaceFolder, [...existing, app])
+      return acc
+    }, new Map<string, AppDefinition[]>())
 
     // Create workspace items with folder names
     return Array.from(grouped.entries()).map(([folderPath, apps]) => {
