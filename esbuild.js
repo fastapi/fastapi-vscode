@@ -8,7 +8,7 @@ import {
 import path from "node:path"
 import esbuild from "esbuild"
 
-// Load .env file if it exists
+// Load .env file if it exists (needed for POSTHOG_API_KEY)
 const envPath = path.join(import.meta.dirname, ".env")
 if (existsSync(envPath)) {
   const envContent = readFileSync(envPath, "utf-8")
