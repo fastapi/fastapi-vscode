@@ -70,14 +70,10 @@ async function parsePyprojectForEntryPoint(
       colonIndex === -1 ? undefined : entrypointValue.slice(colonIndex + 1)
 
     // Handle both module format (api.module) and file format (api.py)
-    let relativePath: string
-    if (modulePath.endsWith(".py") && !modulePath.includes("/")) {
-      // Likely a simple file path: api.py -> api.py
-      relativePath = modulePath
-    } else {
-      // Module path: my_app.main -> my_app/main.py
-      relativePath = `${modulePath.replace(/\./g, "/")}.py`
-    }
+    const relativePath =
+      modulePath.endsWith(".py") && !modulePath.includes("/")
+        ? modulePath // Simple file path: api.py -> api.py
+        : `${modulePath.replace(/\./g, "/")}.py` // Module path: my_app.main -> my_app/main.py
     const fullUri = vscode.Uri.joinPath(folderUri, relativePath)
 
     return (await vscodeFileSystem.exists(fullUri.toString()))
