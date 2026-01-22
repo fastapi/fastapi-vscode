@@ -80,6 +80,12 @@ export async function initVSCodeTelemetry(
     return
   }
 
+  // Skip telemetry in browser environments (vscode.dev, github.dev)
+  // PostHog Node.js client requires Node APIs that aren't available in browsers
+  if (vscode.env.uiKind === vscode.UIKind.Web) {
+    return
+  }
+
   const userId = await getOrCreateUserId(context)
   const extensionVersion =
     vscode.extensions.getExtension("FastAPILabs.fastapi-vscode")?.packageJSON
