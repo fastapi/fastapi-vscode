@@ -7,12 +7,12 @@ export interface TelemetryConfig {
 
 export interface ClientInfo {
   client: string // 'vscode-desktop' | 'cursor' | 'vscodium' | etc.
-  app_name: string
-  app_host: string
-  is_remote: boolean
-  remote_name: string | undefined
-  platform: string // 'win32' | 'darwin' | 'linux'
-  arch: string // 'x64' | 'arm64'
+  app_name: string // Human-readable editor name (e.g., "Visual Studio Code", "Cursor")
+  app_host: string // Host environment (e.g., "desktop", "codespaces", "web")
+  is_remote: boolean // Whether workspace is opened via remote connection
+  remote_name: string | undefined // Remote type if applicable (e.g., "ssh-remote", "dev-container", "wsl")
+  platform: string // OS platform: 'win32' | 'darwin' | 'linux'
+  arch: string // CPU architecture: 'x64' | 'arm64'
 }
 
 // Event property types

@@ -45,6 +45,7 @@ export function getClientInfo(): ClientInfo {
   }
 }
 
+/** Check if telemetry is enabled based on both VS Code and extension settings. */
 export function isTelemetryEnabled(): boolean {
   const vscodeTelemetryEnabled = vscode.env.isTelemetryEnabled
   const config = vscode.workspace.getConfiguration("fastapi")
@@ -52,6 +53,7 @@ export function isTelemetryEnabled(): boolean {
     "telemetry.enabled",
     true,
   )
+  // Telemetry is enabled only if both VS Code and extension settings allow it
   return vscodeTelemetryEnabled && extensionTelemetryEnabled
 }
 
@@ -132,7 +134,7 @@ export async function getInstalledVersions(): Promise<{
       ? `${environment.version.major}.${environment.version.minor}.${environment.version.micro}`
       : `${environment.version.major}.${environment.version.minor}`
 
-    // Get FastAPI version by running python command
+    // Get FastAPI version
     let fastapiVersion: string | undefined
     if (environment.executable?.uri) {
       try {

@@ -188,7 +188,7 @@ export async function discoverFastAPIApps(
         )
         folderApps.push(app)
         apps.push(app)
-        break // Only use first successful app per workspace folder
+        break // TODO: Only use first successful app per workspace folder, for now
       }
     }
 

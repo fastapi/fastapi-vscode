@@ -50,7 +50,8 @@ export function incrementCodeLensClicked(): void {
 }
 
 export function flushSessionSummary(): void {
-  // Send incremental changes since last flush
+  // Send incremental changes since last flush.
+  // Events are batched with a count property - sum counts in PostHog to get totals.
   const routesNavigatedDelta =
     sessionCounters.routes_navigated - lastFlushedCounters.routes_navigated
   const routesCopiedDelta =

@@ -99,12 +99,8 @@ export class TelemetryClient {
         },
       })
     } catch (error) {
-      // Log telemetry errors but don't throw - telemetry should never break the extension
-      console.error(
-        "[FastAPI Telemetry] Failed to capture event:",
-        event,
-        error,
-      )
+      // TODO: Log to Logfire when available
+      // Telemetry should never break the extension, so we silently catch errors
     }
   }
 }
