@@ -1,5 +1,4 @@
 import { PostHog } from "posthog-node"
-import { log } from "../logger"
 import type { TelemetryConfig } from "./types"
 
 const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY || ""
@@ -55,8 +54,6 @@ export class TelemetryClient {
   }
 
   capture(event: string, properties?: Record<string, unknown>): void {
-    log(`Telemetry: ${event} ${JSON.stringify(properties ?? {})}`)
-
     if (!this.posthog || !this.userId || !this.config?.isEnabled()) return
 
     this.posthog.capture({
