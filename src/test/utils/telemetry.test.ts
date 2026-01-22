@@ -3,29 +3,50 @@ import { sanitizeError } from "../../utils/telemetry"
 
 suite("telemetry", () => {
   suite("sanitizeError", () => {
-    test("returns file_not_found for ENOENT errors", () => {
-      const error = new Error("ENOENT: no such file or directory")
-      assert.strictEqual(sanitizeError(error), "file_not_found")
+    test("returns enoent for ENOENT errors", () => {
+      const error = Object.assign(
+        new Error("ENOENT: no such file or directory"),
+        { code: "ENOENT" },
+      )
+      assert.strictEqual(sanitizeError(error), "enoent")
     })
 
-    test("returns wasm_load_error for wasm errors", () => {
-      const error = new Error("Failed to load Wasm module")
-      assert.strictEqual(sanitizeError(error), "wasm_load_error")
+    test("returns etimedout for timeout errors", () => {
+      const error = Object.assign(new Error("Request timeout exceeded"), {
+        code: "ETIMEDOUT",
+      })
+      assert.strictEqual(sanitizeError(error), "etimedout")
     })
 
-    test("returns parse_error for parse errors", () => {
-      const error = new Error("Failed to parse Python file")
-      assert.strictEqual(sanitizeError(error), "parse_error")
+    test("returns eacces for permission errors", () => {
+      const error = Object.assign(new Error("Permission denied"), {
+        code: "EACCES",
+      })
+      assert.strictEqual(sanitizeError(error), "eacces")
     })
 
-    test("returns timeout_error for timeout errors", () => {
-      const error = new Error("Request timeout exceeded")
-      assert.strictEqual(sanitizeError(error), "timeout_error")
+    test("returns eperm for operation not permitted errors", () => {
+      const error = Object.assign(new Error("Operation not permitted"), {
+        code: "EPERM",
+      })
+      assert.strictEqual(sanitizeError(error), "eperm")
     })
 
-    test("returns permission_error for permission errors", () => {
-      const error = new Error("Permission denied")
-      assert.strictEqual(sanitizeError(error), "permission_error")
+    test("returns econnrefused for connection errors", () => {
+      const error = Object.assign(new Error("Connection refused"), {
+        code: "ECONNREFUSED",
+      })
+      assert.strictEqual(sanitizeError(error), "econnrefused")
+    })
+
+    test("returns syntax for SyntaxError", () => {
+      const error = new SyntaxError("Unexpected token")
+      assert.strictEqual(sanitizeError(error), "syntax")
+    })
+
+    test("returns type for TypeError", () => {
+      const error = new TypeError("Cannot read property")
+      assert.strictEqual(sanitizeError(error), "type")
     })
 
     test("returns unknown_error for other errors", () => {
