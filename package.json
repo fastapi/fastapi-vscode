@@ -2,7 +2,7 @@
   "name": "fastapi-vscode",
   "displayName": "FastAPI Extension",
   "description": "VS Code extension for FastAPI development",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "FastAPILabs",
   "license": "MIT",
   "repository": {

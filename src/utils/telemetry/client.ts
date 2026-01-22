@@ -34,6 +34,9 @@ export class TelemetryClient {
       flushInterval: FLUSH_INTERVAL_MS,
     })
 
+    // Identify user with static properties available at init time.
+    // Python/FastAPI versions are added later via setVersions() and included in events,
+    // since they require async detection and can change during the session.
     this.posthog.identify({
       distinctId: this.userId,
       properties: {
