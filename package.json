@@ -130,7 +130,7 @@
     "viewsWelcome": [
       {
         "view": "endpoint-explorer",
-        "contents": "No FastAPI apps found in this workspace.\n[Configure Entry Point](command:workbench.action.openSettings?%5B%22fastapi.entryPoint%22%5D)\n[Open Getting Started](command:workbench.action.openWalkthrough?%7B%22category%22%3A%22FastAPILabs.fastapi-vscode%23fastapi-getting-started%22%7D)"
+        "contents": "No FastAPI apps found in this workspace.\n\n[Configure Entry Point](command:workbench.action.openSettings?[\"fastapi.entryPoint\"])\n\n[Open Getting Started](command:workbench.action.openWalkthrough?{\"category\":\"FastAPILabs.fastapi-vscode#fastapi-getting-started\"})"
       }
     ],
     "walkthroughs": [
