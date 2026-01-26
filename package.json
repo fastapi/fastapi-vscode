@@ -2,7 +2,7 @@
   "name": "fastapi-vscode",
   "displayName": "FastAPI Extension",
   "description": "VS Code extension for FastAPI development",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "publisher": "FastAPILabs",
   "license": "MIT",
   "repository": {
@@ -114,7 +114,7 @@
         {
           "id": "fastapi",
           "title": "FastAPI",
-          "icon": "$(zap)"
+          "icon": "media/icons/fastapi.svg"
         }
       ]
     },
@@ -122,10 +122,78 @@
       "fastapi": [
         {
           "id": "endpoint-explorer",
-          "name": "Endpoint Explorer"
+          "name": "Endpoint Explorer",
+          "icon": "media/icons/fastapi.svg"
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "endpoint-explorer",
+        "contents": "No FastAPI apps found in this workspace.\n[Configure Entry Point](command:workbench.action.openSettings?%5B%22fastapi.entryPoint%22%5D)\n[Open Getting Started](command:workbench.action.openWalkthrough?%7B%22category%22%3A%22FastAPILabs.fastapi-vscode%23fastapi-getting-started%22%7D)"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "fastapi-getting-started",
+        "title": "Get Started with FastAPI",
+        "description": "Learn how to use the FastAPI extension to boost your productivity",
+        "icon": "media/icons/fastapi-walkthrough.svg",
+        "steps": [
+          {
+            "id": "view-endpoints",
+            "title": "View Your API Endpoints",
+            "description": "Open the Endpoint Explorer in the Activity Bar (⚡) to see all routes in your FastAPI application.\n[Open Endpoint Explorer](command:endpoint-explorer.focus)",
+            "media": {
+              "image": "media/walkthrough/endpoints.gif",
+              "altText": "Endpoint Explorer showing FastAPI routes organized by router"
+            },
+            "completionEvents": [
+              "onView:endpoint-explorer"
+            ]
+          },
+          {
+            "id": "search-endpoints",
+            "title": "Quickly Find Endpoints",
+            "description": "Instantly filter and navigate to any endpoint in your application.\n[Search Endpoints](command:fastapi-vscode.searchEndpoints)",
+            "media": {
+              "image": "media/walkthrough/search.gif",
+              "altText": "Search endpoints quick pick showing filtered results"
+            },
+            "completionEvents": [
+              "onCommand:fastapi-vscode.searchEndpoints"
+            ]
+          },
+          {
+            "id": "codelens",
+            "title": "Navigate from Tests to Routes",
+            "description": "CodeLens links appear above test client calls to jump directly to the route definition.",
+            "media": {
+              "image": "media/walkthrough/codelens.gif",
+              "altText": "CodeLens link above test client call"
+            }
+          },
+          {
+            "id": "configure",
+            "title": "Configure Your Project",
+            "description": "If the extension doesn't find your FastAPI app automatically, you can specify the entry point in settings.\n[Open Settings](command:workbench.action.openSettings?[\"fastapi.entryPoint\"])",
+            "media": {
+              "image": "media/walkthrough/configure.gif",
+              "altText": "FastAPI entry point configuration in VS Code settings"
+            }
+          },
+          {
+            "id": "feedback",
+            "title": "Give Feedback & Get Help",
+            "description": "Help us improve! Report bugs, request features, or contribute to the project.\n\n[Report an Issue](command:fastapi-vscode.reportIssue)\n[View on GitHub](https://github.com/fastapi/fastapi-vscode)",
+            "media": {
+              "image": "media/walkthrough/feedback.gif",
+              "altText": "FastAPI extension output panel showing debug logs"
+            }
+          }
+        ]
+      }
+    ],
     "configuration": {
       "title": "FastAPI",
       "properties": {
