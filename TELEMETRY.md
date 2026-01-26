@@ -32,7 +32,7 @@ We collect anonymous usage metrics to improve the extension. We do **not** colle
 - Any code from your project
 - IP addresses (geo-IP is disabled)
 
-**Note:** All events include contextual information: client type (VS Code, Cursor, etc.), OS platform, CPU architecture, extension version, and if available, the installed Python and FastAPI versions from your active interpreter.
+**Note:** All events include contextual information: client type (VS Code, Cursor, etc.), OS platform, CPU architecture, extension version, and if available, the installed Python version and versions of related packages (FastAPI, Pydantic, Starlette, Typer, FastAPI CLI, FastAPI Cloud CLI) from your active interpreter.
 
 ### Events
 
