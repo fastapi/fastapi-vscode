@@ -1,5 +1,5 @@
 // Re-export everything for clean imports
-export { client } from "./client"
+export { client, TRACKED_PACKAGES } from "./client"
 export {
   countRouters,
   countRoutes,

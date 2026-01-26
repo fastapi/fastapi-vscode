@@ -80,7 +80,15 @@ async function main() {
     // vscode is provided by the runtime; web-tree-sitter is bundled but
     // internally references these Node.js modules for environment detection
     // posthog-node uses Node.js APIs, so telemetry is disabled in browser
-    external: ["vscode", "fs/promises", "module", "posthog-node"],
+    // util and child_process are used for version detection but not in browser
+    external: [
+      "vscode",
+      "fs/promises",
+      "module",
+      "posthog-node",
+      "util",
+      "child_process",
+    ],
   })
 
   if (watch) {

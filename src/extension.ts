@@ -25,6 +25,7 @@ import {
   incrementRouteCopied,
   incrementRouteNavigated,
   initVSCodeTelemetry,
+  TRACKED_PACKAGES,
   client as telemetryClient,
   trackActivation,
   trackActivationFailed,
@@ -101,7 +102,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // Get actual installed Python and FastAPI versions from the active interpreter
-  const installedVersions = await getInstalledVersions()
+  const installedVersions = await getInstalledVersions(TRACKED_PACKAGES)
 
   // Set versions on telemetry client so they're included in all events
   telemetryClient.setVersions(

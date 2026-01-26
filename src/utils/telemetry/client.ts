@@ -9,6 +9,16 @@ const FLUSH_AT = 10
 /** Flush after this many milliseconds (30 seconds) */
 const FLUSH_INTERVAL_MS = 30000
 
+/** Python packages to track versions for */
+export const TRACKED_PACKAGES = [
+  "fastapi",
+  "fastapi-cli",
+  "fastapi-cloud-cli",
+  "typer",
+  "starlette",
+  "pydantic",
+] as const
+
 export class TelemetryClient {
   private posthog: PostHog | null = null
   private userId: string | null = null

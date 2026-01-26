@@ -100,14 +100,46 @@ export async function initVSCodeTelemetry(
 }
 
 /**
- * Get actual Python and FastAPI versions from the active interpreter.
- * Uses the Python extension API if available and already active.
- * If not active, events will not have version info.
+ * Fetch package versions using the Python interpreter.
  */
-export async function getInstalledVersions(): Promise<{
-  pythonVersion?: string
-  fastapiVersion?: string
-}> {
+async function fetchPackageVersions(
+  pythonPath: string,
+  packages: readonly string[],
+): Promise<{ [key: string]: string | undefined }> {
+  const { promisify } = await import("util")
+  const { execFile } = await import("child_process")
+  const execFileAsync = promisify(execFile)
+  const versions: { [key: string]: string | undefined } = {}
+
+  for (const pkg of packages) {
+    // Convert package name: remove hyphens for key, replace with underscores for import
+    const pkgNiceName = pkg.replace(/-/g, "")
+    const importName = pkg.replace(/-/g, "_")
+    const key = `${pkgNiceName}Version`
+
+    try {
+      const { stdout } = await execFileAsync(
+        pythonPath,
+        ["-c", `import ${importName}; print(${importName}.__version__)`],
+        { timeout: 5000 },
+      )
+      versions[key] = stdout.trim() || undefined
+    } catch {
+      versions[key] = undefined
+    }
+  }
+
+  return versions
+}
+
+/**
+ * Get actual Python and package versions installed in the current workspace.
+ * This requires the Python extension to be installed and activated.
+ * @returns An object with Python version and a map of package versions.
+ */
+export async function getInstalledVersions(
+  packages: readonly string[] = [],
+): Promise<{ pythonVersion?: string; [key: string]: string | undefined }> {
   try {
     // Get Python extension API
     const pythonExtension = vscode.extensions.getExtension("ms-python.python")
@@ -140,30 +172,20 @@ export async function getInstalledVersions(): Promise<{
       ? `${environment.version.major}.${environment.version.minor}.${environment.version.micro}`
       : `${environment.version.major}.${environment.version.minor}`
 
-    // Get FastAPI version
-    let fastapiVersion: string | undefined
-    if (environment.executable?.uri) {
-      try {
-        const pythonPath = environment.executable.uri.fsPath
-        const { promisify } = await import("util")
-        const { execFile } = await import("child_process")
-        const execFileAsync = promisify(execFile)
-
-        const { stdout } = await execFileAsync(
-          pythonPath,
-          ["-c", "import fastapi; print(fastapi.__version__)"],
-          { timeout: 5000 },
-        )
-
-        fastapiVersion = stdout.trim() || undefined
-      } catch {
-        // FastAPI not installed or execution failed
-      }
+    // Try to fetch package versions if we have an executable path
+    if (!environment.executable?.uri) {
+      return { pythonVersion }
     }
 
-    return { pythonVersion, fastapiVersion }
+    const pythonPath = environment.executable.uri.fsPath
+    const packageVersions = await fetchPackageVersions(
+      pythonPath,
+      packages,
+    ).catch(() => ({}))
+
+    return { pythonVersion, ...packageVersions }
   } catch {
-    // Python extension not available or error
+    // If Python extension is not available or any error occurs, return empty
     return {}
   }
 }
