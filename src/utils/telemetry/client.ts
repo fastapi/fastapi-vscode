@@ -24,8 +24,7 @@ export class TelemetryClient {
   private userId: string | null = null
   private config: TelemetryConfig | null = null
   private initialized = false
-  private pythonVersion: string | undefined = undefined
-  private fastapiVersion: string | undefined = undefined
+  private packageVersions: Record<string, string | undefined> = {}
   private sessionId: string | null = null
   private sessionStartTime: number | null = null
 
@@ -63,12 +62,11 @@ export class TelemetryClient {
   }
 
   /**
-   * Set Python and FastAPI versions to include in all events.
+   * Set package versions to include in all events.
    * Call this after detecting versions from the Python extension.
    */
-  setVersions(pythonVersion?: string, fastapiVersion?: string): void {
-    this.pythonVersion = pythonVersion
-    this.fastapiVersion = fastapiVersion
+  setVersions(versions: Record<string, string | undefined>): void {
+    this.packageVersions = versions
   }
 
   getSessionDuration(): number | null {
@@ -84,8 +82,7 @@ export class TelemetryClient {
     this.initialized = false
     this.userId = null
     this.config = null
-    this.pythonVersion = undefined
-    this.fastapiVersion = undefined
+    this.packageVersions = {}
     this.sessionId = null
     this.sessionStartTime = null
   }
@@ -103,8 +100,7 @@ export class TelemetryClient {
           platform: this.config.clientInfo.platform,
           arch: this.config.clientInfo.arch,
           extension_version: this.config.extensionVersion,
-          python_version: this.pythonVersion,
-          fastapi_version: this.fastapiVersion,
+          ...this.packageVersions,
           $session_id: this.sessionId,
         },
       })

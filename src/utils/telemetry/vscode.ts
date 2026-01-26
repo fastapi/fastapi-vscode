@@ -101,6 +101,7 @@ export async function initVSCodeTelemetry(
 
 /**
  * Fetch package versions using the Python interpreter.
+ * Runs all version checks in parallel for better performance.
  */
 async function fetchPackageVersions(
   pythonPath: string,
@@ -109,25 +110,28 @@ async function fetchPackageVersions(
   const { promisify } = await import("util")
   const { execFile } = await import("child_process")
   const execFileAsync = promisify(execFile)
-  const versions: { [key: string]: string | undefined } = {}
 
-  for (const pkg of packages) {
-    // Convert package name: remove hyphens for key, replace with underscores for import
-    const pkgNiceName = pkg.replace(/-/g, "")
-    const importName = pkg.replace(/-/g, "_")
-    const key = `${pkgNiceName}Version`
-
-    try {
+  // Fetch all package versions in parallel
+  const results = await Promise.allSettled(
+    packages.map(async (pkg) => {
+      const importName = pkg.replace(/-/g, "_")
       const { stdout } = await execFileAsync(
         pythonPath,
         ["-c", `import ${importName}; print(${importName}.__version__)`],
         { timeout: 5000 },
       )
-      versions[key] = stdout.trim() || undefined
-    } catch {
-      versions[key] = undefined
-    }
-  }
+      return { key: `${importName}_version`, version: stdout.trim() }
+    }),
+  )
+
+  // Collect results into a single object
+  const versions: { [key: string]: string | undefined } = {}
+  results.forEach((result, index) => {
+    const importName = packages[index].replace(/-/g, "_")
+    const key = `${importName}_version`
+    versions[key] =
+      result.status === "fulfilled" ? result.value.version : undefined
+  })
 
   return versions
 }
@@ -135,11 +139,11 @@ async function fetchPackageVersions(
 /**
  * Get actual Python and package versions installed in the current workspace.
  * This requires the Python extension to be installed and activated.
- * @returns An object with Python version and a map of package versions.
+ * @returns An object with python_version and package versions (e.g., fastapi_version, pydantic_version).
  */
 export async function getInstalledVersions(
   packages: readonly string[] = [],
-): Promise<{ pythonVersion?: string; [key: string]: string | undefined }> {
+): Promise<{ python_version?: string; [key: string]: string | undefined }> {
   try {
     // Get Python extension API
     const pythonExtension = vscode.extensions.getExtension("ms-python.python")
@@ -168,13 +172,13 @@ export async function getInstalledVersions(
     }
 
     // Extract Python version including patch version (e.g., "3.11.5")
-    const pythonVersion = environment.version.micro
+    const python_version = environment.version.micro
       ? `${environment.version.major}.${environment.version.minor}.${environment.version.micro}`
       : `${environment.version.major}.${environment.version.minor}`
 
     // Try to fetch package versions if we have an executable path
     if (!environment.executable?.uri) {
-      return { pythonVersion }
+      return { python_version }
     }
 
     const pythonPath = environment.executable.uri.fsPath
@@ -183,7 +187,7 @@ export async function getInstalledVersions(
       packages,
     ).catch(() => ({}))
 
-    return { pythonVersion, ...packageVersions }
+    return { python_version, ...packageVersions }
   } catch {
     // If Python extension is not available or any error occurs, return empty
     return {}

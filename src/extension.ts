@@ -101,14 +101,11 @@ export async function activate(context: vscode.ExtensionContext) {
     throw error
   }
 
-  // Get actual installed Python and FastAPI versions from the active interpreter
+  // Get actual installed Python and package versions from the active interpreter
   const installedVersions = await getInstalledVersions(TRACKED_PACKAGES)
 
   // Set versions on telemetry client so they're included in all events
-  telemetryClient.setVersions(
-    installedVersions.pythonVersion,
-    installedVersions.fastapiVersion,
-  )
+  telemetryClient.setVersions(installedVersions)
 
   trackActivation({
     duration_ms: elapsed(),
