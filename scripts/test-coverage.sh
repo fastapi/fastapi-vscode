@@ -8,8 +8,7 @@ bun run esbuild.js --no-bundle
 # Run tests with coverage collection
 npx vscode-test --coverage
 
-# Check coverage threshold (default 80%, override with COVERAGE_THRESHOLD env var)
-THRESHOLD=${COVERAGE_THRESHOLD:-80}
+THRESHOLD=${COVERAGE_THRESHOLD:-100}
 
 if [ -f "coverage/coverage-summary.json" ]; then
   LINES_PCT=$(node -e "console.log(require('./coverage/coverage-summary.json').total.lines.pct)")
