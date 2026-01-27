@@ -1,0 +1,7 @@
+<svg viewBox="0 0 58 58" xmlns="http://www.w3.org/2000/svg">
+  <mask id="bolt-cutout">
+    <circle fill="white" cx="29" cy="29" r="29"/>
+    <path fill="black" d="m 26.8,12 -5.8,13 -2.6,5.9 -5.8,13 26.8,-18.9 h -12.6 l 18.4,-13 z"/>
+  </mask>
+  <circle fill="currentColor" cx="29" cy="29" r="29" mask="url(#bolt-cutout)"/>
+</svg>
