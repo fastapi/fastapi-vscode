@@ -1,17 +1,30 @@
-# FastAPI VS Code Extension
+# FastAPI extension for Visual Studio Code
 
-A VS Code extension for FastAPI development that discovers and displays your API endpoints in a tree view.
+A Visual Studio Code extension for FastAPI application development. Available on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=FastAPILabs.fastapi).
 
-## Features
+## Overview
 
-- **Automatic discovery** of FastAPI routes and routers from your codebase
-- **Tree view** showing all endpoints organized by router hierarchy
-- **Quick navigation** - click any route to jump to its definition
-- **Smart search** - search and filter routes by path, method, or name
-- **CodeLens integration** - navigate from test client calls (e.g., `client.get('/items')`) directly to route definitions
-- **Multi-root workspace support** - discovers apps in all workspace folders
+This extension enhances the FastAPI development experience in Visual Studio Code by providing:
 
-## Settings
+### Endpoint Explorer
+
+The Endpoint Explorer provides a hierarchical tree view of all FastAPI routes in your application. You can expand routers to see their associated endpoints, and click on any route to jump directly to its definition in the code. You can also jump to router definitions by right-clicking on a router node.
+
+![Endpoint Explorer GIF](media/walkthrough/endpoints.gif)
+
+### Search for routes
+
+Using ctrl+shift+E (cmd+shift+E on Mac), you can open the Command Palette and quickly search for routes by path, method, or name.
+
+![Search Routes GIF](media/walkthrough/search.gif)
+
+### CodeLens for test client calls
+
+CodeLens links appear above HTTP client calls like `client.get('/items')`, letting you jump directly to the matching route definition.
+
+![CodeLens GIF](media/walkthrough/codelens.gif)
+
+## Settings and customization
 
 | Setting | Description | Default |
 |---------|-------------|---------|
@@ -20,44 +33,6 @@ A VS Code extension for FastAPI development that discovers and displays your API
 
 **Note:** Currently the extension discovers one FastAPI app per workspace folder. If you have multiple apps, use separate workspace folders or configure `fastapi.entryPoint` to point to your primary app.
 
-## Development
+## License 
 
-### Prerequisites
-
-- [Bun](https://bun.sh) installed
-- VS Code
-
-### Setup
-
-1. Install dependencies:
-   ```bash
-   bun install
-   ```
-
-2. Build the extension:
-   ```bash
-   bun run compile
-   ```
-
-3. Press `F5` to open a new window with your extension loaded
-
-### Scripts
-
-- `bun run compile` - Compile the extension
-- `bun run watch` - Watch for changes and recompile
-- `bun run package` - Package the extension into a .vsix file
-- `bun run publish` - Publish the extension to the marketplace
-
-## Project Structure
-
-- `src/extension.ts` - Extension entry point
-- `esbuild.js` - esbuild configuration
-- `package.json` - Extension manifest
-- `tsconfig.json` - TypeScript configuration
-
-## Technologies
-
-- TypeScript
-- esbuild
-- Bun (package manager)
-- VS Code Extension API
+MIT
