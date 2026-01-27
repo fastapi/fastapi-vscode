@@ -4,6 +4,7 @@ import esbuild from "esbuild"
 
 const production = process.argv.includes("--production")
 const watch = process.argv.includes("--watch")
+const noBundleForCoverage = process.argv.includes("--no-bundle")
 
 const POSTHOG_API_KEY = "phc_s0Qx8NxueJvnqe4YE7NEKYNosJr8aZ81tIByuzm464X"
 
@@ -35,10 +36,13 @@ async function main() {
   copyWasmFiles()
 
   const testEntryPoints = !production ? globSync("src/test/**/*.test.ts") : []
+  const sourceEntryPoints = noBundleForCoverage
+    ? globSync("src/**/*.ts")
+    : ["src/extension.ts"]
 
   // Shared esbuild options
   const sharedOptions = {
-    bundle: true,
+    bundle: !noBundleForCoverage,
     minify: production,
     sourcemap: !production,
     sourcesContent: false,
@@ -56,47 +60,53 @@ async function main() {
   // Node build (desktop VS Code)
   const nodeCtx = await esbuild.context({
     ...sharedOptions,
-    entryPoints: ["src/extension.ts", ...testEntryPoints],
+    entryPoints: [...sourceEntryPoints, ...testEntryPoints],
     format: "cjs",
     platform: "node",
     target: "node20",
     outdir: "dist",
     outbase: "src",
-    external: ["vscode", "web-tree-sitter"],
+    ...(noBundleForCoverage ? {} : { external: ["vscode", "web-tree-sitter"] }),
   })
 
-  // Browser build (vscode.dev)
-  const browserCtx = await esbuild.context({
-    ...sharedOptions,
-    entryPoints: ["src/extension.ts"],
-    format: "cjs",
-    platform: "browser",
-    target: "es2022",
-    outfile: "dist/web/extension.js",
-    // Polyfill/alias node modules for browser
-    alias: {
-      "node:path": "path-browserify",
-    },
-    // vscode is provided by the runtime; web-tree-sitter is bundled but
-    // internally references these Node.js modules for environment detection
-    // posthog-node uses Node.js APIs, so telemetry is disabled in browser
-    // util and child_process are used for version detection but not in browser
-    external: [
-      "vscode",
-      "fs/promises",
-      "module",
-      "posthog-node",
-      "util",
-      "child_process",
-    ],
-  })
+  // Browser build (vscode.dev) - skip for unbundled builds
+  const browserCtx = noBundleForCoverage
+    ? null
+    : await esbuild.context({
+        ...sharedOptions,
+        entryPoints: ["src/extension.ts"],
+        format: "cjs",
+        platform: "browser",
+        target: "es2022",
+        outfile: "dist/web/extension.js",
+        // Polyfill/alias node modules for browser
+        alias: {
+          "node:path": "path-browserify",
+        },
+        // vscode is provided by the runtime; web-tree-sitter is bundled but
+        // internally references these Node.js modules for environment detection
+        // posthog-node uses Node.js APIs, so telemetry is disabled in browser
+        // util and child_process are used for version detection but not in browser
+        external: [
+          "vscode",
+          "fs/promises",
+          "module",
+          "posthog-node",
+          "util",
+          "child_process",
+        ],
+      })
 
   if (watch) {
-    await Promise.all([nodeCtx.watch(), browserCtx.watch()])
+    await Promise.all([nodeCtx.watch(), browserCtx?.watch()].filter(Boolean))
     console.log("Watching for changes...")
   } else {
-    await Promise.all([nodeCtx.rebuild(), browserCtx.rebuild()])
-    await Promise.all([nodeCtx.dispose(), browserCtx.dispose()])
+    await Promise.all(
+      [nodeCtx.rebuild(), browserCtx?.rebuild()].filter(Boolean),
+    )
+    await Promise.all(
+      [nodeCtx.dispose(), browserCtx?.dispose()].filter(Boolean),
+    )
   }
 }
 

@@ -22,6 +22,7 @@ _.log
 *.vsix
 .vscode-test
 .vscode-test-web
+coverage
 
 /.agents/
 /.claude/
