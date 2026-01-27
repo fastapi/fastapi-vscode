@@ -13,7 +13,23 @@ export default defineConfig({
   ],
   coverage: {
     include: ["**/*.js"],
-    exclude: ["**/test/**", "**/web/**", "**/node_modules/**"],
+    exclude: [
+      "**/test/**",
+      "**/web/**",
+      "**/node_modules/**",
+      // Type-only files (compile to empty modules)
+      "**/core/types.js",
+      "**/core/filesystem.js",
+      "**/core/index.js",
+      "**/telemetry/types.js",
+      // VSCode-dependent files (tested via integration tests in extension host)
+      "**/extension.js",
+      "**/appDiscovery.js",
+      "**/vscodeFileSystem.js",
+      "**/endpointTreeProvider.js",
+      "**/telemetry/vscode.js",
+      "**/telemetry/client.js",
+    ],
     reporter: ["text", "html", "json-summary"],
     output: "./coverage",
     includeAll: true,
