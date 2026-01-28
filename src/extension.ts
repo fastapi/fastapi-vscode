@@ -7,6 +7,7 @@ import { discoverFastAPIApps } from "./appDiscovery"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
+import { collectRoutes, countRouters } from "./core/treeUtils"
 import type { AppDefinition, SourceLocation } from "./core/types"
 import {
   type EndpointTreeItem,
@@ -16,8 +17,6 @@ import {
 import { TestCodeLensProvider } from "./providers/testCodeLensProvider"
 import { disposeLogger, log } from "./utils/logger"
 import {
-  countRouters,
-  countRoutes,
   createTimer,
   flushSessionSummary,
   getInstalledVersions,
@@ -110,7 +109,7 @@ export async function activate(context: vscode.ExtensionContext) {
   trackActivation({
     duration_ms: elapsed(),
     success,
-    routes_count: countRoutes(apps),
+    routes_count: collectRoutes(apps).length,
     routers_count: countRouters(apps),
     apps_count: apps.length,
     workspace_folder_count: vscode.workspace.workspaceFolders?.length ?? 0,
@@ -139,7 +138,7 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   }
 
-  const endpointProvider = new EndpointTreeProvider(apps, groupApps)
+  const endpointProvider = new EndpointTreeProvider(apps, groupApps(apps))
   const codeLensProvider = new TestCodeLensProvider(parserService, apps)
 
   // File watcher for auto-refresh
@@ -149,7 +148,7 @@ export async function activate(context: vscode.ExtensionContext) {
     refreshTimeout = setTimeout(async () => {
       if (!parserService) return
       const newApps = await discoverFastAPIApps(parserService)
-      endpointProvider.setApps(newApps, groupApps)
+      endpointProvider.setApps(newApps, groupApps(newApps))
       codeLensProvider.setApps(newApps)
     }, 300)
   }
@@ -215,7 +214,7 @@ function registerCommands(
         if (!parserService) return
         clearImportCache()
         const newApps = await discoverFastAPIApps(parserService)
-        endpointProvider.setApps(newApps, groupApps)
+        endpointProvider.setApps(newApps, groupApps(newApps))
         codeLensProvider.setApps(newApps)
       },
     ),
@@ -235,8 +234,7 @@ function registerCommands(
       async () => {
         const workspacePrefix =
           vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
-        const items = endpointProvider
-          .getAllRoutes()
+        const items = collectRoutes(endpointProvider.getApps())
           .map((route) => {
             const path = stripLeadingDynamicSegments(route.path)
             return {

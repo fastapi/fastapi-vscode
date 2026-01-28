@@ -3,22 +3,8 @@ import { Parser } from "../core/parser"
 import { findProjectRoot } from "../core/pathUtils"
 import { buildRouterGraph } from "../core/routerResolver"
 import { routerNodeToAppDefinition } from "../core/transformer"
-import type {
-  AppDefinition,
-  RouteDefinition,
-  RouterDefinition,
-} from "../core/types"
+import { collectRoutes } from "../core/treeUtils"
 import { fixtures, nodeFileSystem, wasmBinaries } from "./testUtils"
-
-/** Collects all routes from an AppDefinition (direct routes + routes from all routers) */
-function collectAllRoutes(appDef: AppDefinition): RouteDefinition[] {
-  const collectFromRouter = (router: RouterDefinition): RouteDefinition[] => [
-    ...router.routes,
-    ...router.children.flatMap(collectFromRouter),
-  ]
-
-  return [...appDef.routes, ...appDef.routers.flatMap(collectFromRouter)]
-}
 
 suite("Project Layouts", () => {
   let parser: Parser
@@ -48,7 +34,7 @@ suite("Project Layouts", () => {
     assert.ok(graph, "Should find FastAPI app")
 
     const appDef = routerNodeToAppDefinition(graph, fixtures.standard.root)
-    const allRoutes = collectAllRoutes(appDef)
+    const allRoutes = collectRoutes([appDef])
 
     // Should have: GET /, GET /health, GET /users/, GET /users/{user_id}, POST /users/, GET /items/, GET /items/{item_id}
     assert.strictEqual(
@@ -92,7 +78,7 @@ suite("Project Layouts", () => {
     assert.ok(graph, "Should find FastAPI app")
 
     const appDef = routerNodeToAppDefinition(graph, fixtures.flat.root)
-    const allRoutes = collectAllRoutes(appDef)
+    const allRoutes = collectRoutes([appDef])
 
     // Should have: GET /, GET /api/users, GET /api/items
     assert.strictEqual(
@@ -132,7 +118,7 @@ suite("Project Layouts", () => {
     assert.ok(graph, "Should find FastAPI app")
 
     const appDef = routerNodeToAppDefinition(graph, fixtures.namespace.root)
-    const allRoutes = collectAllRoutes(appDef)
+    const allRoutes = collectRoutes([appDef])
 
     // Should have: GET /, GET /users/, GET /users/{user_id}, GET /items/
     assert.strictEqual(
@@ -172,7 +158,7 @@ suite("Project Layouts", () => {
     assert.ok(graph, "Should find FastAPI app")
 
     const appDef = routerNodeToAppDefinition(graph, fixtures.reexport.root)
-    const allRoutes = collectAllRoutes(appDef)
+    const allRoutes = collectRoutes([appDef])
 
     // Should have: GET /, GET /integrations/github, GET /integrations/slack, POST /integrations/webhook,
     // and nested neon routes: GET /integrations/neon/, POST /integrations/neon/connect

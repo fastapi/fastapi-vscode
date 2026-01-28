@@ -1,8 +1,6 @@
 // Re-export everything for clean imports
 export { client, TRACKED_PACKAGES } from "./client"
 export {
-  countRouters,
-  countRoutes,
   createTimer,
   Events,
   flushSessionSummary,

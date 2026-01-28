@@ -1,6 +1,134 @@
 import * as assert from "node:assert"
-import { EndpointTreeProvider } from "../../providers/endpointTreeProvider"
+import type {
+  AppDefinition,
+  RouteDefinition,
+  RouterDefinition,
+} from "../../core/types"
+import {
+  EndpointTreeProvider,
+  getAppLabel,
+  getRouteLabel,
+  getRouterLabel,
+} from "../../providers/endpointTreeProvider"
 import { mockApps } from "../fixtures/mockEndpointData"
+
+function makeRoute(method: string, path: string): RouteDefinition {
+  return {
+    method: method as RouteDefinition["method"],
+    path,
+    functionName: `${method.toLowerCase()}_handler`,
+    location: { filePath: "test.py", line: 1, column: 0 },
+  }
+}
+
+function makeRouter(
+  prefix: string,
+  opts: { tags?: string[]; filePath?: string } = {},
+): RouterDefinition {
+  return {
+    name: "router",
+    prefix,
+    tags: opts.tags ?? [],
+    location: { filePath: opts.filePath ?? "test.py", line: 1, column: 0 },
+    routes: [],
+    children: [],
+  }
+}
+
+function makeApp(name: string, filePath: string): AppDefinition {
+  return {
+    name,
+    filePath,
+    workspaceFolder: "/workspace",
+    routes: [],
+    routers: [],
+  }
+}
+
+suite("getAppLabel", () => {
+  test("uses app name when not generic", () => {
+    assert.strictEqual(
+      getAppLabel(makeApp("myapi", "backend/main.py")),
+      "myapi",
+    )
+  })
+
+  test("uses parent dir when name is 'app'", () => {
+    assert.strictEqual(
+      getAppLabel(makeApp("app", "backend/main.py")),
+      "backend",
+    )
+  })
+
+  test("skips 'src' parent dir", () => {
+    assert.strictEqual(
+      getAppLabel(makeApp("app", "project/src/main.py")),
+      "project/src",
+    )
+  })
+
+  test("skips 'app' parent dir", () => {
+    assert.strictEqual(
+      getAppLabel(makeApp("app", "project/app/main.py")),
+      "project/app",
+    )
+  })
+
+  test("falls back to filename when no parent dirs", () => {
+    assert.strictEqual(getAppLabel(makeApp("app", "main.py")), "main")
+  })
+})
+
+suite("getRouterLabel", () => {
+  test("uses prefix as label", () => {
+    assert.strictEqual(getRouterLabel(makeRouter("/users"), "/"), "/users")
+  })
+
+  test("shows relative path under parent", () => {
+    assert.strictEqual(
+      getRouterLabel(makeRouter("/api/users"), "/api"),
+      "/users",
+    )
+  })
+
+  test("falls back to tag when prefix is /", () => {
+    assert.strictEqual(
+      getRouterLabel(makeRouter("/", { tags: ["users"] }), "/"),
+      "/users",
+    )
+  })
+
+  test("falls back to filename when no prefix or tag", () => {
+    assert.strictEqual(
+      getRouterLabel(makeRouter("/", { filePath: "src/users.py" }), "/"),
+      "users",
+    )
+  })
+
+  test("uses parent dir for generic filenames", () => {
+    assert.strictEqual(
+      getRouterLabel(makeRouter("/", { filePath: "src/users/router.py" }), "/"),
+      "users",
+    )
+  })
+
+  test("uses parent dir for 'routes.py'", () => {
+    assert.strictEqual(
+      getRouterLabel(makeRouter("/", { filePath: "src/items/routes.py" }), "/"),
+      "items",
+    )
+  })
+})
+
+suite("getRouteLabel", () => {
+  test("includes method and path", () => {
+    assert.strictEqual(getRouteLabel(makeRoute("GET", "/users")), "GET /users")
+  })
+
+  test("websocket omits method", () => {
+    assert.strictEqual(getRouteLabel(makeRoute("WEBSOCKET", "/ws")), "/ws")
+  })
+})
 
 suite("EndpointTreeProvider", () => {
   let provider: EndpointTreeProvider

@@ -1,4 +1,3 @@
-import type { AppDefinition, RouterDefinition } from "../../core/types"
 import { client } from "./client"
 import type {
   ActivationEventProps,
@@ -77,31 +76,6 @@ export function flushSessionSummary(): void {
     })
     lastFlushedCounters.codelens_clicks = sessionCounters.codelens_clicks
   }
-}
-
-export function countRoutes(apps: AppDefinition[]): number {
-  const countInRouter = (router: RouterDefinition): number =>
-    router.routes.length +
-    router.children.reduce((sum, child) => sum + countInRouter(child), 0)
-
-  return apps.reduce(
-    (sum, app) =>
-      sum +
-      app.routes.length +
-      app.routers.reduce((sum, router) => sum + countInRouter(router), 0),
-    0,
-  )
-}
-
-export function countRouters(apps: AppDefinition[]): number {
-  const countInRouter = (router: RouterDefinition): number =>
-    1 + router.children.reduce((sum, child) => sum + countInRouter(child), 0)
-
-  return apps.reduce(
-    (sum, app) =>
-      sum + app.routers.reduce((s, router) => s + countInRouter(router), 0),
-    0,
-  )
 }
 
 export function sanitizeError(error: unknown): string {
