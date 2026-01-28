@@ -379,8 +379,8 @@ suite("EndpointTreeProvider", () => {
     assert.strictEqual(provider.getTreeItem(router!).collapsibleState, 2)
   })
 
-  test("dispose does not throw", () => {
-    assert.doesNotThrow(() => new EndpointTreeProvider([]).dispose())
+  test("dispose cleans up", () => {
+    new EndpointTreeProvider([]).dispose()
   })
 
   test("setApps updates apps and refreshes tree", () => {

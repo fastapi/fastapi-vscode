@@ -44,23 +44,16 @@ suite("telemetry/events", () => {
   })
 
   suite("session counters", () => {
-    test("increment functions do not throw", () => {
+    test("increment and flush works when client is not initialized", () => {
       incrementRouteNavigated()
       incrementRouteCopied()
       incrementCodeLensClicked()
-    })
-
-    test("flushSessionSummary does not throw when counters have values", () => {
-      incrementRouteNavigated()
-      incrementRouteCopied()
-      incrementCodeLensClicked()
-      // Client is not initialized, so capture is a no-op, but flush should not throw
-      assert.doesNotThrow(() => flushSessionSummary())
+      // Client is not initialized, so capture is a no-op
+      flushSessionSummary()
     })
 
     test("flushSessionSummary is idempotent when no new increments", () => {
-      // Second flush with no new increments should also be fine
-      assert.doesNotThrow(() => flushSessionSummary())
+      flushSessionSummary()
     })
   })
 })
