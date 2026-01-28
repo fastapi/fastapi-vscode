@@ -29,5 +29,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install
-      - run: bun run compile
-      - run: xvfb-run -a bun run test
+      - run: xvfb-run -a bun run test:coverage

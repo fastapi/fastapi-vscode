@@ -4,7 +4,7 @@ from .routes import items, users
 
 app = FastAPI(title="Standard Package Layout")
 
-app.include_router(users.router)
+app.include_router(users.router, tags=["user-management"])
 app.include_router(items.router)
 
 

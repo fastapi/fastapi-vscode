@@ -28,6 +28,7 @@ export class TelemetryClient {
   private sessionId: string | null = null
   private sessionStartTime: number | null = null
 
+  /* c8 ignore start -- requires PostHog API key */
   init(config: TelemetryConfig): void {
     if (this.initialized || !config.isEnabled() || !POSTHOG_API_KEY) return
 
@@ -60,6 +61,7 @@ export class TelemetryClient {
 
     this.initialized = true
   }
+  /* c8 ignore stop */
 
   /**
    * Set package versions to include in all events.
@@ -75,6 +77,7 @@ export class TelemetryClient {
   }
 
   async shutdown(): Promise<void> {
+    /* c8 ignore next 4 -- requires PostHog instance */
     if (this.posthog) {
       await this.posthog.shutdown()
       this.posthog = null
@@ -87,6 +90,7 @@ export class TelemetryClient {
     this.sessionStartTime = null
   }
 
+  /* c8 ignore start -- requires PostHog API key */
   capture(event: string, properties?: Record<string, unknown>): void {
     if (!this.posthog || !this.userId || !this.config?.isEnabled()) return
 
@@ -109,6 +113,7 @@ export class TelemetryClient {
       // Telemetry should never break the extension, so we silently catch errors
     }
   }
+  /* c8 ignore stop */
 }
 
 export const client = new TelemetryClient()

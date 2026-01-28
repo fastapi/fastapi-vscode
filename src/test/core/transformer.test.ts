@@ -1,285 +1,474 @@
 import * as assert from "node:assert"
-import { Parser } from "../../core/parser"
-import { buildRouterGraph } from "../../core/routerResolver"
+import type { RouterNode } from "../../core/routerResolver"
 import { routerNodeToAppDefinition } from "../../core/transformer"
-import { fixtures, nodeFileSystem, wasmBinaries } from "../testUtils"
+
+/** Helper to create a minimal RouterNode */
+function makeRouterNode(
+  opts: Partial<RouterNode> & { variableName: string },
+): RouterNode {
+  return {
+    filePath: "test.py",
+    type: "APIRouter",
+    prefix: "",
+    tags: [],
+    line: 1,
+    column: 0,
+    routes: [],
+    children: [],
+    ...opts,
+  }
+}
+
+function makeAppNode(opts: Partial<RouterNode> = {}): RouterNode {
+  return makeRouterNode({
+    variableName: "app",
+    type: "FastAPI",
+    ...opts,
+  })
+}
 
 suite("transformer", () => {
-  let parser: Parser
-
-  suiteSetup(async () => {
-    parser = new Parser()
-    await parser.init(wasmBinaries)
-  })
-
-  suiteTeardown(() => {
-    parser.dispose()
-  })
-
   suite("routerNodeToAppDefinition", () => {
-    test("transforms router graph to AppDefinition", async () => {
-      const routerNode = await buildRouterGraph(
-        fixtures.standard.mainPy,
-        parser,
-        fixtures.standard.root,
-        nodeFileSystem,
-      )
-      assert.ok(routerNode)
+    test("transforms basic app with direct routes", () => {
+      const node = makeAppNode({
+        filePath: "main.py",
+        routes: [
+          {
+            method: "get",
+            path: "/health",
+            function: "health",
+            line: 1,
+            column: 0,
+          },
+        ],
+      })
 
-      const result = routerNodeToAppDefinition(routerNode, "/workspace")
+      const result = routerNodeToAppDefinition(node, "/workspace")
 
-      assert.ok(result)
       assert.strictEqual(result.name, "app")
-      assert.strictEqual(result.filePath, fixtures.standard.mainPy)
+      assert.strictEqual(result.filePath, "main.py")
       assert.strictEqual(result.workspaceFolder, "/workspace")
+      assert.strictEqual(result.routes.length, 1)
+      assert.strictEqual(result.routes[0].method, "GET")
+      assert.strictEqual(result.routes[0].path, "/health")
+      assert.strictEqual(result.routes[0].functionName, "health")
     })
 
-    test("includes direct routes on app", async () => {
-      const routerNode = await buildRouterGraph(
-        fixtures.standard.mainPy,
-        parser,
-        fixtures.standard.root,
-        nodeFileSystem,
-      )
-      assert.ok(routerNode)
-
-      const result = routerNodeToAppDefinition(routerNode, "/workspace")
-
-      // app/main.py has @app.get("/health")
-      const healthRoute = result.routes.find((r) => r.path === "/health")
-      assert.ok(healthRoute)
-      assert.strictEqual(healthRoute.method, "GET")
-      assert.strictEqual(healthRoute.functionName, "health")
-    })
-
-    test("flattens nested routers", async () => {
-      const routerNode = await buildRouterGraph(
-        fixtures.standard.mainPy,
-        parser,
-        fixtures.standard.root,
-        nodeFileSystem,
-      )
-      assert.ok(routerNode)
-
-      const result = routerNodeToAppDefinition(routerNode, "/workspace")
-
-      // Should have routers from the include chain
-      assert.ok(result.routers.length > 0)
-    })
-
-    test("computes full path with prefixes", async () => {
-      const routerNode = await buildRouterGraph(
-        fixtures.standard.mainPy,
-        parser,
-        fixtures.standard.root,
-        nodeFileSystem,
-      )
-      assert.ok(routerNode)
-
-      const result = routerNodeToAppDefinition(routerNode, "/workspace")
-
-      // The users router should have prefix="/users" from its definition
-      const usersRouter = result.routers.find((r) =>
-        r.prefix.includes("/users"),
-      )
-      assert.ok(usersRouter, "Should have users router")
-      assert.strictEqual(
-        usersRouter.prefix,
-        "/users",
-        "Users router should have /users prefix",
-      )
-    })
-
-    test("normalizes HTTP methods to uppercase", async () => {
-      const routerNode = await buildRouterGraph(
-        fixtures.standard.mainPy,
-        parser,
-        fixtures.standard.root,
-        nodeFileSystem,
-      )
-      assert.ok(routerNode)
-
-      const result = routerNodeToAppDefinition(routerNode, "/workspace")
-
-      for (const route of result.routes) {
-        assert.strictEqual(
-          route.method,
-          route.method.toUpperCase(),
-          "Method should be uppercase",
-        )
-      }
-
-      for (const router of result.routers) {
-        for (const route of router.routes) {
-          assert.strictEqual(
-            route.method,
-            route.method.toUpperCase(),
-            "Method should be uppercase",
-          )
-        }
-      }
-    })
-
-    test("includes location info for routes", async () => {
-      const routerNode = await buildRouterGraph(
-        fixtures.standard.mainPy,
-        parser,
-        fixtures.standard.root,
-        nodeFileSystem,
-      )
-      assert.ok(routerNode)
-
-      const result = routerNodeToAppDefinition(routerNode, "/workspace")
-
-      for (const route of result.routes) {
-        assert.ok(route.location.filePath)
-        assert.ok(route.location.line > 0)
-        assert.ok(route.location.column >= 0)
-      }
-    })
-
-    test("includes location info for routers", async () => {
-      const routerNode = await buildRouterGraph(
-        fixtures.standard.mainPy,
-        parser,
-        fixtures.standard.root,
-        nodeFileSystem,
-      )
-      assert.ok(routerNode)
-
-      const result = routerNodeToAppDefinition(routerNode, "/workspace")
-
-      for (const router of result.routers) {
-        assert.ok(router.location.filePath)
-        assert.ok(router.location.line > 0)
-        assert.ok(router.location.column >= 0)
-      }
-    })
-
-    test("includes tags from routers", async () => {
-      const routerNode = await buildRouterGraph(
-        fixtures.standard.usersPy,
-        parser,
-        fixtures.standard.root,
-        nodeFileSystem,
-      )
-      assert.ok(routerNode)
-
-      // users.py has: router = APIRouter(prefix="/users", tags=["users"])
-      assert.ok(routerNode.tags.includes("users"))
-    })
-
-    test("skips routers with no routes or children", async () => {
-      const routerNode = await buildRouterGraph(
-        fixtures.standard.mainPy,
-        parser,
-        fixtures.standard.root,
-        nodeFileSystem,
-      )
-      assert.ok(routerNode)
-
-      const result = routerNodeToAppDefinition(routerNode, "/workspace")
-
-      // All routers in result should have at least one route OR children
-      // (synthetic group routers may have only children)
-      const checkRouter = (router: (typeof result.routers)[0]) => {
-        assert.ok(
-          router.routes.length > 0 || router.children.length > 0,
-          `Router ${router.name} should have routes or children`,
-        )
-        for (const child of router.children) {
-          checkRouter(child)
-        }
-      }
-      for (const router of result.routers) {
-        checkRouter(router)
-      }
-    })
-
-    test("merges routers with same prefix from different files", () => {
-      // Routers with the same prefix should be merged for cleaner display
-      const mockRouterNode = {
-        type: "FastAPI" as const,
-        variableName: "app",
-        prefix: "",
-        tags: [],
-        routes: [],
-        filePath: "/test/main.py",
-        line: 1,
-        column: 0,
+    test("computes full path with child prefix", () => {
+      const node = makeAppNode({
         children: [
           {
-            prefix: "/api/v1",
-            tags: [],
-            router: {
-              type: "APIRouter" as const,
-              variableName: "login_router",
-              prefix: "",
-              tags: ["login"],
-              routes: [
-                {
-                  method: "post",
-                  path: "/login",
-                  function: "login",
-                  line: 10,
-                  column: 0,
-                },
-              ],
-              filePath: "/test/login.py",
-              line: 5,
-              column: 0,
-              children: [],
-            },
-          },
-          {
-            prefix: "/api/v1",
-            tags: [],
-            router: {
-              type: "APIRouter" as const,
-              variableName: "utils_router",
-              prefix: "",
-              tags: ["utils"],
+            router: makeRouterNode({
+              variableName: "users_router",
+              prefix: "/users",
               routes: [
                 {
                   method: "get",
-                  path: "/health",
-                  function: "health",
-                  line: 20,
+                  path: "/",
+                  function: "list_users",
+                  line: 1,
                   column: 0,
                 },
               ],
-              filePath: "/test/utils.py",
-              line: 5,
-              column: 0,
-              children: [],
-            },
+            }),
+            prefix: "/api",
+            tags: [],
           },
         ],
-      }
+      })
 
-      const result = routerNodeToAppDefinition(mockRouterNode, "/workspace")
+      const result = routerNodeToAppDefinition(node, "/workspace")
 
-      // Should have 1 merged router with routes from both files
+      assert.strictEqual(result.routers.length, 1)
+      assert.strictEqual(result.routers[0].prefix, "/api/users")
+      assert.strictEqual(result.routers[0].routes[0].path, "/api/users/")
+    })
+
+    test("nests routers with common prefix", () => {
+      const node = makeAppNode({
+        children: [
+          {
+            router: makeRouterNode({
+              variableName: "users_router",
+              prefix: "/users",
+              routes: [
+                {
+                  method: "get",
+                  path: "/",
+                  function: "list_users",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+          {
+            router: makeRouterNode({
+              variableName: "user_detail",
+              prefix: "/users/detail",
+              routes: [
+                {
+                  method: "get",
+                  path: "/{id}",
+                  function: "get_user",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+        ],
+      })
+
+      const result = routerNodeToAppDefinition(node, "/workspace")
+
+      // /users/detail should be nested under /users
+      assert.strictEqual(result.routers.length, 1)
+      assert.strictEqual(result.routers[0].prefix, "/users")
+      assert.strictEqual(result.routers[0].children.length, 1)
+      assert.strictEqual(result.routers[0].children[0].prefix, "/users/detail")
+    })
+
+    test("handles router with empty prefix", () => {
+      const node = makeAppNode({
+        children: [
+          {
+            router: makeRouterNode({
+              variableName: "misc_router",
+              prefix: "",
+              routes: [
+                {
+                  method: "get",
+                  path: "/ping",
+                  function: "ping",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+        ],
+      })
+
+      const result = routerNodeToAppDefinition(node, "/workspace")
+
+      assert.strictEqual(result.routers.length, 1)
+      assert.strictEqual(result.routers[0].routes[0].path, "/ping")
+    })
+
+    test("merges routers with duplicate prefix", () => {
+      const node = makeAppNode({
+        children: [
+          {
+            router: makeRouterNode({
+              variableName: "users_v1",
+              prefix: "/users",
+              routes: [
+                {
+                  method: "get",
+                  path: "/",
+                  function: "list_users",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+          {
+            router: makeRouterNode({
+              variableName: "users_v2",
+              prefix: "/users",
+              routes: [
+                {
+                  method: "post",
+                  path: "/",
+                  function: "create_user",
+                  line: 2,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+        ],
+      })
+
+      const result = routerNodeToAppDefinition(node, "/workspace")
+
+      // Both should be merged under one /users router
+      assert.strictEqual(result.routers.length, 1)
+      assert.strictEqual(result.routers[0].prefix, "/users")
+      assert.strictEqual(result.routers[0].routes.length, 2)
+    })
+
+    test("nests deeper siblings under existing router with same prefix", () => {
+      // /integrations has routes and is processed first (1 segment),
+      // then /integrations/neon and /integrations/redis nest under it
+      const node = makeAppNode({
+        children: [
+          {
+            router: makeRouterNode({
+              variableName: "integrations_router",
+              prefix: "/integrations",
+              routes: [
+                {
+                  method: "get",
+                  path: "/status",
+                  function: "status",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+          {
+            router: makeRouterNode({
+              variableName: "neon_router",
+              prefix: "/integrations/neon",
+              routes: [
+                {
+                  method: "get",
+                  path: "/",
+                  function: "neon",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+          {
+            router: makeRouterNode({
+              variableName: "redis_router",
+              prefix: "/integrations/redis",
+              routes: [
+                {
+                  method: "get",
+                  path: "/",
+                  function: "redis",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+          {
+            router: makeRouterNode({
+              variableName: "integrations_extra",
+              prefix: "/integrations",
+              routes: [
+                {
+                  method: "post",
+                  path: "/hook",
+                  function: "hook",
+                  line: 2,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+        ],
+      })
+
+      const result = routerNodeToAppDefinition(node, "/workspace")
+
+      const group = result.routers.find((r) => r.prefix === "/integrations")
+      assert.ok(group, "Should have /integrations router")
+      // Original routes + merged routes from integrations_extra
+      assert.strictEqual(group.routes.length, 2)
+      // neon and redis nested as children
+      assert.strictEqual(group.children.length, 2)
+    })
+
+    test("creates synthetic group for sibling multi-segment routers", () => {
+      const node = makeAppNode({
+        children: [
+          {
+            router: makeRouterNode({
+              variableName: "neon_router",
+              prefix: "/integrations/neon",
+              routes: [
+                {
+                  method: "get",
+                  path: "/",
+                  function: "neon",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+          {
+            router: makeRouterNode({
+              variableName: "redis_router",
+              prefix: "/integrations/redis",
+              routes: [
+                {
+                  method: "get",
+                  path: "/",
+                  function: "redis",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+        ],
+      })
+
+      const result = routerNodeToAppDefinition(node, "/workspace")
+
+      // Should create a synthetic /integrations group
+      const group = result.routers.find((r) => r.prefix === "/integrations")
+      assert.ok(group, "Should create synthetic /integrations group")
       assert.strictEqual(
-        result.routers.length,
-        1,
-        "Should merge routers with same prefix",
+        group.routes.length,
+        0,
+        "Synthetic group has no routes",
       )
-
-      const mergedRouter = result.routers[0]
       assert.strictEqual(
-        mergedRouter.routes.length,
+        group.children.length,
         2,
-        "Merged router should have both routes",
+        "Group should have 2 children",
       )
-      assert.ok(
-        mergedRouter.routes.some((r) => r.functionName === "login"),
-        "Should have login route",
-      )
-      assert.ok(
-        mergedRouter.routes.some((r) => r.functionName === "health"),
-        "Should have health route",
-      )
+    })
+
+    test("uses tag-matching root router as group parent", () => {
+      const node = makeAppNode({
+        children: [
+          {
+            router: makeRouterNode({
+              variableName: "integrations_router",
+              prefix: "",
+              tags: ["integrations"],
+              routes: [
+                {
+                  method: "get",
+                  path: "/status",
+                  function: "status",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+          {
+            router: makeRouterNode({
+              variableName: "neon_router",
+              prefix: "/integrations/neon",
+              routes: [
+                {
+                  method: "get",
+                  path: "/",
+                  function: "neon",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+        ],
+      })
+
+      const result = routerNodeToAppDefinition(node, "/workspace")
+
+      // The tag-matching router should become the parent
+      const group = result.routers.find((r) => r.prefix === "/integrations")
+      assert.ok(group, "Should find /integrations router")
+      assert.ok(group.routes.length > 0, "Group should have its own routes")
+      assert.strictEqual(group.children.length, 1, "Should nest neon under it")
+    })
+
+    test("skips empty routers", () => {
+      const node = makeAppNode({
+        children: [
+          {
+            router: makeRouterNode({
+              variableName: "empty_router",
+              prefix: "/empty",
+            }),
+            prefix: "",
+            tags: [],
+          },
+          {
+            router: makeRouterNode({
+              variableName: "users_router",
+              prefix: "/users",
+              routes: [
+                {
+                  method: "get",
+                  path: "/",
+                  function: "list_users",
+                  line: 1,
+                  column: 0,
+                },
+              ],
+            }),
+            prefix: "",
+            tags: [],
+          },
+        ],
+      })
+
+      const result = routerNodeToAppDefinition(node, "/workspace")
+
+      assert.strictEqual(result.routers.length, 1)
+      assert.strictEqual(result.routers[0].prefix, "/users")
+    })
+
+    test("defaults invalid method to GET", () => {
+      const node = makeAppNode({
+        routes: [
+          {
+            method: "invalid",
+            path: "/",
+            function: "handler",
+            line: 1,
+            column: 0,
+          },
+        ],
+      })
+
+      const result = routerNodeToAppDefinition(node, "/workspace")
+
+      assert.strictEqual(result.routes[0].method, "GET")
+    })
+
+    test("includes location info", () => {
+      const node = makeAppNode({
+        routes: [
+          { method: "get", path: "/", function: "root", line: 10, column: 4 },
+        ],
+      })
+
+      const result = routerNodeToAppDefinition(node, "/workspace")
+
+      assert.strictEqual(result.routes[0].location.line, 10)
+      assert.strictEqual(result.routes[0].location.column, 4)
     })
   })
 })

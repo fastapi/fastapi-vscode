@@ -156,6 +156,18 @@ import os
       assert.ok(methods.includes("post"))
     })
 
+    test("returns null when parser fails to parse", async () => {
+      const nullParser = { parse: () => null } as unknown as Parser
+      const mockFs = {
+        readFile: async () => new TextEncoder().encode("x = 1"),
+        exists: async () => true,
+        joinPath: (...parts: string[]) => parts.join("/"),
+        dirname: (p: string) => p.split("/").slice(0, -1).join("/"),
+      }
+      const result = await analyzeFile("file:///test.py", nullParser, mockFs)
+      assert.strictEqual(result, null)
+    })
+
     test("returns null for non-existent file", async () => {
       const result = await analyzeFile(
         "file:///nonexistent/file.py",

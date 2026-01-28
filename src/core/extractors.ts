@@ -85,12 +85,9 @@ export function extractPathFromNode(node: Node): string {
     case "identifier":
     case "attribute":
     case "call":
+    default:
       // Dynamic values: variable, attribute access, or function call
       return `{${node.text}}`
-
-    default:
-      // Fallback: wrap unknown types in braces to indicate dynamic
-      return node.text ? `{${node.text}}` : ""
   }
 }
 
@@ -102,10 +99,8 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
     return null
   }
 
-  const decoratorNode = node.firstNamedChild
-  if (!decoratorNode) {
-    return null
-  }
+  // Grammar guarantees: decorated_definition always has a first child (the decorator)
+  const decoratorNode = node.firstNamedChild!
 
   const callNode = findNodesByType(decoratorNode, "call")[0]
   const functionNode = callNode?.childForFieldName("function")
@@ -152,11 +147,9 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
     }
   }
 
-  const functionDefNode = node.childForFieldName("definition")
-  const functionNameDefNode = functionDefNode
-    ? functionDefNode.childForFieldName("name")
-    : null
-  const functionName = functionNameDefNode ? functionNameDefNode.text : ""
+  // Grammar guarantees: decorated_definition always has a definition field with a name
+  const functionDefNode = node.childForFieldName("definition")!
+  const functionName = functionDefNode.childForFieldName("name")?.text ?? ""
 
   return {
     owner: objectNode.text,

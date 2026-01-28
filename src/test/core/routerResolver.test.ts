@@ -406,6 +406,11 @@ suite("routerResolver", () => {
         tokensChild.router.routes.length >= 2,
         "tokens router should have routes",
       )
+      // Verify tag merging from include_router(tokens_router, tags=["tokens"])
+      assert.ok(
+        tokensChild.router.tags.includes("tokens"),
+        "tokens router should have merged tags from include_router call",
+      )
 
       const settingsChild = appsChild.router.children.find(
         (c) => c.router.prefix === "/{app_id}/settings",
@@ -415,6 +420,65 @@ suite("routerResolver", () => {
         settingsChild.router.routes.length >= 2,
         "settings router should have routes",
       )
+    })
+
+    test("follows mount() calls to subapps", async () => {
+      const result = await buildRouterGraph(
+        fixtures.standard.rootMainPy,
+        parser,
+        fixtures.standard.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.variableName, "app")
+
+      // root main.py mounts sub_app at /v1
+      const mountChild = result.children.find((c) => c.prefix === "/v1")
+      assert.ok(mountChild, "Should have child mounted at /v1")
+      assert.strictEqual(mountChild.router.type, "FastAPI")
+    })
+
+    test("merges tags from include_router call with router tags", async () => {
+      const result = await buildRouterGraph(
+        fixtures.standard.mainPy,
+        parser,
+        fixtures.standard.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      const usersChild = result.children.find(
+        (c) => c.router.prefix === "/users",
+      )
+      assert.ok(usersChild, "Should have users router")
+      // Router has tags=["users"], include_router adds tags=["user-management"]
+      assert.ok(
+        usersChild.router.tags.includes("users"),
+        "Should keep router's own tags",
+      )
+      assert.ok(
+        usersChild.router.tags.includes("user-management"),
+        "Should include tags from include_router call",
+      )
+    })
+
+    test("handles circular and unresolvable imports gracefully", async () => {
+      const result = await buildRouterGraph(
+        fixtures.errorCases.mainPy,
+        parser,
+        fixtures.errorCases.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      // Should still have the direct route
+      const rootRoute = result.routes.find((r) => r.path === "/")
+      assert.ok(rootRoute)
+      // Circular import resolves, unresolvable is skipped
+      assert.strictEqual(result.routes.length, 1)
     })
 
     test("discovers nested routers via __init__.py re-export", async () => {

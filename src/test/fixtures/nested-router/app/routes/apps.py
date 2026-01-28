@@ -17,5 +17,5 @@ def get_app(app_id: int):
 
 
 # Nested routers - apps router includes tokens and settings routers
-router.include_router(tokens_router)
+router.include_router(tokens_router, tags=["tokens"])
 router.include_router(settings_router)
