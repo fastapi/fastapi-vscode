@@ -7,7 +7,7 @@ import { discoverFastAPIApps } from "./appDiscovery"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
-import { countRouters, countRoutes } from "./core/treeUtils"
+import { collectAllRoutes, countRouters, countRoutes } from "./core/treeUtils"
 import type { AppDefinition, SourceLocation } from "./core/types"
 import {
   type EndpointTreeItem,
@@ -234,8 +234,7 @@ function registerCommands(
       async () => {
         const workspacePrefix =
           vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
-        const items = endpointProvider
-          .getAllRoutes()
+        const items = collectAllRoutes(endpointProvider.getApps())
           .map((route) => {
             const path = stripLeadingDynamicSegments(route.path)
             return {

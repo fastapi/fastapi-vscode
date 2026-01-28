@@ -7,11 +7,7 @@ import {
   TreeItemCollapsibleState,
 } from "vscode"
 import { stripLeadingDynamicSegments } from "../core/pathUtils"
-import {
-  collectAllRoutes,
-  countRoutesInRouter,
-  findRouter,
-} from "../core/treeUtils"
+import { countRoutesInRouter, findRouter } from "../core/treeUtils"
 import type {
   AppDefinition,
   RouteDefinition,
@@ -63,11 +59,6 @@ export class EndpointTreeProvider
 
   getApps(): AppDefinition[] {
     return this.apps
-  }
-
-  /** Returns all routes from all apps, including nested router routes. */
-  getAllRoutes(): RouteDefinition[] {
-    return collectAllRoutes(this.apps)
   }
 
   setApps(apps: AppDefinition[], groupApps?: GroupingFunction): void {
