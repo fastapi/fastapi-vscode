@@ -10,15 +10,11 @@ import type { Parser } from "./core/parser"
 import { findProjectRoot, uriPath } from "./core/pathUtils"
 import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
+import { collectRoutes, countRouters } from "./core/treeUtils"
 import type { AppDefinition } from "./core/types"
 import { vscodeFileSystem } from "./providers/vscodeFileSystem"
 import { log } from "./utils/logger"
-import {
-  countRouters,
-  countRoutes,
-  createTimer,
-  trackEntrypointDetected,
-} from "./utils/telemetry"
+import { createTimer, trackEntrypointDetected } from "./utils/telemetry"
 
 export type { EntryPoint }
 
@@ -176,20 +172,19 @@ export async function discoverFastAPIApps(
 
       if (routerNode) {
         const app = routerNodeToAppDefinition(routerNode, folder.uri.fsPath)
-        // Count all routes: direct routes + routes in all routers (recursively)
-        const countRoutes = (routers: typeof app.routers): number =>
-          routers.reduce(
-            (sum, r) => sum + r.routes.length + countRoutes(r.children),
-            0,
-          )
-        const totalRoutes = app.routes.length + countRoutes(app.routers)
-        log(
-          `Found FastAPI app "${app.name}" with ${totalRoutes} route(s) in ${app.routers.length} router(s)`,
-        )
         folderApps.push(app)
         apps.push(app)
         break // TODO: Only use first successful app per workspace folder, for now
       }
+    }
+
+    const folderRoutes = collectRoutes(folderApps)
+
+    if (folderApps.length > 0) {
+      const app = folderApps[0]
+      log(
+        `Found FastAPI app "${app.name}" with ${folderRoutes.length} route(s) in ${app.routers.length} router(s)`,
+      )
     }
 
     // Track entrypoint detection per workspace folder
@@ -197,7 +192,7 @@ export async function discoverFastAPIApps(
       duration_ms: folderTimer(),
       method: detectionMethod,
       success: folderApps.length > 0,
-      routes_count: countRoutes(folderApps),
+      routes_count: folderRoutes.length,
       routers_count: countRouters(folderApps),
     })
   }
