@@ -17,7 +17,6 @@ export {
   countRouters,
   countRoutes,
   countRoutesInRouter,
-  countRoutesInRouters,
   findRouter,
   forEachRoute,
   traverseRouters,

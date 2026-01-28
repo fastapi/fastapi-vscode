@@ -5,7 +5,6 @@ import {
   countRouters,
   countRoutes,
   countRoutesInRouter,
-  countRoutesInRouters,
   findRouter,
   forEachRoute,
   traverseRouters,
@@ -270,23 +269,6 @@ suite("treeUtils", () => {
         ],
       )
       assert.strictEqual(countRoutesInRouter(router), 3)
-    })
-  })
-
-  suite("countRoutesInRouters", () => {
-    test("returns 0 for empty array", () => {
-      assert.strictEqual(countRoutesInRouters([]), 0)
-    })
-
-    test("sums routes across multiple routers", () => {
-      const routers = [
-        makeRouter("r1", "/r1", [makeRoute("GET", "/r1")]),
-        makeRouter("r2", "/r2", [
-          makeRoute("GET", "/r2"),
-          makeRoute("POST", "/r2"),
-        ]),
-      ]
-      assert.strictEqual(countRoutesInRouters(routers), 3)
     })
   })
 

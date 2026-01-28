@@ -75,18 +75,14 @@ export function countRoutesInRouter(router: RouterDefinition): number {
 }
 
 /**
- * Counts total routes in a list of routers (including nested children).
- */
-export function countRoutesInRouters(routers: RouterDefinition[]): number {
-  return routers.reduce((sum, router) => sum + countRoutesInRouter(router), 0)
-}
-
-/**
  * Counts total routes across all apps.
  */
 export function countRoutes(apps: AppDefinition[]): number {
   return apps.reduce(
-    (sum, app) => sum + app.routes.length + countRoutesInRouters(app.routers),
+    (sum, app) =>
+      sum +
+      app.routes.length +
+      app.routers.reduce((s, r) => s + countRoutesInRouter(r), 0),
     0,
   )
 }

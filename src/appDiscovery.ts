@@ -13,7 +13,7 @@ import { routerNodeToAppDefinition } from "./core/transformer"
 import {
   countRouters,
   countRoutes,
-  countRoutesInRouters,
+  countRoutesInRouter,
 } from "./core/treeUtils"
 import type { AppDefinition } from "./core/types"
 import { vscodeFileSystem } from "./providers/vscodeFileSystem"
@@ -177,7 +177,8 @@ export async function discoverFastAPIApps(
       if (routerNode) {
         const app = routerNodeToAppDefinition(routerNode, folder.uri.fsPath)
         const totalRoutes =
-          app.routes.length + countRoutesInRouters(app.routers)
+          app.routes.length +
+          app.routers.reduce((sum, r) => sum + countRoutesInRouter(r), 0)
         log(
           `Found FastAPI app "${app.name}" with ${totalRoutes} route(s) in ${app.routers.length} router(s)`,
         )
