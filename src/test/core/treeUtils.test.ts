@@ -1,5 +1,10 @@
 import * as assert from "node:assert"
-import { collectRoutes, countRouters, findRouter } from "../../core/treeUtils"
+import {
+  collectRoutes,
+  countRouters,
+  countRoutesInRouter,
+  findRouter,
+} from "../../core/treeUtils"
 import type {
   AppDefinition,
   RouteDefinition,
@@ -169,6 +174,28 @@ suite("treeUtils", () => {
         makeApp("app2", [], [makeRouter("r2", "/r2")]),
       ]
       assert.strictEqual(countRouters(apps), 2)
+    })
+  })
+
+  suite("countRoutesInRouter", () => {
+    test("counts direct routes only", () => {
+      const route = makeRoute("GET", "/")
+      const router = makeRouter("r", "/r", [route])
+      assert.strictEqual(countRoutesInRouter(router), 1)
+    })
+
+    test("returns 0 for empty router", () => {
+      const router = makeRouter("r", "/r")
+      assert.strictEqual(countRoutesInRouter(router), 0)
+    })
+
+    test("counts routes in nested routers", () => {
+      const child = makeRouter("child", "/r/child", [
+        makeRoute("GET", "/a"),
+        makeRoute("POST", "/b"),
+      ])
+      const router = makeRouter("r", "/r", [makeRoute("GET", "/")], [child])
+      assert.strictEqual(countRoutesInRouter(router), 3)
     })
   })
 })

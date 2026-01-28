@@ -172,14 +172,19 @@ export async function discoverFastAPIApps(
 
       if (routerNode) {
         const app = routerNodeToAppDefinition(routerNode, folder.uri.fsPath)
-        const totalRoutes = collectRoutes([app]).length
-        log(
-          `Found FastAPI app "${app.name}" with ${totalRoutes} route(s) in ${app.routers.length} router(s)`,
-        )
         folderApps.push(app)
         apps.push(app)
         break // TODO: Only use first successful app per workspace folder, for now
       }
+    }
+
+    const folderRoutes = collectRoutes(folderApps)
+
+    if (folderApps.length > 0) {
+      const app = folderApps[0]
+      log(
+        `Found FastAPI app "${app.name}" with ${folderRoutes.length} route(s) in ${app.routers.length} router(s)`,
+      )
     }
 
     // Track entrypoint detection per workspace folder
@@ -187,7 +192,7 @@ export async function discoverFastAPIApps(
       duration_ms: folderTimer(),
       method: detectionMethod,
       success: folderApps.length > 0,
-      routes_count: collectRoutes(folderApps).length,
+      routes_count: folderRoutes.length,
       routers_count: countRouters(folderApps),
     })
   }
