@@ -1,10 +1,5 @@
 import * as assert from "node:assert"
-import {
-  collectAllRoutes,
-  countRouters,
-  countRoutesInRouter,
-  findRouter,
-} from "../../core/treeUtils"
+import { collectRoutes, countRouters, findRouter } from "../../core/treeUtils"
 import type {
   AppDefinition,
   RouteDefinition,
@@ -96,9 +91,9 @@ suite("treeUtils", () => {
     })
   })
 
-  suite("collectAllRoutes", () => {
+  suite("collectRoutes", () => {
     test("returns empty array for empty apps", () => {
-      const result = collectAllRoutes([])
+      const result = collectRoutes([])
       assert.deepStrictEqual(result, [])
     })
 
@@ -106,7 +101,7 @@ suite("treeUtils", () => {
       const route = makeRoute("GET", "/")
       const apps = [makeApp("app", [route])]
 
-      const result = collectAllRoutes(apps)
+      const result = collectRoutes(apps)
       assert.deepStrictEqual(result, [route])
     })
 
@@ -121,7 +116,7 @@ suite("treeUtils", () => {
         ),
       ]
 
-      const result = collectAllRoutes(apps)
+      const result = collectRoutes(apps)
       assert.deepStrictEqual(result, [directRoute, routerRoute])
     })
 
@@ -130,38 +125,8 @@ suite("treeUtils", () => {
       const route2 = makeRoute("GET", "/app2")
       const apps = [makeApp("app1", [route1]), makeApp("app2", [route2])]
 
-      const result = collectAllRoutes(apps)
+      const result = collectRoutes(apps)
       assert.deepStrictEqual(result, [route1, route2])
-    })
-  })
-
-  suite("countRoutesInRouter", () => {
-    test("returns 0 for router with no routes", () => {
-      const router = makeRouter("empty", "/empty")
-      assert.strictEqual(countRoutesInRouter(router), 0)
-    })
-
-    test("counts direct routes", () => {
-      const router = makeRouter("r", "/r", [
-        makeRoute("GET", "/r"),
-        makeRoute("POST", "/r"),
-      ])
-      assert.strictEqual(countRoutesInRouter(router), 2)
-    })
-
-    test("counts routes in nested children", () => {
-      const router = makeRouter(
-        "parent",
-        "/parent",
-        [makeRoute("GET", "/parent")],
-        [
-          makeRouter("child", "/parent/child", [
-            makeRoute("GET", "/parent/child"),
-            makeRoute("POST", "/parent/child"),
-          ]),
-        ],
-      )
-      assert.strictEqual(countRoutesInRouter(router), 3)
     })
   })
 

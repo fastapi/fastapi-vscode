@@ -3,7 +3,7 @@ import { Parser } from "../core/parser"
 import { findProjectRoot } from "../core/pathUtils"
 import { buildRouterGraph } from "../core/routerResolver"
 import { routerNodeToAppDefinition } from "../core/transformer"
-import { collectAllRoutes } from "../core/treeUtils"
+import { collectRoutes } from "../core/treeUtils"
 import { fixtures, nodeFileSystem, wasmBinaries } from "./testUtils"
 
 suite("Project Layouts", () => {
@@ -34,7 +34,7 @@ suite("Project Layouts", () => {
     assert.ok(graph, "Should find FastAPI app")
 
     const appDef = routerNodeToAppDefinition(graph, fixtures.standard.root)
-    const allRoutes = collectAllRoutes([appDef])
+    const allRoutes = collectRoutes([appDef])
 
     // Should have: GET /, GET /health, GET /users/, GET /users/{user_id}, POST /users/, GET /items/, GET /items/{item_id}
     assert.strictEqual(
@@ -78,7 +78,7 @@ suite("Project Layouts", () => {
     assert.ok(graph, "Should find FastAPI app")
 
     const appDef = routerNodeToAppDefinition(graph, fixtures.flat.root)
-    const allRoutes = collectAllRoutes([appDef])
+    const allRoutes = collectRoutes([appDef])
 
     // Should have: GET /, GET /api/users, GET /api/items
     assert.strictEqual(
@@ -118,7 +118,7 @@ suite("Project Layouts", () => {
     assert.ok(graph, "Should find FastAPI app")
 
     const appDef = routerNodeToAppDefinition(graph, fixtures.namespace.root)
-    const allRoutes = collectAllRoutes([appDef])
+    const allRoutes = collectRoutes([appDef])
 
     // Should have: GET /, GET /users/, GET /users/{user_id}, GET /items/
     assert.strictEqual(
@@ -158,7 +158,7 @@ suite("Project Layouts", () => {
     assert.ok(graph, "Should find FastAPI app")
 
     const appDef = routerNodeToAppDefinition(graph, fixtures.reexport.root)
-    const allRoutes = collectAllRoutes([appDef])
+    const allRoutes = collectRoutes([appDef])
 
     // Should have: GET /, GET /integrations/github, GET /integrations/slack, POST /integrations/webhook,
     // and nested neon routes: GET /integrations/neon/, POST /integrations/neon/connect

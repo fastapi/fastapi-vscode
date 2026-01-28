@@ -7,7 +7,7 @@ import { discoverFastAPIApps } from "./appDiscovery"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
-import { collectAllRoutes, countRouters } from "./core/treeUtils"
+import { collectRoutes, countRouters } from "./core/treeUtils"
 import type { AppDefinition, SourceLocation } from "./core/types"
 import {
   type EndpointTreeItem,
@@ -109,7 +109,7 @@ export async function activate(context: vscode.ExtensionContext) {
   trackActivation({
     duration_ms: elapsed(),
     success,
-    routes_count: collectAllRoutes(apps).length,
+    routes_count: collectRoutes(apps).length,
     routers_count: countRouters(apps),
     apps_count: apps.length,
     workspace_folder_count: vscode.workspace.workspaceFolders?.length ?? 0,
@@ -234,7 +234,7 @@ function registerCommands(
       async () => {
         const workspacePrefix =
           vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
-        const items = collectAllRoutes(endpointProvider.getApps())
+        const items = collectRoutes(endpointProvider.getApps())
           .map((route) => {
             const path = stripLeadingDynamicSegments(route.path)
             return {

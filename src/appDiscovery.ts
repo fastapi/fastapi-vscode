@@ -10,11 +10,7 @@ import type { Parser } from "./core/parser"
 import { findProjectRoot, uriPath } from "./core/pathUtils"
 import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
-import {
-  collectAllRoutes,
-  countRouters,
-  countRoutesInRouter,
-} from "./core/treeUtils"
+import { collectRoutes, countRouters } from "./core/treeUtils"
 import type { AppDefinition } from "./core/types"
 import { vscodeFileSystem } from "./providers/vscodeFileSystem"
 import { log } from "./utils/logger"
@@ -176,9 +172,7 @@ export async function discoverFastAPIApps(
 
       if (routerNode) {
         const app = routerNodeToAppDefinition(routerNode, folder.uri.fsPath)
-        const totalRoutes =
-          app.routes.length +
-          app.routers.reduce((sum, r) => sum + countRoutesInRouter(r), 0)
+        const totalRoutes = collectRoutes([app]).length
         log(
           `Found FastAPI app "${app.name}" with ${totalRoutes} route(s) in ${app.routers.length} router(s)`,
         )
@@ -193,7 +187,7 @@ export async function discoverFastAPIApps(
       duration_ms: folderTimer(),
       method: detectionMethod,
       success: folderApps.length > 0,
-      routes_count: collectAllRoutes(folderApps).length,
+      routes_count: collectRoutes(folderApps).length,
       routers_count: countRouters(folderApps),
     })
   }

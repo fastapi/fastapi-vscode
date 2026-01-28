@@ -7,7 +7,7 @@ import {
   TreeItemCollapsibleState,
 } from "vscode"
 import { stripLeadingDynamicSegments } from "../core/pathUtils"
-import { countRoutesInRouter, findRouter } from "../core/treeUtils"
+import { findRouter } from "../core/treeUtils"
 import type {
   AppDefinition,
   RouteDefinition,
@@ -319,7 +319,10 @@ export class EndpointTreeProvider
         routerItem.id = `router-${element.router.location.filePath}-${element.router.prefix}-${this.toggleCount}`
         routerItem.iconPath = new ThemeIcon("symbol-namespace")
 
-        const totalRoutes = countRoutesInRouter(element.router)
+        const countRoutes = (r: RouterDefinition): number =>
+          r.routes.length +
+          r.children.reduce((sum, child) => sum + countRoutes(child), 0)
+        const totalRoutes = countRoutes(element.router)
         routerItem.description =
           totalRoutes !== 1 ? `${totalRoutes} routes` : "1 route"
         routerItem.contextValue = "router"

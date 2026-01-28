@@ -21,7 +21,7 @@ import {
   pathMatchesEndpoint,
   stripLeadingDynamicSegments,
 } from "../core/pathUtils"
-import { collectAllRoutes } from "../core/treeUtils"
+import { collectRoutes } from "../core/treeUtils"
 import type { AppDefinition, SourceLocation } from "../core/types"
 import { trackCodeLensProvided } from "../utils/telemetry"
 
@@ -158,7 +158,7 @@ export class TestCodeLensProvider implements CodeLensProvider {
     testPath: string,
     testMethod: string,
   ): SourceLocation[] {
-    return collectAllRoutes(this.apps)
+    return collectRoutes(this.apps)
       .filter(
         (route) =>
           route.method.toLowerCase() === testMethod.toLowerCase() &&

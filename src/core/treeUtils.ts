@@ -57,21 +57,11 @@ function collectRoutesFromRouters(
 /**
  * Collects all routes from all apps, including nested router routes.
  */
-export function collectAllRoutes(apps: AppDefinition[]): RouteDefinition[] {
+export function collectRoutes(apps: AppDefinition[]): RouteDefinition[] {
   return apps.flatMap((app) => [
     ...app.routes,
     ...collectRoutesFromRouters(app.routers),
   ])
-}
-
-/**
- * Counts total routes in a router tree (including nested children).
- */
-export function countRoutesInRouter(router: RouterDefinition): number {
-  return (
-    router.routes.length +
-    router.children.reduce((sum, child) => sum + countRoutesInRouter(child), 0)
-  )
 }
 
 /**
