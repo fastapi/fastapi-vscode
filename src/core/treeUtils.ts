@@ -74,22 +74,16 @@ export function countRoutesInRouter(router: RouterDefinition): number {
   )
 }
 
-/** Counts total routers in a router tree (including nested children). */
-function countRoutersInRouter(router: RouterDefinition): number {
-  return (
-    1 +
-    router.children.reduce((sum, child) => sum + countRoutersInRouter(child), 0)
-  )
-}
-
 /**
  * Counts total routers across all apps.
  */
 export function countRouters(apps: AppDefinition[]): number {
-  return apps.reduce(
-    (sum, app) =>
-      sum +
-      app.routers.reduce((s, router) => s + countRoutersInRouter(router), 0),
-    0,
-  )
+  let count = 0
+  for (const app of apps) {
+    traverseRouters(app.routers, () => {
+      count++
+      return undefined
+    })
+  }
+  return count
 }
