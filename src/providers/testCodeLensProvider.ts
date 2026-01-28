@@ -21,12 +21,8 @@ import {
   pathMatchesEndpoint,
   stripLeadingDynamicSegments,
 } from "../core/pathUtils"
-import type {
-  AppDefinition,
-  RouteDefinition,
-  RouterDefinition,
-  SourceLocation,
-} from "../core/types"
+import { forEachRoute } from "../core/treeUtils"
+import type { AppDefinition, SourceLocation } from "../core/types"
 import { trackCodeLensProvided } from "../utils/telemetry"
 
 interface TestClientCall {
@@ -164,30 +160,14 @@ export class TestCodeLensProvider implements CodeLensProvider {
   ): SourceLocation[] {
     const matches: SourceLocation[] = []
 
-    const collectRoutes = (routes: RouteDefinition[]) => {
-      for (const route of routes) {
-        if (
-          route.method.toLowerCase() === testMethod.toLowerCase() &&
-          pathMatchesEndpoint(testPath, route.path)
-        ) {
-          matches.push(route.location)
-        }
+    forEachRoute(this.apps, (route) => {
+      if (
+        route.method.toLowerCase() === testMethod.toLowerCase() &&
+        pathMatchesEndpoint(testPath, route.path)
+      ) {
+        matches.push(route.location)
       }
-    }
-
-    const walkRouters = (routers: RouterDefinition[]) => {
-      for (const router of routers) {
-        collectRoutes(router.routes)
-        if (router.children) {
-          walkRouters(router.children)
-        }
-      }
-    }
-
-    for (const app of this.apps) {
-      collectRoutes(app.routes)
-      walkRouters(app.routers)
-    }
+    })
 
     return matches
   }

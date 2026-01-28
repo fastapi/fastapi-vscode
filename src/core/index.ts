@@ -11,6 +11,17 @@ export { Parser } from "./parser"
 export { findProjectRoot } from "./pathUtils"
 export { buildRouterGraph, type RouterNode } from "./routerResolver"
 export { routerNodeToAppDefinition } from "./transformer"
+export {
+  collectAllRoutes,
+  collectRoutesFromRouters,
+  countRouters,
+  countRoutes,
+  countRoutesInRouter,
+  countRoutesInRouters,
+  findRouter,
+  forEachRoute,
+  traverseRouters,
+} from "./treeUtils"
 export type {
   AppDefinition,
   HTTPMethod,

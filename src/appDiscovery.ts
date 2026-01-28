@@ -10,15 +10,15 @@ import type { Parser } from "./core/parser"
 import { findProjectRoot, uriPath } from "./core/pathUtils"
 import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
-import type { AppDefinition } from "./core/types"
-import { vscodeFileSystem } from "./providers/vscodeFileSystem"
-import { log } from "./utils/logger"
 import {
   countRouters,
   countRoutes,
-  createTimer,
-  trackEntrypointDetected,
-} from "./utils/telemetry"
+  countRoutesInRouters,
+} from "./core/treeUtils"
+import type { AppDefinition } from "./core/types"
+import { vscodeFileSystem } from "./providers/vscodeFileSystem"
+import { log } from "./utils/logger"
+import { createTimer, trackEntrypointDetected } from "./utils/telemetry"
 
 export type { EntryPoint }
 
@@ -176,13 +176,8 @@ export async function discoverFastAPIApps(
 
       if (routerNode) {
         const app = routerNodeToAppDefinition(routerNode, folder.uri.fsPath)
-        // Count all routes: direct routes + routes in all routers (recursively)
-        const countRoutes = (routers: typeof app.routers): number =>
-          routers.reduce(
-            (sum, r) => sum + r.routes.length + countRoutes(r.children),
-            0,
-          )
-        const totalRoutes = app.routes.length + countRoutes(app.routers)
+        const totalRoutes =
+          app.routes.length + countRoutesInRouters(app.routers)
         log(
           `Found FastAPI app "${app.name}" with ${totalRoutes} route(s) in ${app.routers.length} router(s)`,
         )

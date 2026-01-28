@@ -7,6 +7,7 @@ import { discoverFastAPIApps } from "./appDiscovery"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
+import { countRouters, countRoutes } from "./core/treeUtils"
 import type { AppDefinition, SourceLocation } from "./core/types"
 import {
   type EndpointTreeItem,
@@ -16,8 +17,6 @@ import {
 import { TestCodeLensProvider } from "./providers/testCodeLensProvider"
 import { disposeLogger, log } from "./utils/logger"
 import {
-  countRouters,
-  countRoutes,
   createTimer,
   flushSessionSummary,
   getInstalledVersions,

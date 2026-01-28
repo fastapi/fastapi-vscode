@@ -7,6 +7,11 @@ import {
   TreeItemCollapsibleState,
 } from "vscode"
 import { stripLeadingDynamicSegments } from "../core/pathUtils"
+import {
+  collectAllRoutes,
+  countRoutesInRouter,
+  findRouter,
+} from "../core/treeUtils"
 import type {
   AppDefinition,
   RouteDefinition,
@@ -62,15 +67,7 @@ export class EndpointTreeProvider
 
   /** Returns all routes from all apps, including nested router routes. */
   getAllRoutes(): RouteDefinition[] {
-    const collectFromRouters = (
-      routers: RouterDefinition[],
-    ): RouteDefinition[] =>
-      routers.flatMap((r) => [...r.routes, ...collectFromRouters(r.children)])
-
-    return this.apps.flatMap((app) => [
-      ...app.routes,
-      ...collectFromRouters(app.routers),
-    ])
+    return collectAllRoutes(this.apps)
   }
 
   setApps(apps: AppDefinition[], groupApps?: GroupingFunction): void {
@@ -110,51 +107,13 @@ export class EndpointTreeProvider
     return `${route.method} ${path}`.toLowerCase()
   }
 
-  /** Counts total routes including nested children. */
-  private getTotalRouteCount(router: RouterDefinition): number {
-    return (
-      router.routes.length +
-      router.children.reduce(
-        (sum, child) => sum + this.getTotalRouteCount(child),
-        0,
-      )
-    )
-  }
-
-  /**
-   * Generic search through router tree.
-   * Returns the router that matches the predicate.
-   */
-  private searchRouters(
-    predicate: (router: RouterDefinition) => boolean,
-  ): RouterDefinition | undefined {
-    const searchIn = (
-      routers: RouterDefinition[],
-    ): RouterDefinition | undefined => {
-      for (const router of routers) {
-        if (predicate(router)) {
-          return router
-        }
-        const found = searchIn(router.children)
-        if (found) return found
-      }
-      return undefined
-    }
-
-    for (const app of this.apps) {
-      const found = searchIn(app.routers)
-      if (found) return found
-    }
-    return undefined
-  }
-
   /**
    * Finds the parent router if this router is nested.
    */
   private findParentRouter(
     target: RouterDefinition,
   ): RouterDefinition | undefined {
-    return this.searchRouters((router) => router.children.includes(target))
+    return findRouter(this.apps, (router) => router.children.includes(target))
   }
 
   /**
@@ -163,7 +122,7 @@ export class EndpointTreeProvider
   private findParentRouterForRoute(
     target: RouteDefinition,
   ): RouterDefinition | undefined {
-    return this.searchRouters((router) => router.routes.includes(target))
+    return findRouter(this.apps, (router) => router.routes.includes(target))
   }
 
   /**
@@ -369,7 +328,7 @@ export class EndpointTreeProvider
         routerItem.id = `router-${element.router.location.filePath}-${element.router.prefix}-${this.toggleCount}`
         routerItem.iconPath = new ThemeIcon("symbol-namespace")
 
-        const totalRoutes = this.getTotalRouteCount(element.router)
+        const totalRoutes = countRoutesInRouter(element.router)
         routerItem.description =
           totalRoutes !== 1 ? `${totalRoutes} routes` : "1 route"
         routerItem.contextValue = "router"
