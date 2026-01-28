@@ -1,13 +1,9 @@
 import * as assert from "node:assert"
 import {
   collectAllRoutes,
-  collectRoutesFromRouters,
   countRouters,
-  countRoutes,
   countRoutesInRouter,
   findRouter,
-  forEachRoute,
-  traverseRouters,
 } from "../../core/treeUtils"
 import type {
   AppDefinition,
@@ -58,78 +54,6 @@ function makeApp(
 }
 
 suite("treeUtils", () => {
-  suite("traverseRouters", () => {
-    test("returns undefined for empty array", () => {
-      const result = traverseRouters([], () => "found")
-      assert.strictEqual(result, undefined)
-    })
-
-    test("visits all routers when visitor returns undefined", () => {
-      const visited: string[] = []
-      const routers = [
-        makeRouter("r1", "/r1", [], [makeRouter("r1a", "/r1/a")]),
-        makeRouter("r2", "/r2"),
-      ]
-
-      traverseRouters(routers, (router) => {
-        visited.push(router.name)
-        return undefined
-      })
-
-      assert.deepStrictEqual(visited, ["r1", "r1a", "r2"])
-    })
-
-    test("returns early when visitor returns a value", () => {
-      const visited: string[] = []
-      const routers = [
-        makeRouter("r1", "/r1"),
-        makeRouter("r2", "/r2"),
-        makeRouter("r3", "/r3"),
-      ]
-
-      const result = traverseRouters(routers, (router) => {
-        visited.push(router.name)
-        if (router.name === "r2") return "found r2"
-        return undefined
-      })
-
-      assert.strictEqual(result, "found r2")
-      assert.deepStrictEqual(visited, ["r1", "r2"])
-    })
-
-    test("traverses nested children depth-first", () => {
-      const visited: string[] = []
-      const routers = [
-        makeRouter(
-          "parent",
-          "/parent",
-          [],
-          [
-            makeRouter(
-              "child1",
-              "/parent/child1",
-              [],
-              [makeRouter("grandchild", "/parent/child1/grandchild")],
-            ),
-            makeRouter("child2", "/parent/child2"),
-          ],
-        ),
-      ]
-
-      traverseRouters(routers, (router) => {
-        visited.push(router.name)
-        return undefined
-      })
-
-      assert.deepStrictEqual(visited, [
-        "parent",
-        "child1",
-        "grandchild",
-        "child2",
-      ])
-    })
-  })
-
   suite("findRouter", () => {
     test("returns undefined when no apps", () => {
       const result = findRouter([], () => true)
@@ -169,37 +93,6 @@ suite("treeUtils", () => {
 
       const result = findRouter(apps, (r) => r.name === "target")
       assert.strictEqual(result, target)
-    })
-  })
-
-  suite("collectRoutesFromRouters", () => {
-    test("returns empty array for empty routers", () => {
-      const result = collectRoutesFromRouters([])
-      assert.deepStrictEqual(result, [])
-    })
-
-    test("collects routes from single router", () => {
-      const route = makeRoute("GET", "/test")
-      const routers = [makeRouter("r1", "/r1", [route])]
-
-      const result = collectRoutesFromRouters(routers)
-      assert.deepStrictEqual(result, [route])
-    })
-
-    test("collects routes from nested routers", () => {
-      const route1 = makeRoute("GET", "/parent/test")
-      const route2 = makeRoute("POST", "/parent/child/test")
-      const routers = [
-        makeRouter(
-          "parent",
-          "/parent",
-          [route1],
-          [makeRouter("child", "/parent/child", [route2])],
-        ),
-      ]
-
-      const result = collectRoutesFromRouters(routers)
-      assert.deepStrictEqual(result, [route1, route2])
     })
   })
 
@@ -272,38 +165,6 @@ suite("treeUtils", () => {
     })
   })
 
-  suite("countRoutes", () => {
-    test("returns 0 for empty apps", () => {
-      assert.strictEqual(countRoutes([]), 0)
-    })
-
-    test("counts direct app routes", () => {
-      const apps = [
-        makeApp("app", [makeRoute("GET", "/"), makeRoute("POST", "/")]),
-      ]
-      assert.strictEqual(countRoutes(apps), 2)
-    })
-
-    test("counts routes in routers", () => {
-      const apps = [
-        makeApp(
-          "app",
-          [makeRoute("GET", "/")],
-          [makeRouter("users", "/users", [makeRoute("GET", "/users")])],
-        ),
-      ]
-      assert.strictEqual(countRoutes(apps), 2)
-    })
-
-    test("counts routes across multiple apps", () => {
-      const apps = [
-        makeApp("app1", [makeRoute("GET", "/app1")]),
-        makeApp("app2", [makeRoute("GET", "/app2")]),
-      ]
-      assert.strictEqual(countRoutes(apps), 2)
-    })
-  })
-
   suite("countRouters", () => {
     test("returns 0 for empty apps", () => {
       assert.strictEqual(countRouters([]), 0)
@@ -343,86 +204,6 @@ suite("treeUtils", () => {
         makeApp("app2", [], [makeRouter("r2", "/r2")]),
       ]
       assert.strictEqual(countRouters(apps), 2)
-    })
-  })
-
-  suite("forEachRoute", () => {
-    test("does nothing for empty apps", () => {
-      const visited: string[] = []
-      forEachRoute([], (route) => visited.push(route.path))
-      assert.deepStrictEqual(visited, [])
-    })
-
-    test("visits direct app routes", () => {
-      const visited: string[] = []
-      const apps = [
-        makeApp("app", [makeRoute("GET", "/"), makeRoute("POST", "/")]),
-      ]
-
-      forEachRoute(apps, (route) =>
-        visited.push(`${route.method} ${route.path}`),
-      )
-      assert.deepStrictEqual(visited, ["GET /", "POST /"])
-    })
-
-    test("visits routes in routers", () => {
-      const visited: string[] = []
-      const apps = [
-        makeApp(
-          "app",
-          [makeRoute("GET", "/")],
-          [makeRouter("users", "/users", [makeRoute("GET", "/users")])],
-        ),
-      ]
-
-      forEachRoute(apps, (route) => visited.push(route.path))
-      assert.deepStrictEqual(visited, ["/", "/users"])
-    })
-
-    test("visits routes in nested routers", () => {
-      const visited: string[] = []
-      const apps = [
-        makeApp(
-          "app",
-          [],
-          [
-            makeRouter(
-              "parent",
-              "/parent",
-              [makeRoute("GET", "/parent")],
-              [
-                makeRouter("child", "/parent/child", [
-                  makeRoute("GET", "/parent/child"),
-                ]),
-              ],
-            ),
-          ],
-        ),
-      ]
-
-      forEachRoute(apps, (route) => visited.push(route.path))
-      assert.deepStrictEqual(visited, ["/parent", "/parent/child"])
-    })
-
-    test("provides router context when available", () => {
-      const results: Array<{ path: string; routerName: string | undefined }> =
-        []
-      const apps = [
-        makeApp(
-          "app",
-          [makeRoute("GET", "/")],
-          [makeRouter("users", "/users", [makeRoute("GET", "/users")])],
-        ),
-      ]
-
-      forEachRoute(apps, (route, router) =>
-        results.push({ path: route.path, routerName: router?.name }),
-      )
-
-      assert.deepStrictEqual(results, [
-        { path: "/", routerName: undefined },
-        { path: "/users", routerName: "users" },
-      ])
     })
   })
 })

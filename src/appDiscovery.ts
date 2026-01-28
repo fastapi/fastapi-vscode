@@ -11,8 +11,8 @@ import { findProjectRoot, uriPath } from "./core/pathUtils"
 import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
 import {
+  collectAllRoutes,
   countRouters,
-  countRoutes,
   countRoutesInRouter,
 } from "./core/treeUtils"
 import type { AppDefinition } from "./core/types"
@@ -193,7 +193,7 @@ export async function discoverFastAPIApps(
       duration_ms: folderTimer(),
       method: detectionMethod,
       success: folderApps.length > 0,
-      routes_count: countRoutes(folderApps),
+      routes_count: collectAllRoutes(folderApps).length,
       routers_count: countRouters(folderApps),
     })
   }

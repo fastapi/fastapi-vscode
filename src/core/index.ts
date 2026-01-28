@@ -13,13 +13,9 @@ export { buildRouterGraph, type RouterNode } from "./routerResolver"
 export { routerNodeToAppDefinition } from "./transformer"
 export {
   collectAllRoutes,
-  collectRoutesFromRouters,
   countRouters,
-  countRoutes,
   countRoutesInRouter,
   findRouter,
-  forEachRoute,
-  traverseRouters,
 } from "./treeUtils"
 export type {
   AppDefinition,

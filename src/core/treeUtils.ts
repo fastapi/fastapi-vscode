@@ -9,7 +9,7 @@ import type { AppDefinition, RouteDefinition, RouterDefinition } from "./types"
  * Traverses all routers in a tree, calling the visitor function for each.
  * Returns early if visitor returns a non-undefined value.
  */
-export function traverseRouters<T>(
+function traverseRouters<T>(
   routers: RouterDefinition[],
   visitor: (router: RouterDefinition) => T | undefined,
 ): T | undefined {
@@ -45,7 +45,7 @@ export function findRouter(
 /**
  * Collects all routes from a list of routers, including nested children.
  */
-export function collectRoutesFromRouters(
+function collectRoutesFromRouters(
   routers: RouterDefinition[],
 ): RouteDefinition[] {
   return routers.flatMap((router) => [
@@ -74,19 +74,6 @@ export function countRoutesInRouter(router: RouterDefinition): number {
   )
 }
 
-/**
- * Counts total routes across all apps.
- */
-export function countRoutes(apps: AppDefinition[]): number {
-  return apps.reduce(
-    (sum, app) =>
-      sum +
-      app.routes.length +
-      app.routers.reduce((s, r) => s + countRoutesInRouter(r), 0),
-    0,
-  )
-}
-
 /** Counts total routers in a router tree (including nested children). */
 function countRoutersInRouter(router: RouterDefinition): number {
   return (
@@ -105,29 +92,4 @@ export function countRouters(apps: AppDefinition[]): number {
       app.routers.reduce((s, router) => s + countRoutersInRouter(router), 0),
     0,
   )
-}
-
-/**
- * Walks through all routes in all apps, calling visitor for each route.
- * Useful for finding routes matching specific criteria.
- */
-export function forEachRoute(
-  apps: AppDefinition[],
-  visitor: (route: RouteDefinition, router?: RouterDefinition) => void,
-): void {
-  const walkRouters = (routers: RouterDefinition[]) => {
-    for (const router of routers) {
-      for (const route of router.routes) {
-        visitor(route, router)
-      }
-      walkRouters(router.children)
-    }
-  }
-
-  for (const app of apps) {
-    for (const route of app.routes) {
-      visitor(route, undefined)
-    }
-    walkRouters(app.routers)
-  }
 }

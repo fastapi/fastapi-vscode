@@ -7,7 +7,7 @@ import { discoverFastAPIApps } from "./appDiscovery"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
-import { collectAllRoutes, countRouters, countRoutes } from "./core/treeUtils"
+import { collectAllRoutes, countRouters } from "./core/treeUtils"
 import type { AppDefinition, SourceLocation } from "./core/types"
 import {
   type EndpointTreeItem,
@@ -109,7 +109,7 @@ export async function activate(context: vscode.ExtensionContext) {
   trackActivation({
     duration_ms: elapsed(),
     success,
-    routes_count: countRoutes(apps),
+    routes_count: collectAllRoutes(apps).length,
     routers_count: countRouters(apps),
     apps_count: apps.length,
     workspace_folder_count: vscode.workspace.workspaceFolders?.length ?? 0,
