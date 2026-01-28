@@ -6,7 +6,7 @@ set -x
 bun run esbuild.js --no-bundle
 
 # Run tests with coverage collection
-npx vscode-test --coverage
+bunx vscode-test --coverage
 
 THRESHOLD=${COVERAGE_THRESHOLD:-90}
 

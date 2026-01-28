@@ -69,6 +69,10 @@ export const fixtures = {
       join(fixturesPath, "nested-router", "app", "routes", "settings.py"),
     ),
   },
+  samePrefix: {
+    root: uri(join(fixturesPath, "same-prefix")),
+    mainPy: uri(join(fixturesPath, "same-prefix", "app", "main.py")),
+  },
 }
 
 /**

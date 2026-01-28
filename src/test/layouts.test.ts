@@ -208,4 +208,57 @@ suite("Project Layouts", () => {
       "Should have POST /integrations/neon/connect",
     )
   })
+
+  test("same-prefix: merges routers with same prefix from different files", async () => {
+    const projectRoot = await findProjectRoot(
+      fixtures.samePrefix.mainPy,
+      fixtures.samePrefix.root,
+      nodeFileSystem,
+    )
+
+    const graph = await buildRouterGraph(
+      fixtures.samePrefix.mainPy,
+      parser,
+      projectRoot,
+      nodeFileSystem,
+    )
+    assert.ok(graph, "Should find FastAPI app")
+
+    const appDef = routerNodeToAppDefinition(graph, fixtures.samePrefix.root)
+    const allRoutes = collectAllRoutes(appDef)
+
+    // Should have: POST /api/v1/login, GET /api/v1/health
+    assert.strictEqual(
+      allRoutes.length,
+      2,
+      `Expected 2 routes, got ${allRoutes.length}`,
+    )
+
+    const paths = allRoutes.map((r) => `${r.method} ${r.path}`)
+    assert.ok(
+      paths.some((p) => p === "POST /api/v1/login"),
+      "Should have POST /api/v1/login",
+    )
+    assert.ok(
+      paths.some((p) => p === "GET /api/v1/health"),
+      "Should have GET /api/v1/health",
+    )
+
+    // Both routes should be merged under a single /api/v1 router
+    assert.strictEqual(
+      appDef.routers.length,
+      1,
+      "Should have 1 merged router (not 2 separate)",
+    )
+    assert.strictEqual(
+      appDef.routers[0].prefix,
+      "/api/v1",
+      "Router should have /api/v1 prefix",
+    )
+    assert.strictEqual(
+      appDef.routers[0].routes.length,
+      2,
+      "Merged router should have both routes",
+    )
+  })
 })

@@ -22,7 +22,7 @@ export default defineConfig({
       "**/core/filesystem.js",
       "**/core/index.js",
       "**/telemetry/types.js",
-      // VSCode-dependent files (tested via integration tests in extension host)
+      // VSCode-dependent files (require mocking, not unit testable)
       "**/extension.js",
       "**/appDiscovery.js",
       "**/vscodeFileSystem.js",
