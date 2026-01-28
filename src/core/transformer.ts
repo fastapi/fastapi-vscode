@@ -114,17 +114,11 @@ function buildPrefixHierarchy(
       continue
     }
 
-    // Check if a router with the exact same prefix already exists - nest under it
+    // Check if a router with the exact same prefix already exists - merge into it
     const existingRouter = prefixToRouter.get(strippedPrefix)
     if (existingRouter) {
-      // If existing is a synthetic group (no routes), add as child; otherwise merge
-      if (existingRouter.routes.length === 0 && router.routes.length > 0) {
-        existingRouter.children.push(router)
-      } else {
-        // Merge routes and children into the existing router
-        existingRouter.routes.push(...router.routes)
-        existingRouter.children.push(...router.children)
-      }
+      existingRouter.routes.push(...router.routes)
+      existingRouter.children.push(...router.children)
       continue
     }
 

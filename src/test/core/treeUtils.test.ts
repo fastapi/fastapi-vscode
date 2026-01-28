@@ -133,6 +133,18 @@ suite("treeUtils", () => {
       const result = collectRoutes(apps)
       assert.deepStrictEqual(result, [route1, route2])
     })
+
+    test("collects routes from nested routers", () => {
+      const childRoute = makeRoute("GET", "/a")
+      const parentRoute = makeRoute("GET", "/b")
+      const directRoute = makeRoute("GET", "/c")
+      const child = makeRouter("child", "/child", [childRoute])
+      const parent = makeRouter("parent", "/parent", [parentRoute], [child])
+      const apps = [makeApp("app", [directRoute], [parent])]
+
+      const result = collectRoutes(apps)
+      assert.strictEqual(result.length, 3)
+    })
   })
 
   suite("countRouters", () => {

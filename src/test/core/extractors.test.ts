@@ -1,6 +1,8 @@
 import * as assert from "node:assert"
 import {
   decoratorExtractor,
+  extractPathFromNode,
+  extractStringValue,
   findNodesByType,
   importExtractor,
   includeRouterExtractor,
@@ -156,6 +158,71 @@ def handler():
       assert.strictEqual(result.path, "{BASE}/users")
     })
 
+    test("returns null for simple decorator without call", () => {
+      const code = `
+@staticmethod
+def handler():
+    pass
+`
+      const tree = parse(code)
+      const decoratedDefs = findNodesByType(
+        tree.rootNode,
+        "decorated_definition",
+      )
+      const result = decoratorExtractor(decoratedDefs[0])
+      assert.strictEqual(result, null)
+    })
+
+    test("returns null for non-route decorator", () => {
+      const code = `
+@app.exception_handler(404)
+def not_found(request, exc):
+    pass
+`
+      const tree = parse(code)
+      const decoratedDefs = findNodesByType(
+        tree.rootNode,
+        "decorated_definition",
+      )
+      const result = decoratorExtractor(decoratedDefs[0])
+      assert.strictEqual(result, null)
+    })
+
+    test("extracts api_route decorator", () => {
+      const code = `
+@router.api_route("/items", methods=["POST"])
+def handle_items():
+    pass
+`
+      const tree = parse(code)
+      const decoratedDefs = findNodesByType(
+        tree.rootNode,
+        "decorated_definition",
+      )
+      const result = decoratorExtractor(decoratedDefs[0])
+
+      assert.ok(result)
+      assert.strictEqual(result.method, "POST")
+      assert.strictEqual(result.path, "/items")
+    })
+
+    test("extracts api_route with default GET when no methods specified", () => {
+      const code = `
+@router.api_route("/items")
+def handle_items():
+    pass
+`
+      const tree = parse(code)
+      const decoratedDefs = findNodesByType(
+        tree.rootNode,
+        "decorated_definition",
+      )
+      const result = decoratorExtractor(decoratedDefs[0])
+
+      assert.ok(result)
+      assert.strictEqual(result.method, "GET")
+    })
+
     test("returns null for non-decorated definition", () => {
       const code = `
 def regular_function():
@@ -240,6 +307,17 @@ def handler():
       assert.ok(result)
       assert.strictEqual(result.prefix, "/api")
       assert.deepStrictEqual(result.tags, ["api"])
+    })
+
+    test("ignores positional arguments in router constructor", () => {
+      const code = "router = APIRouter(some_config)"
+      const tree = parse(code)
+      const assignments = findNodesByType(tree.rootNode, "assignment")
+      const result = routerExtractor(assignments[0])
+
+      assert.ok(result)
+      assert.strictEqual(result.prefix, "")
+      assert.deepStrictEqual(result.tags, [])
     })
 
     test("handles dynamic prefix", () => {
@@ -478,6 +556,25 @@ def handler():
       const result = mountExtractor(calls[0])
 
       assert.strictEqual(result, null)
+    })
+  })
+
+  suite("extractStringValue", () => {
+    test("returns null for non-string node", () => {
+      const code = "x = 42"
+      const tree = parse(code)
+      const nodes = findNodesByType(tree.rootNode, "integer")
+      assert.strictEqual(extractStringValue(nodes[0]), null)
+    })
+  })
+
+  suite("extractPathFromNode", () => {
+    test("returns dynamic placeholder for non-plus binary operator", () => {
+      const code = "x = a - b"
+      const tree = parse(code)
+      const ops = findNodesByType(tree.rootNode, "binary_operator")
+      const result = extractPathFromNode(ops[0])
+      assert.strictEqual(result, "{a - b}")
     })
   })
 

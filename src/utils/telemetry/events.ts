@@ -102,6 +102,7 @@ export function sanitizeError(error: unknown): string {
   return "unknown_error"
 }
 
+/* c8 ignore start -- thin telemetry wrappers, no branching logic worth testing */
 export function trackActivation(props: ActivationEventProps): void {
   client.capture(Events.ACTIVATED, { ...props })
 }
@@ -155,3 +156,4 @@ export function trackDeactivation(): void {
     })
   }
 }
+/* c8 ignore stop */

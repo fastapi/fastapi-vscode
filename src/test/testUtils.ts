@@ -22,6 +22,7 @@ const uri = (path: string) => `file://${path}`
 export const fixtures = {
   standard: {
     root: uri(join(fixturesPath, "standard")),
+    rootMainPy: uri(join(fixturesPath, "standard", "main.py")),
     mainPy: uri(join(fixturesPath, "standard", "app", "main.py")),
     usersPy: uri(join(fixturesPath, "standard", "app", "routes", "users.py")),
     initPy: uri(join(fixturesPath, "standard", "app", "__init__.py")),
@@ -55,6 +56,10 @@ export const fixtures = {
     tokensPy: uri(
       join(fixturesPath, "aliased-import", "app", "routes", "tokens.py"),
     ),
+  },
+  errorCases: {
+    root: uri(join(fixturesPath, "error-cases")),
+    mainPy: uri(join(fixturesPath, "error-cases", "main.py")),
   },
   nestedRouter: {
     root: uri(join(fixturesPath, "nested-router")),

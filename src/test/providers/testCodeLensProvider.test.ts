@@ -256,6 +256,21 @@ def test_get_user():
       assert.strictEqual(lenses.length, 1)
     })
 
+    test("ignores plain function calls (not attribute access)", async () => {
+      const app = createMockApp([createRoute("GET", "/users")])
+      provider.setApps([app])
+
+      const doc = await vscode.workspace.openTextDocument({
+        content: `
+def test_plain():
+    get("/users")
+`,
+        language: "python",
+      })
+      const lenses = provider.provideCodeLenses(doc)
+      assert.strictEqual(lenses.length, 0)
+    })
+
     test("ignores non-HTTP method calls", async () => {
       const app = createMockApp([createRoute("GET", "/users")])
       provider.setApps([app])
@@ -265,6 +280,21 @@ def test_get_user():
 def test_something():
     client.connect("/users")
     client.custom("/users")
+`,
+        language: "python",
+      })
+      const lenses = provider.provideCodeLenses(doc)
+      assert.strictEqual(lenses.length, 0)
+    })
+
+    test("ignores calls with no arguments", async () => {
+      const app = createMockApp([createRoute("GET", "/users")])
+      provider.setApps([app])
+
+      const doc = await vscode.workspace.openTextDocument({
+        content: `
+def test_no_args():
+    client.get()
 `,
         language: "python",
       })
