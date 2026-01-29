@@ -91,7 +91,7 @@ export async function initVSCodeTelemetry(
     vscode.extensions.getExtension("FastAPILabs.fastapi-vscode")?.packageJSON
       ?.version ?? "unknown"
 
-  client.init({
+  await client.init({
     userId,
     clientInfo: getClientInfo(),
     extensionVersion,

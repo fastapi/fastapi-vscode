@@ -1,4 +1,4 @@
-import { PostHog } from "posthog-node"
+import type { PostHog } from "posthog-node"
 import type { TelemetryConfig } from "./types"
 
 const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY || ""
@@ -29,7 +29,7 @@ export class TelemetryClient {
   private sessionStartTime: number | null = null
 
   /* c8 ignore start -- requires PostHog API key */
-  init(config: TelemetryConfig): void {
+  async init(config: TelemetryConfig): Promise<void> {
     if (this.initialized || !config.isEnabled() || !POSTHOG_API_KEY) return
 
     this.config = config
@@ -37,7 +37,15 @@ export class TelemetryClient {
     this.sessionId = crypto.randomUUID()
     this.sessionStartTime = Date.now()
 
-    this.posthog = new PostHog(POSTHOG_API_KEY, {
+    let PostHogClass: typeof PostHog
+    try {
+      ;({ PostHog: PostHogClass } = await import("posthog-node"))
+    } catch {
+      // posthog-node is unavailable (e.g. browser/web context)
+      return
+    }
+
+    this.posthog = new PostHogClass(POSTHOG_API_KEY, {
       host: POSTHOG_HOST,
       disableGeoip: true,
       flushAt: FLUSH_AT,
