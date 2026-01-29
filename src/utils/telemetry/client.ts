@@ -116,7 +116,7 @@ export class TelemetryClient {
           $session_id: this.sessionId,
         },
       })
-    } catch (error) {
+    } catch (_error) {
       // TODO: Log to Logfire when available
       // Telemetry should never break the extension, so we silently catch errors
     }

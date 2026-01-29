@@ -107,8 +107,8 @@ async function fetchPackageVersions(
   pythonPath: string,
   packages: readonly string[],
 ): Promise<{ [key: string]: string | undefined }> {
-  const { promisify } = await import("util")
-  const { execFile } = await import("child_process")
+  const { promisify } = await import("node:util")
+  const { execFile } = await import("node:child_process")
   const execFileAsync = promisify(execFile)
 
   // Fetch all package versions in parallel

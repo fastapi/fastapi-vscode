@@ -19,7 +19,8 @@
   "main": "./dist/extension.js",
   "browser": "./dist/web/extension.js",
   "activationEvents": [
-    "workspaceContains:**/*.py"
+    "workspaceContains:**/*.py",
+    "workspaceContains:.fastapicloud/cloud.json"
   ],
   "categories": [
     "Other"
@@ -31,6 +32,12 @@
     }
   },
   "contributes": {
+    "authentication": [
+      {
+        "id": "fastapi-vscode",
+        "label": "FastAPI Cloud"
+      }
+    ],
     "commands": [
       {
         "command": "fastapi-vscode.refreshEndpoints",
@@ -64,6 +71,26 @@
         "title": "Search Endpoints...",
         "category": "FastAPI",
         "icon": "$(search)"
+      },
+      {
+        "command": "fastapi-vscode.linkApp",
+        "title": "Link Project",
+        "category": "FastAPI Cloud"
+      },
+      {
+        "command": "fastapi-vscode.unlinkApp",
+        "title": "Unlink Project",
+        "category": "FastAPI Cloud"
+      },
+      {
+        "command": "fastapi-vscode.signIn",
+        "title": "Sign In",
+        "category": "FastAPI Cloud"
+      },
+      {
+        "command": "fastapi-vscode.signOut",
+        "title": "Sign Out",
+        "category": "FastAPI Cloud"
       }
     ],
     "keybindings": [
@@ -82,6 +109,22 @@
         {
           "command": "fastapi-vscode.goToRouter",
           "when": "false"
+        },
+        {
+          "command": "fastapi-vscode.linkApp",
+          "when": "config.fastapi.cloud.enabled"
+        },
+        {
+          "command": "fastapi-vscode.unlinkApp",
+          "when": "config.fastapi.cloud.enabled"
+        },
+        {
+          "command": "fastapi-vscode.signIn",
+          "when": "config.fastapi.cloud.enabled"
+        },
+        {
+          "command": "fastapi-vscode.signOut",
+          "when": "config.fastapi.cloud.enabled"
         }
       ],
       "view/title": [
@@ -209,6 +252,12 @@
           "scope": "resource",
           "description": "Show CodeLens links above test client calls (e.g., client.get('/items')) to navigate to the corresponding route definition."
         },
+        "fastapi.cloud.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Enable FastAPI Cloud integration (status bar, link/unlink commands)."
+        },
         "fastapi.telemetry.enabled": {
           "type": "boolean",
           "default": true,
@@ -234,6 +283,7 @@
     "@biomejs/biome": "^2.3.11",
     "@types/bun": "latest",
     "@types/mocha": "^10.0.10",
+    "@types/sinon": "^21.0.0",
     "@types/vscode": "^1.85.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
@@ -242,6 +292,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "path-browserify": "^1.0.1",
+    "sinon": "^21.0.1",
     "typescript": "^5.0.0"
   },
   "dependencies": {
@@ -250,7 +301,7 @@
     "web-tree-sitter": "^0.26.3"
   },
   "lint-staged": {
-    "*.{ts,js,json}": [
+    "**/*.{ts,js,json}": [
       "biome check --write"
     ]
   }

@@ -81,10 +81,6 @@ export function extractPathFromNode(node: Node): string {
       // For other operators, just return the raw text
       return `{${node.text}}`
     }
-
-    case "identifier":
-    case "attribute":
-    case "call":
     default:
       // Dynamic values: variable, attribute access, or function call
       return `{${node.text}}`

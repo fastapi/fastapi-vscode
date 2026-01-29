@@ -1,3 +1,4 @@
+import { Blob } from "node:buffer"
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import type { FileSystem } from "../core/filesystem"
@@ -109,4 +110,27 @@ export const nodeFileSystem: FileSystem = {
     const path = uriToPath(uri)
     return `file://${dirname(path)}`
   },
+}
+
+// Cloud helpers
+
+export function mockResponse(body: unknown, ok = true, status = 200): Response {
+  return {
+    ok,
+    status,
+    statusText: ok ? "OK" : "Error",
+    json: async () => body,
+    headers: new Headers(),
+    redirected: false,
+    type: "basic",
+    url: "",
+    body: null,
+    bodyUsed: false,
+    clone: () => mockResponse(body, ok, status),
+    arrayBuffer: async () => new ArrayBuffer(0),
+    blob: async () => new Blob(),
+    formData: async () => new FormData() as never,
+    text: async () => JSON.stringify(body),
+    bytes: async () => new Uint8Array(),
+  }
 }

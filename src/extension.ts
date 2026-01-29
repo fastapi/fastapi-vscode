@@ -4,6 +4,10 @@
 
 import * as vscode from "vscode"
 import { discoverFastAPIApps } from "./appDiscovery"
+import { ApiService } from "./cloud/api"
+import { CloudAuthenticationProvider } from "./cloud/auth"
+import { CloudController } from "./cloud/cloudController"
+import { ConfigService } from "./cloud/config"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
@@ -185,6 +189,76 @@ export async function activate(context: vscode.ExtensionContext) {
     )
   }
 
+  // Cloud (if enabled)
+  const cloudEnabled = vscode.workspace
+    .getConfiguration("fastapi")
+    .get<boolean>("cloud.enabled", true)
+
+  if (cloudEnabled) {
+    // Auth provider must be registered regardless of workspace,
+    // so sign-in works from command palette and Accounts menu in vscode.dev
+    const authProvider = new CloudAuthenticationProvider(context)
+    authProvider.startWatching()
+
+    context.subscriptions.push(
+      { dispose: () => authProvider.dispose() },
+      vscode.commands.registerCommand("fastapi-vscode.signIn", async () => {
+        await vscode.authentication.getSession("fastapi-vscode", [], {
+          createIfNone: true,
+        })
+      }),
+    )
+
+    const configService = new ConfigService()
+    const apiService = new ApiService()
+    const cloudController = new CloudController(
+      authProvider,
+      configService,
+      apiService,
+    )
+
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri
+    if (workspaceRoot) {
+      cloudController.initialize(workspaceRoot)
+    } else {
+      // In vscode.dev, workspace folders may not be available yet at activation
+      const folderDisposable = vscode.workspace.onDidChangeWorkspaceFolders(
+        (e) => {
+          const root = e.added[0]?.uri
+          if (root) {
+            folderDisposable.dispose()
+            cloudController.initialize(root)
+          }
+        },
+      )
+      context.subscriptions.push(folderDisposable)
+      // Show status bar immediately even without workspace
+      cloudController.showStatusBar()
+      cloudController.refresh()
+    }
+
+    context.subscriptions.push(
+      { dispose: () => configService.dispose() },
+      { dispose: () => cloudController.dispose() },
+      registerCloudCommands(cloudController),
+    )
+  }
+
+  // Watch for cloud.enabled setting changes
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
+      if (e.affectsConfiguration("fastapi.cloud.enabled")) {
+        const action = await vscode.window.showWarningMessage(
+          "FastAPI Cloud setting changed. Reload the window to apply changes.",
+          "Reload Window",
+        )
+        if (action === "Reload Window") {
+          vscode.commands.executeCommand("workbench.action.reloadWindow")
+        }
+      }
+    }),
+  )
+
   // Periodic telemetry flush (every 5 minutes)
   const telemetryFlushInterval = setInterval(flushSessionSummary, 5 * 60 * 1000)
 
@@ -194,6 +268,28 @@ export async function activate(context: vscode.ExtensionContext) {
     treeView,
     registerCommands(endpointProvider, codeLensProvider, groupApps),
     { dispose: () => clearInterval(telemetryFlushInterval) },
+  )
+}
+
+function registerCloudCommands(
+  cloudController: CloudController,
+): vscode.Disposable {
+  return vscode.Disposable.from(
+    vscode.commands.registerCommand("fastapi-vscode.cloudMenu", async () => {
+      await cloudController.showMenu()
+    }),
+
+    vscode.commands.registerCommand("fastapi-vscode.linkApp", async () => {
+      await cloudController.linkProject()
+    }),
+
+    vscode.commands.registerCommand("fastapi-vscode.unlinkApp", async () => {
+      await cloudController.unlinkProject()
+    }),
+
+    vscode.commands.registerCommand("fastapi-vscode.signOut", async () => {
+      await cloudController.signOut()
+    }),
   )
 }
 
