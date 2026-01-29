@@ -100,6 +100,7 @@ suite("cloud/cloudController", () => {
       assert.ok(quickPickStub.calledOnce)
       const items = quickPickStub.firstCall.args[0] as any[]
       assert.ok(items.some((i: any) => i.id === "link"))
+      assert.ok(items.some((i: any) => i.id === "create"))
 
       dispose(deps)
     })

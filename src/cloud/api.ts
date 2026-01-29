@@ -159,8 +159,8 @@ export class ApiService {
       user_code: data.user_code,
       verification_uri: data.verification_uri,
       verification_uri_complete: data.verification_uri_complete ?? "",
-      expires_in: data.expires_in ?? 0,
-      interval: data.interval ?? 0,
+      expires_in: data.expires_in,
+      interval: data.interval,
     }
   }
 
@@ -181,7 +181,7 @@ export class ApiService {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": `fastapi-vscode/${getExtensionVersion()}`,
+            ...getUserAgentHeaders(),
           },
           body: new URLSearchParams({
             client_id: clientId,

@@ -9,7 +9,7 @@ import {
 } from "../utils/telemetry"
 import { ApiService } from "./api"
 import type { ConfigService } from "./config"
-import { pickExistingApp, pickTeam } from "./pickers"
+import { createNewApp, pickExistingApp, pickTeam } from "./pickers"
 import type { App, Team } from "./types"
 
 const AUTH_PROVIDER_ID = "fastapi-vscode"
@@ -27,6 +27,7 @@ export class CloudController {
   private refreshing = false
   private started = false
   private appNotFoundWarningShown = false
+  private sessionListener: vscode.Disposable | null = null
 
   constructor(
     private authProvider: AuthProvider,
@@ -46,7 +47,7 @@ export class CloudController {
     this.statusBarItem.show()
     if (!this.started) {
       this.started = true
-      vscode.authentication.onDidChangeSessions((e) => {
+      this.sessionListener = vscode.authentication.onDidChangeSessions((e) => {
         if (e.provider.id === AUTH_PROVIDER_ID) this.refresh()
       })
     }
@@ -146,81 +147,121 @@ export class CloudController {
     }
 
     if (!this.currentApp && !this.hasConfig) {
-      // No app linked - show link option
-      const items = [
-        {
-          label: "$(link) Link Existing App",
-          description: "Connect to an app on FastAPI Cloud",
-          id: "link",
-        },
-      ]
-
-      const selected = await vscode.window.showQuickPick(items, {
-        placeHolder: "Set up FastAPI Cloud",
-      })
-
-      if (selected?.id === "link") {
-        vscode.commands.executeCommand("fastapi-vscode.linkApp")
-      }
+      await this.showSetupMenu()
     } else if (!this.currentApp && this.hasConfig) {
-      // Config exists but app fetch failed - warn and offer relink/unlink
-      const selected = await vscode.window.showWarningMessage(
-        "This project is linked to a FastAPI Cloud app that could not be found. Unlink it, then link to the correct app.",
-        "Unlink",
-      )
-
-      if (selected === "Unlink") {
-        await this.unlinkProject()
-      }
+      await this.showBrokenLinkMenu()
     } else {
-      const app = this.currentApp!
-      const dashboardUrl = this.currentTeam
-        ? ApiService.getDashboardUrl(this.currentTeam.slug, app.slug)
-        : undefined
-      const items = [
-        {
-          label: "$(globe) Open App",
-          description: app.url,
-          id: "open",
-        },
-        {
-          label: "$(link-external) Dashboard",
-          description: dashboardUrl,
-          id: "dashboard",
-        },
-        { label: "$(output) View Logs", id: "logs" },
-        { label: "$(ellipsis) More", id: "more" },
-      ]
+      await this.showAppMenu()
+    }
+  }
 
-      const selected = await vscode.window.showQuickPick(items, {
-        placeHolder: app.slug,
-      })
+  private async showSetupMenu() {
+    const items = [
+      {
+        label: "$(link) Link Existing App",
+        description: "Connect to an app on FastAPI Cloud",
+        id: "link",
+      },
+      {
+        label: "$(add) Create New App",
+        description: "Create a new app and link it",
+        id: "create",
+      },
+    ]
 
-      if (selected) {
-        switch (selected.id) {
-          case "open":
-            if (this.currentApp?.url) {
-              vscode.env.openExternal(vscode.Uri.parse(this.currentApp.url))
-              trackCloudAppOpened()
-            }
-            break
-          case "dashboard":
-            if (dashboardUrl) {
-              vscode.env.openExternal(vscode.Uri.parse(dashboardUrl))
-              trackCloudDashboardOpened()
-            }
-            break
-          case "logs":
-            // TODO: Implement logs view in VS Code
-            trackCloudLogsViewed()
-            vscode.window.showInformationMessage("Logs view coming soon")
-            break
-          case "more":
-            await this.showMoreMenu()
-            break
-        }
+    const selected = await vscode.window.showQuickPick(items, {
+      placeHolder: "Set up FastAPI Cloud",
+    })
+
+    if (selected?.id === "link") {
+      vscode.commands.executeCommand("fastapi-vscode.linkApp")
+    } else if (selected?.id === "create") {
+      await this.createAndLinkProject()
+    }
+  }
+
+  private async showBrokenLinkMenu() {
+    const selected = await vscode.window.showWarningMessage(
+      "This project is linked to a FastAPI Cloud app that could not be found. Unlink it, then link to the correct app.",
+      "Unlink",
+    )
+
+    if (selected === "Unlink") {
+      await this.unlinkProject()
+    }
+  }
+
+  private async showAppMenu() {
+    const app = this.currentApp!
+    const dashboardUrl = this.currentTeam
+      ? ApiService.getDashboardUrl(this.currentTeam.slug, app.slug)
+      : undefined
+    const items = [
+      {
+        label: "$(globe) Open App",
+        description: app.url,
+        id: "open",
+      },
+      {
+        label: "$(link-external) Dashboard",
+        description: dashboardUrl,
+        id: "dashboard",
+      },
+      { label: "$(output) View Logs", id: "logs" },
+      { label: "$(ellipsis) More", id: "more" },
+    ]
+
+    const selected = await vscode.window.showQuickPick(items, {
+      placeHolder: app.slug,
+    })
+
+    if (selected) {
+      switch (selected.id) {
+        case "open":
+          if (this.currentApp?.url) {
+            vscode.env.openExternal(vscode.Uri.parse(this.currentApp.url))
+            trackCloudAppOpened()
+          }
+          break
+        case "dashboard":
+          if (dashboardUrl) {
+            vscode.env.openExternal(vscode.Uri.parse(dashboardUrl))
+            trackCloudDashboardOpened()
+          }
+          break
+        case "logs":
+          // TODO: Implement logs view in VS Code
+          trackCloudLogsViewed()
+          vscode.window.showInformationMessage("Logs view coming soon")
+          break
+        case "more":
+          await this.showMoreMenu()
+          break
       }
     }
+  }
+
+  async createAndLinkProject() {
+    if (!this.workspaceRoot) {
+      vscode.window.showErrorMessage("No workspace folder open")
+      return
+    }
+
+    const team = await pickTeam(this.apiService)
+    if (!team) return
+
+    const folderName = this.workspaceRoot.path.split("/").pop() || "my-app"
+    const app = await createNewApp(this.apiService, team, folderName)
+    if (!app) return
+
+    await this.configService.writeConfig(this.workspaceRoot, {
+      app_id: app.id,
+      team_id: team.id,
+    })
+
+    trackCloudProjectLinked()
+    vscode.window.showInformationMessage(`Linked to ${app.slug}`)
+    await this.refresh()
   }
 
   async linkProject() {
@@ -313,6 +354,7 @@ export class CloudController {
   }
 
   dispose() {
+    this.sessionListener?.dispose()
     this.statusBarItem.dispose()
   }
 }

@@ -2,12 +2,7 @@ import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
 import type { ApiService } from "../../cloud/api"
-import {
-  createNewApp,
-  pickExistingApp,
-  pickOrCreateApp,
-  pickTeam,
-} from "../../cloud/pickers"
+import { createNewApp, pickExistingApp, pickTeam } from "../../cloud/pickers"
 import type { App, Team } from "../../cloud/types"
 
 function mockApiService(overrides: Partial<ApiService> = {}): ApiService {
@@ -211,74 +206,6 @@ suite("cloud/pickers", () => {
 
       assert.strictEqual(result, null)
       assert.ok(errorStub.calledOnce)
-    })
-  })
-
-  suite("pickOrCreateApp", () => {
-    test("returns null when no team selected", async () => {
-      const api = mockApiService()
-      sinon.stub(vscode.window, "showErrorMessage")
-
-      const result = await pickOrCreateApp(api, "my-app")
-
-      assert.strictEqual(result, null)
-    })
-
-    test("returns null when user cancels choice", async () => {
-      const api = mockApiService({
-        getTeams: sinon.stub().resolves([team1]),
-      })
-
-      sinon.stub(vscode.window, "showQuickPick").resolves(undefined)
-
-      const result = await pickOrCreateApp(api, "my-app")
-
-      assert.strictEqual(result, null)
-    })
-
-    test("creates new app when user chooses new", async () => {
-      const createdApp = { id: "a3", slug: "my-app", url: "", team_id: "t1" }
-      const api = mockApiService({
-        getTeams: sinon.stub().resolves([team1]),
-        createApp: sinon.stub().resolves(createdApp),
-      })
-
-      const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
-      quickPickStub.resolves({ label: "Create new app", id: "new" } as any)
-
-      sinon.stub(vscode.window, "showInputBox").resolves("my-app")
-      sinon.stub(vscode.window, "showInformationMessage")
-
-      const result = await pickOrCreateApp(api, "my-app")
-
-      assert.ok(result)
-      assert.deepStrictEqual(result!.app, createdApp)
-      assert.deepStrictEqual(result!.team, team1)
-    })
-
-    test("selects existing app when user chooses existing", async () => {
-      const api = mockApiService({
-        getTeams: sinon.stub().resolves([team1]),
-        getApps: sinon.stub().resolves([app1]),
-      })
-
-      const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
-      // First call: create/existing choice
-      quickPickStub
-        .onFirstCall()
-        .resolves({ label: "Use existing app", id: "existing" } as any)
-      // Second call: app selection
-      quickPickStub.onSecondCall().resolves({
-        label: app1.slug,
-        description: app1.url,
-        app: app1,
-      } as any)
-
-      const result = await pickOrCreateApp(api, "my-app")
-
-      assert.ok(result)
-      assert.deepStrictEqual(result!.app, app1)
-      assert.deepStrictEqual(result!.team, team1)
     })
   })
 })

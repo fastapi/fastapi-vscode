@@ -49,7 +49,6 @@ export function isTokenExpired(token: string): boolean {
 export class CloudAuthenticationProvider
   implements AuthenticationProvider, Disposable
 {
-  private authUri: Uri | null = null
   private lastAuthState = false
   private cachedLabel: string | null = null
 
@@ -77,7 +76,7 @@ export class CloudAuthenticationProvider
   }
 
   private async checkAndFireAuthState() {
-    const loggedIn = await this.isLoggedIn()
+    const loggedIn = await this.hasValidToken()
     if (loggedIn !== this.lastAuthState) {
       // Track sign in when transitioning from logged out to logged in
       if (loggedIn && !this.lastAuthState) {
@@ -88,7 +87,6 @@ export class CloudAuthenticationProvider
     }
   }
   private getAuthUri(): Uri | null {
-    if (this.authUri) return this.authUri
     // In browser (vscode.dev), we can't access local filesystem auth
     if (env.uiKind === UIKind.Web) {
       return null
@@ -111,8 +109,7 @@ export class CloudAuthenticationProvider
       authPath = `${xdgData}/fastapi-cli/auth.json`
     }
 
-    this.authUri = Uri.file(authPath)
-    return this.authUri
+    return Uri.file(authPath)
   }
 
   get onDidChangeSessions() {
@@ -159,11 +156,18 @@ export class CloudAuthenticationProvider
       }
 
       // Fetch user info for account label (use cached value if available)
-      let label = this.cachedLabel
-      if (!label) {
-        const userInfo = await this.fetchUserInfo(token)
-        label = userInfo?.email ?? NAME
-        this.cachedLabel = label
+      const label = this.cachedLabel ?? NAME
+      if (!this.cachedLabel) {
+        this.fetchUserInfo(token).then((info) => {
+          if (info?.email) {
+            this.cachedLabel = info.email
+            this._onDidChangeSessions.fire({
+              added: [],
+              removed: [],
+              changed: [],
+            })
+          }
+        })
       }
 
       return [
@@ -182,14 +186,24 @@ export class CloudAuthenticationProvider
     }
   }
 
-  async isLoggedIn(): Promise<boolean> {
-    const token = await this.getSessions().then(
-      (sessions) => sessions[0]?.accessToken,
-    )
-    if (!token) {
+  private async hasValidToken(): Promise<boolean> {
+    const authUri = this.getAuthUri()
+    try {
+      let token: string | undefined
+      if (env.uiKind === UIKind.Web) {
+        token = await this.context.secrets.get("fastapi-cloud-access-token")
+      } else {
+        if (!authUri) return false
+        const content = await workspace.fs.readFile(authUri)
+        const authConfig: AuthConfig = JSON.parse(
+          Buffer.from(content).toString("utf8"),
+        )
+        token = authConfig.access_token
+      }
+      return !!token && !isTokenExpired(token)
+    } catch {
       return false
     }
-    return !isTokenExpired(token)
   }
 
   async saveToken(token: string): Promise<void> {
@@ -213,7 +227,7 @@ export class CloudAuthenticationProvider
 
   public async createSession(): Promise<AuthenticationSession> {
     // Return existing session if already logged in (e.g. via CLI)
-    if (await this.isLoggedIn()) {
+    if (await this.hasValidToken()) {
       const sessions = await this.getSessions()
       return sessions[0]
     }
@@ -275,16 +289,10 @@ export class CloudAuthenticationProvider
 
   public async removeSession(sessionId: string): Promise<void> {
     const authUri = this.getAuthUri()
+
+    const sessions = await this.getSessions()
+    const session = sessions.find((s) => s.id === sessionId)
     try {
-      const sessions = await this.getSessions()
-      const session = sessions.find((s) => s.id === sessionId)
-      if (session) {
-        this._onDidChangeSessions.fire({
-          added: [],
-          removed: [session],
-          changed: [],
-        })
-      }
       // In browsers envs like vscode.dev, we use SecretStorage instead of filesystem
       if (env.uiKind === UIKind.Web) {
         const secretStorage: SecretStorage = this.context.secrets
@@ -293,17 +301,22 @@ export class CloudAuthenticationProvider
       } else if (authUri) {
         await workspace.fs.delete(authUri)
       }
+
+      if (session) {
+        this._onDidChangeSessions.fire({
+          added: [],
+          removed: [session],
+          changed: [],
+        })
+      }
     } catch {
       /* file doesn't exist */
     }
   }
 
   async signOut(): Promise<void> {
+    await this.removeSession("fastapi-cloud-session")
     this.cachedLabel = null
-    const sessions = await this.getSessions()
-    for (const session of sessions) {
-      await this.removeSession(session.id)
-    }
   }
 
   public async dispose() {

@@ -68,8 +68,8 @@ suite("cloud/api", () => {
       const result = await ApiService.requestDeviceCode("test-client")
 
       assert.strictEqual(result.verification_uri_complete, "")
-      assert.strictEqual(result.expires_in, 0)
-      assert.strictEqual(result.interval, 0)
+      assert.strictEqual(result.expires_in, undefined)
+      assert.strictEqual(result.interval, undefined)
     })
 
     test("throws on non-ok response", async () => {

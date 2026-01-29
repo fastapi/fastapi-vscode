@@ -2,11 +2,6 @@ import * as vscode from "vscode"
 import type { ApiService } from "./api"
 import type { App, Team } from "./types"
 
-export interface AppSelection {
-  app: App
-  team: Team
-}
-
 /**
  * Shows a quick pick to select a team. Auto-selects if only one team.
  */
@@ -108,39 +103,4 @@ export async function createNewApp(
     )
     return null
   }
-}
-
-/**
- * Full flow to select or create an app.
- * Returns the selected/created app and team, or null if cancelled.
- */
-export async function pickOrCreateApp(
-  apiService: ApiService,
-  defaultAppName: string,
-): Promise<AppSelection | null> {
-  const team = await pickTeam(apiService)
-  if (!team) return null
-
-  const choice = await vscode.window.showQuickPick(
-    [
-      { label: "Create new app", id: "new" },
-      { label: "Use existing app", id: "existing" },
-    ],
-    {
-      placeHolder: "Create a new app or use an existing one?",
-    },
-  )
-
-  if (!choice) return null
-
-  let app: App | null
-  if (choice.id === "existing") {
-    app = await pickExistingApp(apiService, team)
-  } else {
-    app = await createNewApp(apiService, team, defaultAppName)
-  }
-
-  if (!app) return null
-
-  return { app, team }
 }
