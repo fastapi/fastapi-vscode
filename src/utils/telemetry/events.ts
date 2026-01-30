@@ -27,7 +27,6 @@ export const Events = {
   CLOUD_PROJECT_UNLINKED: "extension_cloud_project_unlinked",
   CLOUD_DASHBOARD_OPENED: "extension_cloud_dashboard_opened",
   CLOUD_APP_OPENED: "extension_cloud_app_opened",
-  CLOUD_LOGS_VIEWED: "extension_cloud_logs_viewed",
 } as const
 
 // Session counters for aggregated tracking
@@ -175,23 +174,19 @@ export function trackCloudSignOut(): void {
   client.capture(Events.CLOUD_SIGN_OUT)
 }
 
-export function trackCloudProjectLinked(): void {
-  client.capture(Events.CLOUD_PROJECT_LINKED)
+export function trackCloudProjectLinked(appName: string): void {
+  client.capture(Events.CLOUD_PROJECT_LINKED, { app_name: appName })
 }
 
-export function trackCloudProjectUnlinked(): void {
-  client.capture(Events.CLOUD_PROJECT_UNLINKED)
+export function trackCloudProjectUnlinked(appName: string): void {
+  client.capture(Events.CLOUD_PROJECT_UNLINKED, { app_name: appName })
 }
 
-export function trackCloudDashboardOpened(): void {
-  client.capture(Events.CLOUD_DASHBOARD_OPENED)
+export function trackCloudDashboardOpened(appName: string): void {
+  client.capture(Events.CLOUD_DASHBOARD_OPENED, { app_name: appName })
 }
 
-export function trackCloudAppOpened(): void {
-  client.capture(Events.CLOUD_APP_OPENED)
-}
-
-export function trackCloudLogsViewed(): void {
-  client.capture(Events.CLOUD_LOGS_VIEWED)
+export function trackCloudAppOpened(appName: string): void {
+  client.capture(Events.CLOUD_APP_OPENED, { app_name: appName })
 }
 /* c8 ignore stop */

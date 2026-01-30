@@ -2,7 +2,6 @@ import * as vscode from "vscode"
 import {
   trackCloudAppOpened,
   trackCloudDashboardOpened,
-  trackCloudLogsViewed,
   trackCloudProjectLinked,
   trackCloudProjectUnlinked,
   trackCloudSignOut,
@@ -212,7 +211,6 @@ export class CloudController {
         description: dashboardUrl,
         id: "dashboard",
       },
-      { label: "$(output) View Logs", id: "logs" },
       { label: "$(ellipsis) More", id: "more" },
     ]
 
@@ -225,19 +223,14 @@ export class CloudController {
         case "open":
           if (this.currentApp?.url) {
             vscode.env.openExternal(vscode.Uri.parse(this.currentApp.url))
-            trackCloudAppOpened()
+            trackCloudAppOpened(app.slug)
           }
           break
         case "dashboard":
           if (dashboardUrl) {
             vscode.env.openExternal(vscode.Uri.parse(dashboardUrl))
-            trackCloudDashboardOpened()
+            trackCloudDashboardOpened(app.slug)
           }
-          break
-        case "logs":
-          // TODO: Implement logs view in VS Code
-          trackCloudLogsViewed()
-          vscode.window.showInformationMessage("Logs view coming soon")
           break
         case "more":
           await this.showMoreMenu()
@@ -264,7 +257,7 @@ export class CloudController {
       team_id: team.id,
     })
 
-    trackCloudProjectLinked()
+    trackCloudProjectLinked(app.slug)
     vscode.window.showInformationMessage(`Linked to ${app.slug}`)
     await this.refresh()
   }
@@ -286,7 +279,7 @@ export class CloudController {
       team_id: team.id,
     })
 
-    trackCloudProjectLinked()
+    trackCloudProjectLinked(app.slug)
     vscode.window.showInformationMessage(`Linked to ${app.slug}`)
     await this.refresh()
   }
@@ -349,7 +342,7 @@ export class CloudController {
 
     if (confirm === "Unlink") {
       await this.configService.deleteConfig(this.workspaceRoot)
-      trackCloudProjectUnlinked()
+      trackCloudProjectUnlinked(label)
       this.currentApp = null
       this.currentTeam = null
       this.hasConfig = false

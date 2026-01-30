@@ -12,7 +12,6 @@ export {
   trackActivationFailed,
   trackCloudAppOpened,
   trackCloudDashboardOpened,
-  trackCloudLogsViewed,
   trackCloudProjectLinked,
   trackCloudProjectUnlinked,
   trackCloudSignIn,
