@@ -14,7 +14,6 @@ import {
   window,
   workspace,
 } from "vscode"
-import { log } from "../utils/logger"
 import { trackCloudSignIn } from "../utils/telemetry"
 import { ApiService } from "./api"
 
@@ -139,13 +138,8 @@ export class CloudAuthenticationProvider
       const token = await this.getToken()
 
       if (!token || isTokenExpired(token)) {
-        log(
-          `getSessions: no valid token (token=${!!token}, expired=${token ? isTokenExpired(token) : "n/a"})`,
-        )
         return []
       }
-
-      log("getSessions: returning valid session")
 
       if (!this.cachedLabel) {
         const info = await ApiService.getUser(token)
