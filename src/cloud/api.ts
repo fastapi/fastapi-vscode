@@ -1,12 +1,14 @@
 import * as vscode from "vscode"
 import { getExtensionVersion } from "../extension"
 import { AUTH_PROVIDER_ID } from "./auth"
-import type { App, Deployment, ListResponse, Team, User } from "./types"
-
-export interface UploadInfo {
-  url: string
-  fields: Record<string, string>
-}
+import type {
+  App,
+  Deployment,
+  ListResponse,
+  Team,
+  UploadInfo,
+  User,
+} from "./types"
 
 export const BASE_URL = "https://api.fastapicloud.com/api/v1"
 export const DASHBOARD_URL = "https://dashboard.fastapicloud.com"
@@ -60,6 +62,7 @@ export class ApiService {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          ...getUserAgentHeaders(),
         },
       })
       if (!response.ok) return null

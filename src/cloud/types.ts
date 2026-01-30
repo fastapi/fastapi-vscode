@@ -42,6 +42,11 @@ export interface Config {
   team_id: string
 }
 
+export interface UploadInfo {
+  url: string
+  fields: Record<string, string>
+}
+
 export interface User {
   email: string
   full_name: string
