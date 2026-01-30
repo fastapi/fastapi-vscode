@@ -5,7 +5,7 @@
 import * as vscode from "vscode"
 import { discoverFastAPIApps } from "./appDiscovery"
 import { ApiService } from "./cloud/api"
-import { CloudAuthenticationProvider } from "./cloud/auth"
+import { AUTH_PROVIDER_ID, CloudAuthenticationProvider } from "./cloud/auth"
 import { CloudController } from "./cloud/cloudController"
 import { ConfigService } from "./cloud/config"
 import { clearImportCache } from "./core/importResolver"
@@ -37,6 +37,8 @@ import {
   trackTreeViewVisible,
 } from "./utils/telemetry"
 
+export const EXTENSION_ID = "FastAPILabs.fastapi-vscode"
+
 let parserService: Parser | null = null
 
 function navigateToLocation(location: SourceLocation): void {
@@ -50,8 +52,8 @@ function navigateToLocation(location: SourceLocation): void {
 export async function activate(context: vscode.ExtensionContext) {
   const elapsed = createTimer()
   const extensionVersion =
-    vscode.extensions.getExtension("FastAPILabs.fastapi-vscode")?.packageJSON
-      ?.version ?? "unknown"
+    vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON?.version ??
+    "unknown"
   log(
     `FastAPI extension ${extensionVersion} activated (VS Code ${vscode.version})`,
   )
@@ -202,7 +204,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
       { dispose: () => authProvider.dispose() },
       vscode.commands.registerCommand("fastapi-vscode.signIn", async () => {
-        await vscode.authentication.getSession("fastapi-vscode", [], {
+        await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
           createIfNone: true,
         })
       }),

@@ -4,6 +4,7 @@
  */
 
 import * as vscode from "vscode"
+import { EXTENSION_ID } from "../../extension"
 import { client } from "./client"
 import type { ClientInfo } from "./types"
 
@@ -88,8 +89,8 @@ export async function initVSCodeTelemetry(
 
   const userId = await getOrCreateUserId(context)
   const extensionVersion =
-    vscode.extensions.getExtension("FastAPILabs.fastapi-vscode")?.packageJSON
-      ?.version ?? "unknown"
+    vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON?.version ??
+    "unknown"
 
   await client.init({
     userId,

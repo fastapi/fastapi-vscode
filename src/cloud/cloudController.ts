@@ -7,11 +7,10 @@ import {
   trackCloudSignOut,
 } from "../utils/telemetry"
 import { ApiService } from "./api"
+import { AUTH_PROVIDER_ID } from "./auth"
 import type { ConfigService } from "./config"
 import { createNewApp, pickExistingApp, pickTeam } from "./pickers"
 import type { App, Team } from "./types"
-
-const AUTH_PROVIDER_ID = "fastapi-vscode"
 
 interface AuthProvider {
   signOut(): Promise<void>

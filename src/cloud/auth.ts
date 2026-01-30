@@ -18,7 +18,7 @@ import { log } from "../utils/logger"
 import { trackCloudSignIn } from "../utils/telemetry"
 import { ApiService } from "./api"
 
-const CLIENT_ID = "fastapi-vscode"
+export const AUTH_PROVIDER_ID = "fastapi-vscode"
 const NAME = "FastAPI Cloud"
 const AUTH_POLL_INTERVAL_MS = 3000
 
@@ -63,9 +63,14 @@ export class CloudAuthenticationProvider
 
   constructor(private readonly context: ExtensionContext) {
     this._disposable = Disposable.from(
-      authentication.registerAuthenticationProvider(CLIENT_ID, NAME, this, {
-        supportsMultipleAccounts: false,
-      }),
+      authentication.registerAuthenticationProvider(
+        AUTH_PROVIDER_ID,
+        NAME,
+        this,
+        {
+          supportsMultipleAccounts: false,
+        },
+      ),
     )
   }
 
@@ -244,7 +249,7 @@ export class CloudAuthenticationProvider
       ReturnType<typeof ApiService.requestDeviceCode>
     >
     try {
-      deviceCodeResponse = await ApiService.requestDeviceCode(CLIENT_ID)
+      deviceCodeResponse = await ApiService.requestDeviceCode(AUTH_PROVIDER_ID)
     } catch (error) {
       if (
         error instanceof TypeError &&
@@ -275,7 +280,7 @@ export class CloudAuthenticationProvider
         cancellationToken.onCancellationRequested(() => abortController.abort())
 
         return await ApiService.pollDeviceToken(
-          CLIENT_ID,
+          AUTH_PROVIDER_ID,
           deviceCodeResponse.device_code,
           intervalMs,
           abortController.signal,

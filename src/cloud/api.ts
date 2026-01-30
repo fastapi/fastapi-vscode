@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
+import { EXTENSION_ID } from "../extension"
+import { AUTH_PROVIDER_ID } from "./auth"
 import type { App, Deployment, ListResponse, Team } from "./types"
-
-const AUTH_PROVIDER_ID = "fastapi-vscode"
 
 export interface UploadInfo {
   url: string
@@ -10,8 +10,8 @@ export interface UploadInfo {
 
 function getExtensionVersion(): string {
   return (
-    vscode.extensions.getExtension("FastAPILabs.fastapi-vscode")?.packageJSON
-      ?.version ?? "unknown"
+    vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON?.version ??
+    "unknown"
   )
 }
 
