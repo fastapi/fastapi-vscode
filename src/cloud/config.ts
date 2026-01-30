@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { log } from "../utils/logger"
 import type { Config } from "./types"
 
 // README content aligned with fastapi-cloud-cli
@@ -15,9 +16,10 @@ No, you should not commit the ".fastapicloud" folder to your version control sys
 That's why there's a ".gitignore" file in this folder.
 `
 
+const CONFIG_DIR = ".fastapicloud"
+const CONFIG_FILE = "cloud.json"
+
 export class ConfigService {
-  private static CONFIG_DIR = ".fastapicloud"
-  private static CONFIG_FILE = "cloud.json"
   private fileWatcher?: vscode.FileSystemWatcher
 
   private _onConfigStateChanged = new vscode.EventEmitter<Config | null>()
@@ -26,45 +28,36 @@ export class ConfigService {
   startWatching(workspaceRoot: vscode.Uri) {
     const pattern = new vscode.RelativePattern(
       workspaceRoot,
-      `${ConfigService.CONFIG_DIR}/${ConfigService.CONFIG_FILE}`,
+      `${CONFIG_DIR}/${CONFIG_FILE}`,
     )
     this.fileWatcher = vscode.workspace.createFileSystemWatcher(pattern)
-    this.fileWatcher.onDidChange(async () => {
+    const fireConfig = async () => {
       const config = await this.getConfig(workspaceRoot)
       this._onConfigStateChanged.fire(config)
-    })
-    this.fileWatcher.onDidCreate(async () => {
-      const config = await this.getConfig(workspaceRoot)
-      this._onConfigStateChanged.fire(config)
-    })
+    }
+    this.fileWatcher.onDidChange(fireConfig)
+    this.fileWatcher.onDidCreate(fireConfig)
     this.fileWatcher.onDidDelete(() => this._onConfigStateChanged.fire(null))
   }
 
   async getConfig(workspaceRoot: vscode.Uri): Promise<Config | null> {
     try {
-      const uri = vscode.Uri.joinPath(
-        workspaceRoot,
-        ConfigService.CONFIG_DIR,
-        ConfigService.CONFIG_FILE,
-      )
+      const uri = vscode.Uri.joinPath(workspaceRoot, CONFIG_DIR, CONFIG_FILE)
       const data = await vscode.workspace.fs.readFile(uri)
       return JSON.parse(new TextDecoder().decode(data))
     } catch (err) {
-      console.error("[FastAPI Cloud] Failed to read config:", err)
+      log(`Failed to read config: ${err}`)
       return null
     }
   }
 
   async writeConfig(workspaceRoot: vscode.Uri, config: Config) {
     try {
-      const dirUri = vscode.Uri.joinPath(
-        workspaceRoot,
-        ConfigService.CONFIG_DIR,
-      )
+      const dirUri = vscode.Uri.joinPath(workspaceRoot, CONFIG_DIR)
       await vscode.workspace.fs.createDirectory(dirUri)
 
       // cloud.json
-      const configUri = vscode.Uri.joinPath(dirUri, ConfigService.CONFIG_FILE)
+      const configUri = vscode.Uri.joinPath(dirUri, CONFIG_FILE)
       await vscode.workspace.fs.writeFile(
         configUri,
         new TextEncoder().encode(JSON.stringify(config)),
@@ -90,15 +83,13 @@ export class ConfigService {
 
   async deleteConfig(workspaceRoot: vscode.Uri) {
     try {
-      const dirUri = vscode.Uri.joinPath(
-        workspaceRoot,
-        ConfigService.CONFIG_DIR,
-      )
+      const dirUri = vscode.Uri.joinPath(workspaceRoot, CONFIG_DIR)
       await vscode.workspace.fs.delete(dirUri, { recursive: true })
     } catch {
       // No project linked
     }
   }
+
   dispose() {
     this.fileWatcher?.dispose()
     this._onConfigStateChanged.dispose()

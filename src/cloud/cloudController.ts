@@ -24,7 +24,6 @@ export class CloudController {
   private hasConfig = false
   private workspaceRoot: vscode.Uri | null = null
   private refreshing = false
-  private started = false
   private appNotFoundWarningShown = false
   private sessionListener: vscode.Disposable | null = null
 
@@ -44,8 +43,7 @@ export class CloudController {
   showStatusBar() {
     this.statusBarItem.text = "$(cloud) FastAPI Cloud"
     this.statusBarItem.show()
-    if (!this.started) {
-      this.started = true
+    if (!this.sessionListener) {
       this.sessionListener = vscode.authentication.onDidChangeSessions((e) => {
         if (e.provider.id === AUTH_PROVIDER_ID) this.refresh()
       })
