@@ -39,6 +39,13 @@ import {
 
 export const EXTENSION_ID = "FastAPILabs.fastapi-vscode"
 
+export function getExtensionVersion(): string {
+  return (
+    vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON?.version ??
+    "unknown"
+  )
+}
+
 let parserService: Parser | null = null
 
 function navigateToLocation(location: SourceLocation): void {
@@ -51,9 +58,7 @@ function navigateToLocation(location: SourceLocation): void {
 
 export async function activate(context: vscode.ExtensionContext) {
   const elapsed = createTimer()
-  const extensionVersion =
-    vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON?.version ??
-    "unknown"
+  const extensionVersion = getExtensionVersion()
   log(
     `FastAPI extension ${extensionVersion} activated (VS Code ${vscode.version})`,
   )

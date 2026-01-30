@@ -1,18 +1,11 @@
 import * as vscode from "vscode"
-import { EXTENSION_ID } from "../extension"
+import { getExtensionVersion } from "../extension"
 import { AUTH_PROVIDER_ID } from "./auth"
 import type { App, Deployment, ListResponse, Team } from "./types"
 
 export interface UploadInfo {
   url: string
   fields: Record<string, string>
-}
-
-function getExtensionVersion(): string {
-  return (
-    vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON?.version ??
-    "unknown"
-  )
 }
 
 function getUserAgentHeaders(): Record<string, string> {

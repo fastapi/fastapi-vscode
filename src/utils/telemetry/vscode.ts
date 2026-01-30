@@ -4,7 +4,7 @@
  */
 
 import * as vscode from "vscode"
-import { EXTENSION_ID } from "../../extension"
+import { getExtensionVersion } from "../../extension"
 import { client } from "./client"
 import type { ClientInfo } from "./types"
 
@@ -88,9 +88,7 @@ export async function initVSCodeTelemetry(
   }
 
   const userId = await getOrCreateUserId(context)
-  const extensionVersion =
-    vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON?.version ??
-    "unknown"
+  const extensionVersion = getExtensionVersion()
 
   await client.init({
     userId,
