@@ -151,7 +151,7 @@ suite("cloud/auth", () => {
 
         assert.strictEqual(sessions.length, 1)
         assert.strictEqual(sessions[0].accessToken, token)
-        assert.strictEqual(sessions[0].account.label, "FastAPI Cloud")
+        assert.strictEqual(sessions[0].account.label, "test@example.com")
         assert.ok(fetchStub.calledOnce)
 
         await provider.dispose()
@@ -196,13 +196,10 @@ suite("cloud/auth", () => {
 
         const { provider } = createProvider()
 
-        // First call returns default label, fires fetchUserInfo in background
+        // First call fetches and caches the label
         const sessions1 = await provider.getSessions()
-        assert.strictEqual(sessions1[0].account.label, "FastAPI Cloud")
+        assert.strictEqual(sessions1[0].account.label, "cached@example.com")
         assert.strictEqual(fetchStub.callCount, 1)
-
-        // Let the fire-and-forget .then() resolve to populate cache
-        await new Promise((r) => setTimeout(r, 0))
 
         // Second call uses cached label, no new fetch
         const sessions2 = await provider.getSessions()
@@ -286,9 +283,6 @@ suite("cloud/auth", () => {
         await provider.removeSession("fastapi-cloud-session")
 
         assert.ok(fsStub.fake.delete.calledOnce)
-        // Wait for fire-and-forget fetchUserInfo to resolve
-        await new Promise((r) => setTimeout(r, 0))
-        // Event fires at least once for the removal; may also fire from fetchUserInfo's .then()
         const removeEvent = fired.args.find(
           (args: any[]) => args[0].removed.length > 0,
         )
@@ -347,9 +341,8 @@ suite("cloud/auth", () => {
 
         const { provider } = createProvider()
 
-        // Populate cached label via fire-and-forget
+        // First call fetches and caches the label
         await provider.getSessions()
-        await new Promise((r) => setTimeout(r, 0))
 
         // Verify label is cached
         const sessions = await provider.getSessions()
@@ -395,7 +388,7 @@ suite("cloud/auth", () => {
         const session = await provider.createSession()
 
         assert.strictEqual(session.accessToken, token)
-        assert.strictEqual(session.account.label, "FastAPI Cloud")
+        assert.strictEqual(session.account.label, "test@example.com")
 
         await provider.dispose()
       })
@@ -568,8 +561,6 @@ suite("cloud/auth", () => {
           )
 
         await (provider as any).checkAndFireAuthState()
-        // Fires at least once: from checkAndFireAuthState detecting the state change.
-        // May also fire from getSessions' fire-and-forget fetchUserInfo resolving.
         assert.ok(
           fired.callCount >= 1,
           "should fire when state changes to logged in",

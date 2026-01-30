@@ -169,20 +169,14 @@ export class CloudAuthenticationProvider
 
       log("getSessions: returning valid session")
 
-      // Fetch user info for account label (use cached value if available)
-      const label = this.cachedLabel ?? NAME
+      // Fetch user info for account label (cached after first successful fetch)
       if (!this.cachedLabel) {
-        this.fetchUserInfo(token).then((info) => {
-          if (info?.email) {
-            this.cachedLabel = info.email
-            this._onDidChangeSessions.fire({
-              added: [],
-              removed: [],
-              changed: [],
-            })
-          }
-        })
+        const info = await this.fetchUserInfo(token)
+        if (info?.email) {
+          this.cachedLabel = info.email
+        }
       }
+      const label = this.cachedLabel ?? NAME
 
       return [
         {
