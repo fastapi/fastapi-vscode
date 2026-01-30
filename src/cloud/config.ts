@@ -56,28 +56,25 @@ export class ConfigService {
       const dirUri = vscode.Uri.joinPath(workspaceRoot, CONFIG_DIR)
       await vscode.workspace.fs.createDirectory(dirUri)
 
-      // cloud.json
       const configUri = vscode.Uri.joinPath(dirUri, CONFIG_FILE)
       await vscode.workspace.fs.writeFile(
         configUri,
         new TextEncoder().encode(JSON.stringify(config)),
       )
 
-      // README.md
       const readmeUri = vscode.Uri.joinPath(dirUri, "README.md")
       await vscode.workspace.fs.writeFile(
         readmeUri,
         new TextEncoder().encode(README_CONTENT),
       )
 
-      // .gitignore
       const gitignoreUri = vscode.Uri.joinPath(dirUri, ".gitignore")
       await vscode.workspace.fs.writeFile(
         gitignoreUri,
         new TextEncoder().encode("*"),
       )
-    } catch {
-      // Failed to write config
+    } catch (err) {
+      log(`Failed to write config: ${err}`)
     }
   }
 
