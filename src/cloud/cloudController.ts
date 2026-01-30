@@ -76,6 +76,11 @@ export class CloudController {
         return
       }
 
+      if (!this.workspaceRoot) {
+        this.statusBarItem.text = "$(cloud) Set up FastAPI Cloud"
+        return
+      }
+
       if (this.workspaceRoot) {
         const config = await this.configService.getConfig(this.workspaceRoot)
 

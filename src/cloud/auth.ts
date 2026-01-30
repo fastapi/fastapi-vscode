@@ -14,6 +14,7 @@ import {
   window,
   workspace,
 } from "vscode"
+import { log } from "../utils/logger"
 import { trackCloudSignIn } from "../utils/telemetry"
 import { ApiService } from "./api"
 
@@ -37,7 +38,9 @@ export function isTokenExpired(token: string): boolean {
     // Token is malformed, consider it expired
     if (parts.length !== 3) return true
 
-    const decoded = JSON.parse(Buffer.from(parts[1], "base64url").toString())
+    // Use atob instead of Buffer.from("base64url") for web worker compatibility
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/")
+    const decoded = JSON.parse(atob(base64))
 
     if (decoded.exp === undefined) return false
     return Date.now() >= decoded.exp * 1000
@@ -134,6 +137,9 @@ export class CloudAuthenticationProvider
 
   public async getSessions(): Promise<AuthenticationSession[]> {
     const authUri = this.getAuthUri()
+    log(
+      `getSessions called (uiKind=${env.uiKind}, authUri=${authUri?.toString() ?? "null"})`,
+    )
 
     try {
       let token: string | undefined
@@ -142,6 +148,9 @@ export class CloudAuthenticationProvider
         // In browser, use SecretStorage
         const secretStorage: SecretStorage = this.context.secrets
         token = await secretStorage.get("fastapi-cloud-access-token")
+        log(
+          `getSessions: SecretStorage token ${token ? `found (${token.length} chars)` : "not found"}`,
+        )
       } else {
         if (!authUri) return []
         const content = await workspace.fs.readFile(authUri)
@@ -152,8 +161,13 @@ export class CloudAuthenticationProvider
       }
 
       if (!token || isTokenExpired(token)) {
+        log(
+          `getSessions: no valid token (token=${!!token}, expired=${token ? isTokenExpired(token) : "n/a"})`,
+        )
         return []
       }
+
+      log("getSessions: returning valid session")
 
       // Fetch user info for account label (use cached value if available)
       const label = this.cachedLabel ?? NAME
