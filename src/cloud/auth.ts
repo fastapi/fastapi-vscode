@@ -19,11 +19,11 @@ import { trackCloudSignIn } from "../utils/telemetry"
 import { ApiService } from "./api"
 
 export const AUTH_PROVIDER_ID = "fastapi-vscode"
-const NAME = "FastAPI Cloud"
+export const NAME = "FastAPI Cloud"
 const AUTH_POLL_INTERVAL_MS = 3000
 const SECRET_STORAGE_KEY = "fastapi-cloud-access-token"
-const SESSION_ID = "fastapi-cloud-session"
-const ACCOUNT_ID = "fastapi-cloud-account"
+export const SESSION_ID = "fastapi-cloud-session"
+export const ACCOUNT_ID = "fastapi-cloud-account"
 
 interface AuthConfig {
   access_token: string

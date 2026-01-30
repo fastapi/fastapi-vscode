@@ -2,6 +2,7 @@ import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
 import { ApiService } from "../../cloud/api"
+import { ACCOUNT_ID, NAME, SESSION_ID } from "../../cloud/auth"
 import { CloudController } from "../../cloud/cloudController"
 import { ConfigService } from "../../cloud/config"
 import type { App, Team } from "../../cloud/types"
@@ -20,8 +21,8 @@ function createStatusBarStub() {
 
 const mockSession = {
   accessToken: "test_token",
-  id: "fastapi-cloud-session",
-  account: { id: "fastapi-cloud-account", label: "FastAPI Cloud" },
+  id: SESSION_ID,
+  account: { id: ACCOUNT_ID, label: NAME },
   scopes: [],
 } as vscode.AuthenticationSession
 
@@ -128,11 +129,6 @@ suite("cloud/cloudController", () => {
       const deps = createController()
       await initializeWithApp(deps)
 
-      // Restore isLoggedIn so showMenu can re-stub it
-      ;(vscode.authentication.getSession as sinon.SinonStub).resolves(
-        mockSession as any,
-      )
-
       const quickPickStub = sinon
         .stub(vscode.window, "showQuickPick")
         .resolves(undefined)
@@ -151,9 +147,6 @@ suite("cloud/cloudController", () => {
     test("opens app URL when open selected", async () => {
       const deps = createController()
       await initializeWithApp(deps)
-      ;(vscode.authentication.getSession as sinon.SinonStub).resolves(
-        mockSession as any,
-      )
 
       sinon
         .stub(vscode.window, "showQuickPick")
@@ -170,9 +163,6 @@ suite("cloud/cloudController", () => {
     test("opens dashboard when dashboard selected", async () => {
       const deps = createController()
       await initializeWithApp(deps)
-      ;(vscode.authentication.getSession as sinon.SinonStub).resolves(
-        mockSession as any,
-      )
 
       sinon
         .stub(vscode.window, "showQuickPick")
@@ -189,9 +179,6 @@ suite("cloud/cloudController", () => {
     test("shows more menu when more selected", async () => {
       const deps = createController()
       await initializeWithApp(deps)
-      ;(vscode.authentication.getSession as sinon.SinonStub).resolves(
-        mockSession as any,
-      )
 
       const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
       // First call: main menu selects "more"
@@ -211,9 +198,6 @@ suite("cloud/cloudController", () => {
     test("unlinks project when unlink selected", async () => {
       const deps = createController()
       await initializeWithApp(deps)
-      ;(vscode.authentication.getSession as sinon.SinonStub).resolves(
-        mockSession as any,
-      )
 
       const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
       quickPickStub.onFirstCall().resolves({ label: "", id: "more" } as any)
@@ -234,9 +218,6 @@ suite("cloud/cloudController", () => {
     test("signs out when signout selected", async () => {
       const deps = createController()
       await initializeWithApp(deps)
-      ;(vscode.authentication.getSession as sinon.SinonStub).resolves(
-        mockSession as any,
-      )
 
       const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
       quickPickStub.onFirstCall().resolves({ label: "", id: "more" } as any)
@@ -352,14 +333,14 @@ suite("cloud/cloudController", () => {
   })
 
   suite("linkProject", () => {
-    test("does nothing without workspace root", async () => {
+    test("shows error without workspace root", async () => {
       const deps = createController()
 
-      const writeStub = sinon.stub(deps.configService, "writeConfig").resolves()
+      const errorStub = sinon.stub(vscode.window, "showErrorMessage")
 
       await deps.controller.linkProject()
 
-      assert.ok(!writeStub.called)
+      assert.ok(errorStub.calledOnceWith("No workspace folder open"))
 
       dispose(deps)
     })
@@ -507,9 +488,25 @@ suite("cloud/cloudController", () => {
   })
 
   suite("dispose", () => {
-    test("does not throw", () => {
+    test("disposes session listener and status bar", () => {
       const deps = createController()
+      const listenerDisposable = { dispose: sinon.stub() }
+      const original = vscode.authentication.onDidChangeSessions
+      Object.defineProperty(vscode.authentication, "onDidChangeSessions", {
+        value: () => listenerDisposable,
+        configurable: true,
+      })
+
+      deps.controller.showStatusBar()
       deps.controller.dispose()
+
+      assert.ok(listenerDisposable.dispose.calledOnce)
+      assert.ok((deps.statusBar.dispose as sinon.SinonStub).calledOnce)
+
+      Object.defineProperty(vscode.authentication, "onDidChangeSessions", {
+        value: original,
+        configurable: true,
+      })
     })
   })
 })

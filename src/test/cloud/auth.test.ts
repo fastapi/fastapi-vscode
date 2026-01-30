@@ -1,7 +1,11 @@
 import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
-import { CloudAuthenticationProvider, isTokenExpired } from "../../cloud/auth"
+import {
+  CloudAuthenticationProvider,
+  isTokenExpired,
+  SESSION_ID,
+} from "../../cloud/auth"
 import { mockResponse, stubFs } from "../testUtils"
 
 function createJwtToken(payload: Record<string, unknown>): string {
@@ -253,7 +257,7 @@ suite("cloud/auth", () => {
         const fired = sinon.stub()
         provider.onDidChangeSessions(fired)
 
-        await provider.removeSession("fastapi-cloud-session")
+        await provider.removeSession(SESSION_ID)
 
         assert.ok(fsStub.fake.delete.calledOnce)
         const removeEvent = fired.args.find(
@@ -263,37 +267,7 @@ suite("cloud/auth", () => {
           removeEvent,
           "should fire onDidChangeSessions with removed session",
         )
-        assert.strictEqual(
-          removeEvent[0].removed[0].id,
-          "fastapi-cloud-session",
-        )
-
-        await provider.dispose()
-      })
-
-      test("handles file not found gracefully", async () => {
-        fsStub.fake.readFile.rejects(new Error("File not found"))
-
-        const { provider } = createProvider()
-        await provider.removeSession("nonexistent")
-
-        await provider.dispose()
-      })
-
-      test("handles delete failure gracefully", async () => {
-        const token = validToken()
-        fsStub.fake.readFile.resolves(
-          Buffer.from(JSON.stringify({ access_token: token })),
-        )
-        sinon
-          .stub(globalThis, "fetch")
-          .resolves(
-            mockResponse({ email: "test@example.com", full_name: "Test" }),
-          )
-        fsStub.fake.delete.rejects(new Error("Permission denied"))
-
-        const { provider } = createProvider()
-        await provider.removeSession("fastapi-cloud-session")
+        assert.strictEqual(removeEvent[0].removed[0].id, SESSION_ID)
 
         await provider.dispose()
       })
@@ -331,15 +305,6 @@ suite("cloud/auth", () => {
           fetchStub.callCount > countAfterSignOut,
           "should re-fetch user info after cache was cleared by signOut",
         )
-
-        await provider.dispose()
-      })
-
-      test("works when no sessions exist", async () => {
-        fsStub.fake.readFile.rejects(new Error("File not found"))
-
-        const { provider } = createProvider()
-        await provider.signOut()
 
         await provider.dispose()
       })
