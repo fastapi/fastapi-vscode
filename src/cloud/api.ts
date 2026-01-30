@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { getExtensionVersion } from "../extension"
 import { AUTH_PROVIDER_ID } from "./auth"
-import type { App, Deployment, ListResponse, Team, UserInfo } from "./types"
+import type { App, Deployment, ListResponse, Team, User } from "./types"
 
 export interface UploadInfo {
   url: string
@@ -17,21 +17,6 @@ function getUserAgentHeaders(): Record<string, string> {
 }
 
 export class ApiService {
-  static async fetchUserInfo(token: string): Promise<UserInfo | null> {
-    try {
-      const response = await fetch(`${BASE_URL}/users/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
-      if (!response.ok) return null
-      return (await response.json()) as UserInfo
-    } catch {
-      return null
-    }
-  }
-
   static getDashboardUrl(teamSlug: string, appSlug: string): string {
     return `${DASHBOARD_URL}/${teamSlug}/apps/${appSlug}/general`
   }
@@ -67,6 +52,21 @@ export class ApiService {
     }
 
     return response.json() as Promise<T>
+  }
+
+  static async getUser(token: string): Promise<User | null> {
+    try {
+      const response = await fetch(`${BASE_URL}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+      if (!response.ok) return null
+      return (await response.json()) as User
+    } catch {
+      return null
+    }
   }
 
   async getTeams(): Promise<Team[]> {

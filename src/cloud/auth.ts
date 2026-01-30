@@ -155,7 +155,7 @@ export class CloudAuthenticationProvider
 
       // Fetch user info for account label (cached after first successful fetch)
       if (!this.cachedLabel) {
-        const info = await ApiService.fetchUserInfo(token)
+        const info = await ApiService.getUser(token)
         if (info?.email) {
           this.cachedLabel = info.email
         }

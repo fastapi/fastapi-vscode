@@ -209,7 +209,7 @@ suite("cloud/auth", () => {
         await provider.dispose()
       })
 
-      test("falls back to default label when fetchUserInfo fails", async () => {
+      test("falls back to default label when getUser fails", async () => {
         const token = validToken()
         fsStub.fake.readFile.resolves(
           Buffer.from(JSON.stringify({ access_token: token })),
@@ -226,7 +226,7 @@ suite("cloud/auth", () => {
         await provider.dispose()
       })
 
-      test("falls back to default label when fetchUserInfo returns non-ok", async () => {
+      test("falls back to default label when getUser returns non-ok", async () => {
         const token = validToken()
         fsStub.fake.readFile.resolves(
           Buffer.from(JSON.stringify({ access_token: token })),
@@ -412,7 +412,7 @@ suite("cloud/auth", () => {
         )
         // pollDeviceToken call
         fetchStub.onSecondCall().resolves(mockResponse({ access_token: token }))
-        // fetchUserInfo call (after saveToken, getSessions is called)
+        // getUser call (after saveToken, getSessions is called)
         fetchStub
           .onThirdCall()
           .resolves(
