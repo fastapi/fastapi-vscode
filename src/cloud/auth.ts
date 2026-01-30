@@ -21,6 +21,9 @@ import { ApiService } from "./api"
 export const AUTH_PROVIDER_ID = "fastapi-vscode"
 const NAME = "FastAPI Cloud"
 const AUTH_POLL_INTERVAL_MS = 3000
+const SECRET_STORAGE_KEY = "fastapi-cloud-access-token"
+const SESSION_ID = "fastapi-cloud-session"
+const ACCOUNT_ID = "fastapi-cloud-account"
 
 interface AuthConfig {
   access_token: string
@@ -81,7 +84,6 @@ export class CloudAuthenticationProvider
   private async checkAndFireAuthState() {
     const loggedIn = await this.hasValidToken()
     if (loggedIn !== this.lastAuthState) {
-      // Track sign in when transitioning from logged out to logged in
       if (loggedIn && !this.lastAuthState) {
         trackCloudSignIn()
       }
@@ -89,13 +91,13 @@ export class CloudAuthenticationProvider
       this._onDidChangeSessions.fire({ added: [], removed: [], changed: [] })
     }
   }
+
   private getAuthUri(): Uri | null {
     // In browser (vscode.dev), we can't access local filesystem auth
     if (env.uiKind === UIKind.Web) {
       return null
     }
 
-    // Get home directory from environment
     const home = process.env.HOME || process.env.USERPROFILE
     if (!home) return null
 
@@ -119,30 +121,22 @@ export class CloudAuthenticationProvider
     return this._onDidChangeSessions.event
   }
 
-  public async getSessions(): Promise<AuthenticationSession[]> {
+  private async getToken(): Promise<string | undefined> {
+    if (env.uiKind === UIKind.Web) {
+      return this.context.secrets.get(SECRET_STORAGE_KEY)
+    }
     const authUri = this.getAuthUri()
-    log(
-      `getSessions called (uiKind=${env.uiKind}, authUri=${authUri?.toString() ?? "null"})`,
+    if (!authUri) return undefined
+    const content = await workspace.fs.readFile(authUri)
+    const authConfig: AuthConfig = JSON.parse(
+      Buffer.from(content).toString("utf8"),
     )
+    return authConfig.access_token
+  }
 
+  public async getSessions(): Promise<AuthenticationSession[]> {
     try {
-      let token: string | undefined
-
-      if (env.uiKind === UIKind.Web) {
-        // In browser, use SecretStorage
-        const secretStorage: SecretStorage = this.context.secrets
-        token = await secretStorage.get("fastapi-cloud-access-token")
-        log(
-          `getSessions: SecretStorage token ${token ? `found (${token.length} chars)` : "not found"}`,
-        )
-      } else {
-        if (!authUri) return []
-        const content = await workspace.fs.readFile(authUri)
-        const authConfig: AuthConfig = JSON.parse(
-          Buffer.from(content).toString("utf8"),
-        )
-        token = authConfig.access_token
-      }
+      const token = await this.getToken()
 
       if (!token || isTokenExpired(token)) {
         log(
@@ -153,7 +147,6 @@ export class CloudAuthenticationProvider
 
       log("getSessions: returning valid session")
 
-      // Fetch user info for account label (cached after first successful fetch)
       if (!this.cachedLabel) {
         const info = await ApiService.getUser(token)
         if (info?.email) {
@@ -164,10 +157,10 @@ export class CloudAuthenticationProvider
 
       return [
         {
-          id: "fastapi-cloud-session",
+          id: SESSION_ID,
           accessToken: token,
           account: {
-            id: "fastapi-cloud-account",
+            id: ACCOUNT_ID,
             label,
           },
           scopes: [],
@@ -179,19 +172,8 @@ export class CloudAuthenticationProvider
   }
 
   private async hasValidToken(): Promise<boolean> {
-    const authUri = this.getAuthUri()
     try {
-      let token: string | undefined
-      if (env.uiKind === UIKind.Web) {
-        token = await this.context.secrets.get("fastapi-cloud-access-token")
-      } else {
-        if (!authUri) return false
-        const content = await workspace.fs.readFile(authUri)
-        const authConfig: AuthConfig = JSON.parse(
-          Buffer.from(content).toString("utf8"),
-        )
-        token = authConfig.access_token
-      }
+      const token = await this.getToken()
       return !!token && !isTokenExpired(token)
     } catch {
       return false
@@ -202,7 +184,7 @@ export class CloudAuthenticationProvider
     if (env.uiKind === UIKind.Web) {
       // In browser, use SecretStorage
       const secretStorage: SecretStorage = this.context.secrets
-      await secretStorage.store("fastapi-cloud-access-token", token)
+      await secretStorage.store(SECRET_STORAGE_KEY, token)
       return
     }
 
@@ -288,7 +270,7 @@ export class CloudAuthenticationProvider
       // In browsers envs like vscode.dev, we use SecretStorage instead of filesystem
       if (env.uiKind === UIKind.Web) {
         const secretStorage: SecretStorage = this.context.secrets
-        await secretStorage.delete("fastapi-cloud-access-token")
+        await secretStorage.delete(SECRET_STORAGE_KEY)
         // Otherwise, we need to delete the auth file from filesystem if it exists
       } else if (authUri) {
         await workspace.fs.delete(authUri)
@@ -307,7 +289,7 @@ export class CloudAuthenticationProvider
   }
 
   async signOut(): Promise<void> {
-    await this.removeSession("fastapi-cloud-session")
+    await this.removeSession(SESSION_ID)
     this.cachedLabel = null
   }
 
