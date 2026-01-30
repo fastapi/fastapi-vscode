@@ -2,33 +2,7 @@ import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
 import { ConfigService } from "../../cloud/config"
-
-function stubFs() {
-  const original = vscode.workspace.fs
-  const fake = {
-    readFile: sinon.stub(),
-    writeFile: sinon.stub(),
-    delete: sinon.stub(),
-    createDirectory: sinon.stub(),
-  } as unknown as typeof vscode.workspace.fs & {
-    readFile: sinon.SinonStub
-    writeFile: sinon.SinonStub
-    delete: sinon.SinonStub
-    createDirectory: sinon.SinonStub
-  }
-  Object.defineProperty(vscode.workspace, "fs", {
-    value: fake,
-    configurable: true,
-  })
-  return {
-    fake,
-    restore: () =>
-      Object.defineProperty(vscode.workspace, "fs", {
-        value: original,
-        configurable: true,
-      }),
-  }
-}
+import { stubFs } from "../testUtils"
 
 suite("cloud/config", () => {
   let fsStub: ReturnType<typeof stubFs>

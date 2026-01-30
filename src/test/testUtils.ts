@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
+import sinon from "sinon"
+import * as vscode from "vscode"
 import type { FileSystem } from "../core/filesystem"
 
 declare const __DIST_ROOT__: string
@@ -112,6 +114,33 @@ export const nodeFileSystem: FileSystem = {
 }
 
 // Cloud helpers
+
+export function stubFs() {
+  const original = vscode.workspace.fs
+  const fake = {
+    readFile: sinon.stub(),
+    writeFile: sinon.stub(),
+    delete: sinon.stub(),
+    createDirectory: sinon.stub(),
+  } as unknown as typeof vscode.workspace.fs & {
+    readFile: sinon.SinonStub
+    writeFile: sinon.SinonStub
+    delete: sinon.SinonStub
+    createDirectory: sinon.SinonStub
+  }
+  Object.defineProperty(vscode.workspace, "fs", {
+    value: fake,
+    configurable: true,
+  })
+  return {
+    fake,
+    restore: () =>
+      Object.defineProperty(vscode.workspace, "fs", {
+        value: original,
+        configurable: true,
+      }),
+  }
+}
 
 export function mockResponse(body: unknown, ok = true, status = 200): Response {
   return {

@@ -32,17 +32,15 @@ suite("cloud/api", () => {
 
       const result = await ApiService.requestDeviceCode("test-client")
 
-      assert.strictEqual(result.device_code, "dc_123")
-      assert.strictEqual(result.user_code, "UC-456")
-      assert.strictEqual(result.verification_uri, "https://example.com/verify")
-      assert.strictEqual(
-        result.verification_uri_complete,
-        "https://example.com/verify?code=UC-456",
-      )
-      assert.strictEqual(result.expires_in, 900)
-      assert.strictEqual(result.interval, 5)
+      assert.deepStrictEqual(result, {
+        device_code: "dc_123",
+        user_code: "UC-456",
+        verification_uri: "https://example.com/verify",
+        verification_uri_complete: "https://example.com/verify?code=UC-456",
+        expires_in: 900,
+        interval: 5,
+      })
 
-      // Verify fetch was called with correct params
       const [url, options] = fetchStub.firstCall.args
       assert.strictEqual(url, `${BASE_URL}/login/device/authorization`)
       assert.strictEqual(options?.method, "POST")
@@ -88,6 +86,39 @@ suite("cloud/api", () => {
     })
   })
 
+  suite("getUser", () => {
+    test("returns user on success", async () => {
+      sinon
+        .stub(globalThis, "fetch")
+        .resolves(
+          mockResponse({ email: "test@example.com", full_name: "Test User" }),
+        )
+
+      const result = await ApiService.getUser("test_token")
+
+      assert.deepStrictEqual(result, {
+        email: "test@example.com",
+        full_name: "Test User",
+      })
+    })
+
+    test("returns null on non-ok response", async () => {
+      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 401))
+
+      const result = await ApiService.getUser("bad_token")
+
+      assert.strictEqual(result, null)
+    })
+
+    test("returns null on network error", async () => {
+      sinon.stub(globalThis, "fetch").rejects(new Error("fetch failed"))
+
+      const result = await ApiService.getUser("test_token")
+
+      assert.strictEqual(result, null)
+    })
+  })
+
   suite("pollDeviceToken", () => {
     test("returns token on success", async () => {
       sinon
@@ -113,10 +144,9 @@ suite("cloud/api", () => {
       const resultPromise = ApiService.pollDeviceToken(
         "test-client",
         "dc_123",
-        100, // short interval for test
+        100,
       )
 
-      // Advance past the polling interval
       await clock.tickAsync(150)
 
       const result = await resultPromise
