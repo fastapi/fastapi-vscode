@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { log } from "../utils/logger"
 import {
   trackCloudAppOpened,
   trackCloudDashboardOpened,
@@ -79,56 +80,51 @@ export class CloudController {
         return
       }
 
-      if (this.workspaceRoot) {
-        const config = await this.configService.getConfig(this.workspaceRoot)
+      const config = await this.configService.getConfig(this.workspaceRoot)
 
-        if (!config) {
-          console.log(
-            "[FastAPI Cloud] No config found at",
-            this.workspaceRoot.toString(),
-          )
-          this.hasConfig = false
-          this.currentApp = null
-          this.currentTeam = null
-          this.statusBarItem.text = "$(cloud) Set up FastAPI Cloud"
-          return
+      if (!config) {
+        log(`No config found at ${this.workspaceRoot.toString()}`)
+        this.hasConfig = false
+        this.currentApp = null
+        this.currentTeam = null
+        this.statusBarItem.text = "$(cloud) Set up FastAPI Cloud"
+        return
+      }
+
+      this.hasConfig = true
+
+      try {
+        this.currentApp = await this.apiService.getApp(config.app_id)
+        this.currentTeam = await this.apiService.getTeam(config.team_id)
+
+        if (this.currentApp) {
+          this.statusBarItem.text = `$(cloud) ${this.currentApp.slug}`
         }
+      } catch (err) {
+        log(`Failed to fetch app/team: ${err}`)
+        this.currentApp = null
+        this.currentTeam = null
 
-        this.hasConfig = true
+        const is404 =
+          err instanceof Error && err.message.includes("returned 404")
 
-        try {
-          this.currentApp = await this.apiService.getApp(config.app_id)
-          this.currentTeam = await this.apiService.getTeam(config.team_id)
-
-          if (this.currentApp) {
-            this.statusBarItem.text = `$(cloud) ${this.currentApp.slug}`
+        if (is404) {
+          this.statusBarItem.text = "$(warning) FastAPI Cloud"
+          if (!this.appNotFoundWarningShown) {
+            this.appNotFoundWarningShown = true
+            vscode.window
+              .showWarningMessage(
+                "This project is linked to a FastAPI Cloud app that could not be found. You may need to unlink and relink it.",
+                "Unlink",
+              )
+              .then((selected) => {
+                if (selected === "Unlink") this.unlinkProject()
+              })
           }
-        } catch (err) {
-          console.error("[FastAPI Cloud] Failed to fetch app/team:", err)
-          this.currentApp = null
-          this.currentTeam = null
-
-          const is404 =
-            err instanceof Error && err.message.includes("returned 404")
-
-          if (is404) {
-            this.statusBarItem.text = "$(warning) FastAPI Cloud"
-            if (!this.appNotFoundWarningShown) {
-              this.appNotFoundWarningShown = true
-              vscode.window
-                .showWarningMessage(
-                  "This project is linked to a FastAPI Cloud app that could not be found. You may need to unlink and relink it.",
-                  "Unlink",
-                )
-                .then((selected) => {
-                  if (selected === "Unlink") this.unlinkProject()
-                })
-            }
-          } else {
-            // Transient error (network, 500, etc.) — don't bother the user,
-            // next refresh will retry automatically
-            this.statusBarItem.text = "$(cloud) Set up FastAPI Cloud"
-          }
+        } else {
+          // Transient error (network, 500, etc.) — don't bother the user,
+          // next refresh will retry automatically
+          this.statusBarItem.text = "$(cloud) Set up FastAPI Cloud"
         }
       }
     } finally {
@@ -195,7 +191,8 @@ export class CloudController {
   }
 
   private async showAppMenu() {
-    const app = this.currentApp!
+    if (!this.currentApp) return
+    const app = this.currentApp
     const dashboardUrl = this.currentTeam
       ? ApiService.getDashboardUrl(this.currentTeam.slug, app.slug)
       : undefined
@@ -238,6 +235,16 @@ export class CloudController {
     }
   }
 
+  private async saveLink(app: App, team: Team) {
+    await this.configService.writeConfig(this.workspaceRoot!, {
+      app_id: app.id,
+      team_id: team.id,
+    })
+    trackCloudProjectLinked(app.slug)
+    vscode.window.showInformationMessage(`Linked to ${app.slug}`)
+    await this.refresh()
+  }
+
   async createAndLinkProject() {
     if (!this.workspaceRoot) {
       vscode.window.showErrorMessage("No workspace folder open")
@@ -251,14 +258,7 @@ export class CloudController {
     const app = await createNewApp(this.apiService, team, folderName)
     if (!app) return
 
-    await this.configService.writeConfig(this.workspaceRoot, {
-      app_id: app.id,
-      team_id: team.id,
-    })
-
-    trackCloudProjectLinked(app.slug)
-    vscode.window.showInformationMessage(`Linked to ${app.slug}`)
-    await this.refresh()
+    await this.saveLink(app, team)
   }
 
   async linkProject() {
@@ -273,14 +273,7 @@ export class CloudController {
     const app = await pickExistingApp(this.apiService, team)
     if (!app) return
 
-    await this.configService.writeConfig(this.workspaceRoot, {
-      app_id: app.id,
-      team_id: team.id,
-    })
-
-    trackCloudProjectLinked(app.slug)
-    vscode.window.showInformationMessage(`Linked to ${app.slug}`)
-    await this.refresh()
+    await this.saveLink(app, team)
   }
 
   private async showMoreMenu() {
