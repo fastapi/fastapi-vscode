@@ -189,7 +189,6 @@ export async function activate(context: vscode.ExtensionContext) {
     )
   }
 
-  // Cloud (if enabled)
   const cloudEnabled = vscode.workspace
     .getConfiguration("fastapi")
     .get<boolean>("cloud.enabled", true)
