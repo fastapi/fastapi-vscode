@@ -143,7 +143,6 @@ suite("cloud/cloudController", () => {
       const items = quickPickStub.firstCall.args[0] as any[]
       assert.ok(items.some((i: any) => i.id === "open"))
       assert.ok(items.some((i: any) => i.id === "dashboard"))
-      assert.ok(items.some((i: any) => i.id === "logs"))
       assert.ok(items.some((i: any) => i.id === "more"))
 
       dispose(deps)
@@ -183,27 +182,6 @@ suite("cloud/cloudController", () => {
       await deps.controller.showMenu()
 
       assert.ok(openStub.calledOnce)
-
-      dispose(deps)
-    })
-
-    test("shows logs message when logs selected", async () => {
-      const deps = createController()
-      await initializeWithApp(deps)
-      ;(vscode.authentication.getSession as sinon.SinonStub).resolves(
-        mockSession as any,
-      )
-
-      sinon
-        .stub(vscode.window, "showQuickPick")
-        .resolves({ label: "", id: "logs" } as any)
-      const infoStub = sinon
-        .stub(vscode.window, "showInformationMessage")
-        .resolves(undefined as any)
-
-      await deps.controller.showMenu()
-
-      assert.ok(infoStub.calledOnce)
 
       dispose(deps)
     })
