@@ -271,7 +271,7 @@ suite("cloud/auth", () => {
         await provider.dispose()
       })
 
-      test("handles missing session gracefully", async () => {
+      test("handles file not found gracefully", async () => {
         fsStub.fake.readFile.rejects(new Error("File not found"))
 
         const { provider } = createProvider()
@@ -545,15 +545,22 @@ suite("cloud/auth", () => {
 
     suite("dispose", () => {
       test("clears polling interval", async () => {
+        const clock = sinon.useFakeTimers({ shouldAdvanceTime: true })
         const { provider } = createProvider()
-        provider.startWatching()
-        await provider.dispose()
-        await provider.dispose()
-      })
 
-      test("disposes without startWatching", async () => {
-        const { provider } = createProvider()
+        fsStub.fake.readFile.rejects(new Error("File not found"))
+
+        provider.startWatching()
+
+        await clock.tickAsync(3100)
+        const callCount = fsStub.fake.readFile.callCount
+
         await provider.dispose()
+
+        await clock.tickAsync(6000)
+        assert.strictEqual(fsStub.fake.readFile.callCount, callCount)
+
+        clock.restore()
       })
     })
   })
