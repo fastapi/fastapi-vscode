@@ -26,11 +26,6 @@ interface AuthConfig {
   access_token: string
 }
 
-interface UserInfo {
-  email: string
-  full_name: string
-}
-
 export function isTokenExpired(token: string): boolean {
   try {
     const parts = token.split(".")
@@ -124,22 +119,6 @@ export class CloudAuthenticationProvider
     return this._onDidChangeSessions.event
   }
 
-  private async fetchUserInfo(token: string): Promise<UserInfo | null> {
-    try {
-      const response = await fetch(`${ApiService.BASE_URL}/users/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
-      if (!response.ok) return null
-      const data = (await response.json()) as UserInfo
-      return data
-    } catch {
-      return null
-    }
-  }
-
   public async getSessions(): Promise<AuthenticationSession[]> {
     const authUri = this.getAuthUri()
     log(
@@ -176,7 +155,7 @@ export class CloudAuthenticationProvider
 
       // Fetch user info for account label (cached after first successful fetch)
       if (!this.cachedLabel) {
-        const info = await this.fetchUserInfo(token)
+        const info = await ApiService.fetchUserInfo(token)
         if (info?.email) {
           this.cachedLabel = info.email
         }

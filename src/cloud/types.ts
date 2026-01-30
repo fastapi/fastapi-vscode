@@ -42,6 +42,11 @@ export interface Config {
   team_id: string
 }
 
+export interface UserInfo {
+  email: string
+  full_name: string
+}
+
 export interface ListResponse<T> {
   data: T[]
   count: number

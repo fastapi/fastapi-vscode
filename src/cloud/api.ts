@@ -1,25 +1,39 @@
 import * as vscode from "vscode"
 import { getExtensionVersion } from "../extension"
 import { AUTH_PROVIDER_ID } from "./auth"
-import type { App, Deployment, ListResponse, Team } from "./types"
+import type { App, Deployment, ListResponse, Team, UserInfo } from "./types"
 
 export interface UploadInfo {
   url: string
   fields: Record<string, string>
 }
 
+export const BASE_URL = "https://api.fastapicloud.com/api/v1"
+export const DASHBOARD_URL = "https://dashboard.fastapicloud.com"
+
 function getUserAgentHeaders(): Record<string, string> {
-  // User-Agent is a forbidden header in browsers and causes fetch to fail
   if (vscode.env.uiKind === vscode.UIKind.Web) return {}
   return { "User-Agent": `fastapi-vscode/${getExtensionVersion()}` }
 }
 
 export class ApiService {
-  public static readonly BASE_URL = "https://api.fastapicloud.com/api/v1"
-  public static readonly DASHBOARD_URL = "https://dashboard.fastapicloud.com"
+  static async fetchUserInfo(token: string): Promise<UserInfo | null> {
+    try {
+      const response = await fetch(`${BASE_URL}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+      if (!response.ok) return null
+      return (await response.json()) as UserInfo
+    } catch {
+      return null
+    }
+  }
 
   static getDashboardUrl(teamSlug: string, appSlug: string): string {
-    return `${ApiService.DASHBOARD_URL}/${teamSlug}/apps/${appSlug}/general`
+    return `${DASHBOARD_URL}/${teamSlug}/apps/${appSlug}/general`
   }
 
   private async request<T>(
@@ -36,7 +50,7 @@ export class ApiService {
     }
     const token = session.accessToken
 
-    const response = await fetch(`${ApiService.BASE_URL}${endpoint}`, {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
       ...options,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -117,17 +131,14 @@ export class ApiService {
     expires_in?: number
     interval?: number
   }> {
-    const response = await fetch(
-      `${ApiService.BASE_URL}/login/device/authorization`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          ...getUserAgentHeaders(),
-        },
-        body: new URLSearchParams({ client_id: clientId }).toString(),
+    const response = await fetch(`${BASE_URL}/login/device/authorization`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        ...getUserAgentHeaders(),
       },
-    )
+      body: new URLSearchParams({ client_id: clientId }).toString(),
+    })
 
     if (!response.ok) {
       throw new Error(
@@ -168,22 +179,19 @@ export class ApiService {
         throw new Error("Sign-in cancelled")
       }
 
-      const response = await fetch(
-        `${ApiService.BASE_URL}/login/device/token`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            ...getUserAgentHeaders(),
-          },
-          body: new URLSearchParams({
-            client_id: clientId,
-            device_code: deviceCode,
-            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-          }).toString(),
-          signal,
+      const response = await fetch(`${BASE_URL}/login/device/token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          ...getUserAgentHeaders(),
         },
-      )
+        body: new URLSearchParams({
+          client_id: clientId,
+          device_code: deviceCode,
+          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        }).toString(),
+        signal,
+      })
 
       const data = (await response.json()) as {
         access_token?: string

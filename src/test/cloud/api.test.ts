@@ -1,7 +1,7 @@
 import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
-import { ApiService } from "../../cloud/api"
+import { ApiService, BASE_URL } from "../../cloud/api"
 import { mockResponse } from "../testUtils"
 
 suite("cloud/api", () => {
@@ -44,10 +44,7 @@ suite("cloud/api", () => {
 
       // Verify fetch was called with correct params
       const [url, options] = fetchStub.firstCall.args
-      assert.strictEqual(
-        url,
-        `${ApiService.BASE_URL}/login/device/authorization`,
-      )
+      assert.strictEqual(url, `${BASE_URL}/login/device/authorization`)
       assert.strictEqual(options?.method, "POST")
       assert.ok(
         (options?.headers as Record<string, string>)["Content-Type"]?.includes(
