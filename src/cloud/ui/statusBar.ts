@@ -5,6 +5,11 @@ import type { WorkspaceState } from "../types"
 
 const STATUS_BAR_UPDATE_DEBOUNCE_MS = 100
 
+const STATUS_BAR_DEFAULT = "$(cloud) FastAPI Cloud"
+const STATUS_BAR_SIGN_IN = "$(cloud) Sign into FastAPI Cloud"
+const STATUS_BAR_SETUP = "$(cloud) Set up FastAPI Cloud"
+const STATUS_BAR_WARNING = "$(warning) FastAPI Cloud"
+
 export class StatusBarManager {
   private activeEditorListener?: vscode.Disposable
   private statusBarUpdateTimeout?: NodeJS.Timeout
@@ -16,7 +21,7 @@ export class StatusBarManager {
   ) {}
 
   show(): void {
-    this.statusBarItem.text = "$(cloud) FastAPI Cloud"
+    this.statusBarItem.text = STATUS_BAR_DEFAULT
     this.statusBarItem.show()
 
     if (!this.activeEditorListener) {
@@ -43,13 +48,13 @@ export class StatusBarManager {
       )
 
       if (!session) {
-        this.statusBarItem.text = "$(cloud) Sign into FastAPI Cloud"
+        this.statusBarItem.text = STATUS_BAR_SIGN_IN
         return
       }
 
       const activeFolder = this.getActiveWorkspaceFolder()
       if (!activeFolder) {
-        this.statusBarItem.text = "$(cloud) Set up FastAPI Cloud"
+        this.statusBarItem.text = STATUS_BAR_SETUP
         return
       }
 
@@ -59,19 +64,19 @@ export class StatusBarManager {
         case "not_configured":
         case "error":
         case "refreshing":
-          this.statusBarItem.text = "$(cloud) Set up FastAPI Cloud"
+          this.statusBarItem.text = STATUS_BAR_SETUP
           break
         case "linked":
           this.statusBarItem.text = `$(cloud) ${state.app.slug}`
           break
         case "not_found":
-          this.statusBarItem.text = "$(warning) FastAPI Cloud"
+          this.statusBarItem.text = STATUS_BAR_WARNING
           break
       }
     } catch (err) {
       // Auth provider may not be ready yet
       log(`Failed to update status bar: ${err}`)
-      this.statusBarItem.text = "$(cloud) Sign into FastAPI Cloud"
+      this.statusBarItem.text = STATUS_BAR_SIGN_IN
     }
   }
 

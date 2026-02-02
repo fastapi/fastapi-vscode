@@ -3,6 +3,10 @@ import { trackCloudSignOut } from "../../utils/telemetry"
 import { AUTH_PROVIDER_ID } from "../auth"
 import type { AuthProvider } from "../types"
 
+// Message constants
+const MSG_SIGN_OUT_CONFIRM = "Sign out of FastAPI Cloud?"
+const BTN_SIGN_OUT = "Sign Out"
+
 export class AuthCommands {
   constructor(
     private authProvider: AuthProvider,
@@ -17,12 +21,12 @@ export class AuthCommands {
 
   async signOut(): Promise<boolean> {
     const confirm = await vscode.window.showWarningMessage(
-      "Sign out of FastAPI Cloud?",
+      MSG_SIGN_OUT_CONFIRM,
       { modal: true },
-      "Sign Out",
+      BTN_SIGN_OUT,
     )
 
-    if (confirm === "Sign Out") {
+    if (confirm === BTN_SIGN_OUT) {
       await this.authProvider.signOut()
       trackCloudSignOut()
       this.onStateChanged()

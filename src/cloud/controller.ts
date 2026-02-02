@@ -9,6 +9,11 @@ import type { AuthProvider, WorkspaceState } from "./types"
 import { MenuHandler } from "./ui/menus"
 import { StatusBarManager } from "./ui/statusBar"
 
+// Message constants
+const MSG_APP_NOT_FOUND =
+  "This project is linked to a FastAPI Cloud app that could not be found. You may need to unlink and relink it."
+const BTN_UNLINK = "Unlink"
+
 export class CloudController {
   private workspaceStates = new Map<string, WorkspaceState>()
   private statusBarManager: StatusBarManager
@@ -205,12 +210,9 @@ export class CloudController {
 
           if (shouldShowWarning) {
             vscode.window
-              .showWarningMessage(
-                "This project is linked to a FastAPI Cloud app that could not be found. You may need to unlink and relink it.",
-                "Unlink",
-              )
+              .showWarningMessage(MSG_APP_NOT_FOUND, BTN_UNLINK)
               .then((selected) => {
-                if (selected === "Unlink") {
+                if (selected === BTN_UNLINK) {
                   // Fire-and-forget - user action triggered from warning
                   void this.unlinkProject(workspaceRoot)
                 }
