@@ -7,24 +7,7 @@ import { ApiService } from "../api"
 import { AUTH_PROVIDER_ID } from "../auth"
 import type { AuthCommands } from "../commands/auth"
 import type { LinkCommands } from "../commands/project"
-import {
-  BTN_UNLINK,
-  MENU_CREATE_NEW,
-  MENU_CREATE_NEW_DESC,
-  MENU_DASHBOARD,
-  MENU_LINK_EXISTING,
-  MENU_LINK_EXISTING_DESC,
-  MENU_MORE,
-  MENU_OPEN_APP,
-  MENU_PLACEHOLDER_MORE,
-  MENU_PLACEHOLDER_SETUP,
-  MENU_SIGN_OUT,
-  MENU_SIGN_OUT_DESC,
-  MENU_UNLINK_PROJECT,
-  MENU_UNLINK_PROJECT_DESC,
-  MSG_APP_NOT_FOUND,
-  MSG_NO_WORKSPACE,
-} from "../constants"
+import { Button, Menu, Project } from "../constants"
 import type { WorkspaceState } from "../types"
 
 export class MenuHandler {
@@ -50,7 +33,7 @@ export class MenuHandler {
 
     const activeFolder = this.getActiveWorkspaceFolder()
     if (!activeFolder) {
-      vscode.window.showErrorMessage(MSG_NO_WORKSPACE)
+      vscode.window.showErrorMessage(Project.MSG_NO_WORKSPACE)
       return
     }
 
@@ -74,19 +57,19 @@ export class MenuHandler {
   private async showSetupMenu(workspaceRoot: vscode.Uri): Promise<void> {
     const items = [
       {
-        label: MENU_LINK_EXISTING,
-        description: MENU_LINK_EXISTING_DESC,
+        label: Menu.LINK_EXISTING,
+        description: Menu.LINK_EXISTING_DESC,
         id: "link",
       },
       {
-        label: MENU_CREATE_NEW,
-        description: MENU_CREATE_NEW_DESC,
+        label: Menu.CREATE_NEW,
+        description: Menu.CREATE_NEW_DESC,
         id: "create",
       },
     ]
 
     const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: MENU_PLACEHOLDER_SETUP,
+      placeHolder: Menu.PLACEHOLDER_SETUP,
     })
 
     if (selected?.id === "link") {
@@ -98,11 +81,11 @@ export class MenuHandler {
 
   private async showBrokenLinkMenu(workspaceRoot: vscode.Uri): Promise<void> {
     const selected = await vscode.window.showWarningMessage(
-      MSG_APP_NOT_FOUND,
-      BTN_UNLINK,
+      Project.MSG_APP_NOT_FOUND,
+      Button.UNLINK,
     )
 
-    if (selected === BTN_UNLINK) {
+    if (selected === Button.UNLINK) {
       await this.linkCommands.unlinkProject(workspaceRoot, this.getState)
     }
   }
@@ -115,16 +98,16 @@ export class MenuHandler {
     const dashboardUrl = ApiService.getDashboardUrl(team.slug, app.slug)
     const items = [
       {
-        label: MENU_OPEN_APP,
+        label: Menu.OPEN_APP,
         description: app.url,
         id: "open",
       },
       {
-        label: MENU_DASHBOARD,
+        label: Menu.DASHBOARD,
         description: dashboardUrl,
         id: "dashboard",
       },
-      { label: MENU_MORE, id: "more" },
+      { label: Menu.MORE, id: "more" },
     ]
 
     const selected = await vscode.window.showQuickPick(items, {
@@ -153,19 +136,19 @@ export class MenuHandler {
   private async showMoreMenu(workspaceRoot: vscode.Uri): Promise<void> {
     const items = [
       {
-        label: MENU_UNLINK_PROJECT,
-        description: MENU_UNLINK_PROJECT_DESC,
+        label: Menu.UNLINK_PROJECT,
+        description: Menu.UNLINK_PROJECT_DESC,
         id: "unlink",
       },
       {
-        label: MENU_SIGN_OUT,
-        description: MENU_SIGN_OUT_DESC,
+        label: Menu.SIGN_OUT,
+        description: Menu.SIGN_OUT_DESC,
         id: "signout",
       },
     ]
 
     const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: MENU_PLACEHOLDER_MORE,
+      placeHolder: Menu.PLACEHOLDER_MORE,
     })
 
     switch (selected?.id) {

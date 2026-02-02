@@ -1,19 +1,6 @@
 import * as vscode from "vscode"
 import type { ApiService } from "../api"
-import {
-  ERR_CREATE_APP,
-  ERR_FETCH_APPS,
-  ERR_FETCH_TEAMS,
-  ERR_NAME_INVALID,
-  ERR_NAME_TOO_SHORT,
-  ERR_NO_APPS,
-  ERR_NO_TEAMS,
-  ERR_NOT_AUTHENTICATED,
-  MSG_APP_CREATED,
-  PICKER_SELECT_APP,
-  PICKER_SELECT_TEAM,
-  PROMPT_ENTER_APP_NAME,
-} from "../constants"
+import { Picker } from "../constants"
 import type { App, Team } from "../types"
 
 /**
@@ -26,14 +13,14 @@ export async function pickTeam(apiService: ApiService): Promise<Team | null> {
   } catch (error) {
     const message =
       error instanceof Error && error.message === "Not authenticated"
-        ? ERR_NOT_AUTHENTICATED
-        : ERR_FETCH_TEAMS
+        ? Picker.ERR_NOT_AUTHENTICATED
+        : Picker.ERR_FETCH_TEAMS
     vscode.window.showErrorMessage(message)
     return null
   }
 
   if (teams.length === 0) {
-    vscode.window.showErrorMessage(ERR_NO_TEAMS)
+    vscode.window.showErrorMessage(Picker.ERR_NO_TEAMS)
     return null
   }
 
@@ -43,7 +30,7 @@ export async function pickTeam(apiService: ApiService): Promise<Team | null> {
 
   const teamItems = teams.map((t) => ({ label: t.name, team: t }))
   const picked = await vscode.window.showQuickPick(teamItems, {
-    placeHolder: PICKER_SELECT_TEAM,
+    placeHolder: Picker.SELECT_TEAM,
   })
 
   return picked?.team ?? null
@@ -60,12 +47,12 @@ export async function pickExistingApp(
   try {
     apps = await apiService.getApps(team.id)
   } catch {
-    vscode.window.showErrorMessage(ERR_FETCH_APPS)
+    vscode.window.showErrorMessage(Picker.ERR_FETCH_APPS)
     return null
   }
 
   if (apps.length === 0) {
-    vscode.window.showErrorMessage(ERR_NO_APPS)
+    vscode.window.showErrorMessage(Picker.ERR_NO_APPS)
     return null
   }
 
@@ -75,7 +62,7 @@ export async function pickExistingApp(
     app: a,
   }))
   const picked = await vscode.window.showQuickPick(appItems, {
-    placeHolder: PICKER_SELECT_APP,
+    placeHolder: Picker.SELECT_APP,
   })
 
   return picked?.app ?? null
@@ -90,11 +77,11 @@ export async function createNewApp(
   defaultName: string,
 ): Promise<App | null> {
   const appName = await vscode.window.showInputBox({
-    prompt: PROMPT_ENTER_APP_NAME,
+    prompt: Picker.PROMPT_ENTER_APP_NAME,
     value: defaultName,
     validateInput: (value) => {
-      if (!value || value.length < 2) return ERR_NAME_TOO_SHORT
-      if (!/^[a-z0-9-]+$/.test(value)) return ERR_NAME_INVALID
+      if (!value || value.length < 2) return Picker.ERR_NAME_TOO_SHORT
+      if (!/^[a-z0-9-]+$/.test(value)) return Picker.ERR_NAME_INVALID
       return null
     },
   })
@@ -103,11 +90,13 @@ export async function createNewApp(
 
   try {
     const app = await apiService.createApp(team.id, appName)
-    vscode.window.showInformationMessage(MSG_APP_CREATED(app.slug))
+    vscode.window.showInformationMessage(Picker.MSG_APP_CREATED(app.slug))
     return app
   } catch (error) {
     vscode.window.showErrorMessage(
-      ERR_CREATE_APP(error instanceof Error ? error.message : "Unknown error"),
+      Picker.ERR_CREATE_APP(
+        error instanceof Error ? error.message : "Unknown error",
+      ),
     )
     return null
   }

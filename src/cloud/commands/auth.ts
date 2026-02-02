@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { trackCloudSignOut } from "../../utils/telemetry"
 import { AUTH_PROVIDER_ID } from "../auth"
-import { BTN_SIGN_OUT, MSG_SIGN_OUT_CONFIRM } from "../constants"
+import { Auth, Button } from "../constants"
 import type { AuthProvider } from "../types"
 
 export class AuthCommands {
@@ -18,12 +18,12 @@ export class AuthCommands {
 
   async signOut(): Promise<boolean> {
     const confirm = await vscode.window.showWarningMessage(
-      MSG_SIGN_OUT_CONFIRM,
+      Auth.MSG_SIGN_OUT_CONFIRM,
       { modal: true },
-      BTN_SIGN_OUT,
+      Button.SIGN_OUT,
     )
 
-    if (confirm === BTN_SIGN_OUT) {
+    if (confirm === Button.SIGN_OUT) {
       await this.authProvider.signOut()
       trackCloudSignOut()
       this.onStateChanged()

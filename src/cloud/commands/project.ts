@@ -5,14 +5,7 @@ import {
 } from "../../utils/telemetry"
 import type { ApiService } from "../api"
 import type { ConfigService } from "../config"
-import {
-  BTN_UNLINK,
-  MSG_LINKED,
-  MSG_NO_WORKSPACE,
-  MSG_UNLINK_CONFIRM,
-  PICKER_SELECT_WORKSPACE_LINK,
-  PICKER_SELECT_WORKSPACE_UNLINK,
-} from "../constants"
+import { Button, Picker, Project } from "../constants"
 import type { WorkspaceState } from "../types"
 import { createNewApp, pickExistingApp, pickTeam } from "../ui/pickers"
 
@@ -23,7 +16,7 @@ async function pickWorkspaceFolder(
   const workspaceFolders = vscode.workspace.workspaceFolders
 
   if (!workspaceFolders || workspaceFolders.length === 0) {
-    vscode.window.showErrorMessage(MSG_NO_WORKSPACE)
+    vscode.window.showErrorMessage(Project.MSG_NO_WORKSPACE)
     return null
   }
 
@@ -61,7 +54,7 @@ export class LinkCommands {
 
   async linkProject(workspaceRoot?: vscode.Uri): Promise<void> {
     const targetFolder =
-      workspaceRoot ?? (await pickWorkspaceFolder(PICKER_SELECT_WORKSPACE_LINK))
+      workspaceRoot ?? (await pickWorkspaceFolder(Picker.SELECT_WORKSPACE_LINK))
     if (!targetFolder) return
 
     const team = await pickTeam(this.apiService)
@@ -75,13 +68,13 @@ export class LinkCommands {
       team_id: team.id,
     })
     trackCloudProjectLinked(app.slug)
-    vscode.window.showInformationMessage(MSG_LINKED(app.slug))
+    vscode.window.showInformationMessage(Project.MSG_LINKED(app.slug))
     await this.onProjectLinked(targetFolder)
   }
 
   async createAndLinkProject(workspaceRoot?: vscode.Uri): Promise<void> {
     const targetFolder =
-      workspaceRoot ?? (await pickWorkspaceFolder(PICKER_SELECT_WORKSPACE_LINK))
+      workspaceRoot ?? (await pickWorkspaceFolder(Picker.SELECT_WORKSPACE_LINK))
     if (!targetFolder) return
 
     const team = await pickTeam(this.apiService)
@@ -96,7 +89,7 @@ export class LinkCommands {
       team_id: team.id,
     })
     trackCloudProjectLinked(app.slug)
-    vscode.window.showInformationMessage(MSG_LINKED(app.slug))
+    vscode.window.showInformationMessage(Project.MSG_LINKED(app.slug))
     await this.onProjectLinked(targetFolder)
   }
 
@@ -106,7 +99,7 @@ export class LinkCommands {
   ): Promise<void> {
     const targetFolder =
       workspaceRoot ??
-      (await pickWorkspaceFolder(PICKER_SELECT_WORKSPACE_UNLINK, (uri) => {
+      (await pickWorkspaceFolder(Picker.SELECT_WORKSPACE_UNLINK, (uri) => {
         const state = getState(uri)
         // Only show folders that have a config (any state except not_configured)
         return state.status !== "not_configured"
@@ -117,12 +110,12 @@ export class LinkCommands {
 
     const label = state.status === "linked" ? state.app.slug : "this app"
     const confirm = await vscode.window.showWarningMessage(
-      MSG_UNLINK_CONFIRM(label),
+      Project.MSG_UNLINK_CONFIRM(label),
       { modal: true },
-      BTN_UNLINK,
+      Button.UNLINK,
     )
 
-    if (confirm === BTN_UNLINK) {
+    if (confirm === Button.UNLINK) {
       await this.configService.deleteConfig(targetFolder)
       trackCloudProjectUnlinked(label)
       await this.onProjectUnlinked(targetFolder)

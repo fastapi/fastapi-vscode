@@ -5,7 +5,7 @@ import { AUTH_PROVIDER_ID } from "./auth"
 import { AuthCommands } from "./commands/auth"
 import { LinkCommands } from "./commands/project"
 import type { ConfigService } from "./config"
-import { BTN_UNLINK, MSG_APP_NOT_FOUND } from "./constants"
+import { Button, Project } from "./constants"
 import type { AuthProvider, WorkspaceState } from "./types"
 import { MenuHandler } from "./ui/menus"
 import { StatusBarManager } from "./ui/statusBar"
@@ -206,9 +206,9 @@ export class CloudController {
 
           if (shouldShowWarning) {
             vscode.window
-              .showWarningMessage(MSG_APP_NOT_FOUND, BTN_UNLINK)
+              .showWarningMessage(Project.MSG_APP_NOT_FOUND, Button.UNLINK)
               .then((selected) => {
-                if (selected === BTN_UNLINK) {
+                if (selected === Button.UNLINK) {
                   // Fire-and-forget - user action triggered from warning
                   void this.unlinkProject(workspaceRoot)
                 }
