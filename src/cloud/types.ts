@@ -37,9 +37,37 @@ export enum DeploymentStatus {
   success = "success",
   failed = "failed",
 }
+
+export const failedStatuses: DeploymentStatus[] = [
+  DeploymentStatus.extracting_failed,
+  DeploymentStatus.building_image_failed,
+  DeploymentStatus.deploying_failed,
+  DeploymentStatus.verifying_failed,
+  DeploymentStatus.failed,
+]
+
+export const statusMessages: Record<DeploymentStatus, string> = {
+  [DeploymentStatus.waiting_upload]: "Waiting for upload...",
+  [DeploymentStatus.upload_cancelled]: "Upload cancelled",
+  [DeploymentStatus.ready_for_build]: "Ready for build...",
+  [DeploymentStatus.building]: "Building...",
+  [DeploymentStatus.extracting]: "Extracting...",
+  [DeploymentStatus.extracting_failed]: "Extraction failed",
+  [DeploymentStatus.building_image]: "Building image...",
+  [DeploymentStatus.building_image_failed]: "Image build failed",
+  [DeploymentStatus.deploying]: "Deploying...",
+  [DeploymentStatus.deploying_failed]: "Deployment failed",
+  [DeploymentStatus.verifying]: "Verifying...",
+  [DeploymentStatus.verifying_failed]: "Verification failed",
+  [DeploymentStatus.verifying_skipped]: "Verification skipped",
+  [DeploymentStatus.success]: "Success",
+  [DeploymentStatus.failed]: "Failed",
+}
+
 export interface Config {
   app_id: string
   team_id: string
+  app_slug?: string
 }
 
 export interface UploadInfo {

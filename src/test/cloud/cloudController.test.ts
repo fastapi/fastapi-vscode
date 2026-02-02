@@ -85,42 +85,31 @@ suite("cloud/cloudController", () => {
       dispose(deps)
     })
 
-    test("shows link options when logged in but no app", async () => {
+    test("calls linkProject when logged in but no app", async () => {
       const deps = createController()
+      const workspaceRoot = vscode.Uri.file("/tmp/test")
 
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
+      sinon.stub(deps.configService, "startWatching")
+      sinon.stub(deps.configService, "getConfig").resolves(null)
+      await deps.controller.initialize(workspaceRoot)
 
+      // linkProject -> createOrLinkApp -> pickTeam -> getTeams
+      sinon.stub(deps.apiService, "getTeams").resolves([testTeam])
+      // First showQuickPick: link/create choice, cancel it
       const quickPickStub = sinon
         .stub(vscode.window, "showQuickPick")
         .resolves(undefined)
 
       await deps.controller.showMenu()
 
+      // createOrLinkApp shows the link/create choice
       assert.ok(quickPickStub.calledOnce)
       const items = quickPickStub.firstCall.args[0] as any[]
       assert.ok(items.some((i: any) => i.id === "link"))
       assert.ok(items.some((i: any) => i.id === "create"))
-
-      dispose(deps)
-    })
-
-    test("executes link command when link selected", async () => {
-      const deps = createController()
-
-      sinon
-        .stub(vscode.authentication, "getSession")
-        .resolves(mockSession as any)
-
-      sinon
-        .stub(vscode.window, "showQuickPick")
-        .resolves({ label: "", id: "link" } as any)
-      const execStub = sinon.stub(vscode.commands, "executeCommand").resolves()
-
-      await deps.controller.showMenu()
-
-      assert.ok(execStub.calledOnceWith("fastapi-vscode.linkApp"))
 
       dispose(deps)
     })
@@ -360,8 +349,16 @@ suite("cloud/cloudController", () => {
       sinon.stub(deps.apiService, "getTeams").resolves([testTeam])
       sinon.stub(deps.apiService, "getApps").resolves([testApp])
 
-      // pickTeam auto-selects when only 1 team, so only pickExistingApp calls showQuickPick
-      sinon.stub(vscode.window, "showQuickPick").resolves({
+      // pickTeam auto-selects when only 1 team
+      // First showQuickPick: link/create choice -> pick "link"
+      // Second showQuickPick: app selection -> pick testApp
+      const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
+      quickPickStub.onFirstCall().resolves({
+        label: "$(link) Link Existing App",
+        description: "Connect to an app on FastAPI Cloud",
+        id: "link",
+      } as any)
+      quickPickStub.onSecondCall().resolves({
         label: testApp.slug,
         description: testApp.url,
         app: testApp,
@@ -379,7 +376,7 @@ suite("cloud/cloudController", () => {
       dispose(deps)
     })
 
-    test("returns when team selection cancelled", async () => {
+    test("returns when choice cancelled", async () => {
       const deps = createController()
       const workspaceRoot = vscode.Uri.file("/tmp/test")
 
@@ -390,6 +387,7 @@ suite("cloud/cloudController", () => {
       sinon.stub(deps.configService, "getConfig").resolves(null)
       await deps.controller.initialize(workspaceRoot)
 
+      // pickTeam auto-selects, then user cancels the link/create choice
       sinon.stub(deps.apiService, "getTeams").resolves([testTeam])
       sinon.stub(vscode.window, "showQuickPick").resolves(undefined)
 

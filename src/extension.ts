@@ -296,6 +296,9 @@ function registerCloudCommands(
     vscode.commands.registerCommand("fastapi-vscode.signOut", async () => {
       await cloudController.signOut()
     }),
+    vscode.commands.registerCommand("fastapi-vscode.deploy", async () => {
+      await cloudController.deploy()
+    }),
   )
 }
 

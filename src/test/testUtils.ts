@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import sinon from "sinon"
 import * as vscode from "vscode"
+import type { ApiService } from "../cloud/api"
+import type { ConfigService } from "../cloud/config"
 import type { FileSystem } from "../core/filesystem"
 
 declare const __DIST_ROOT__: string
@@ -151,4 +153,25 @@ export function mockResponse(body: unknown, ok = true, status = 200): Response {
     text: async () => JSON.stringify(body),
     clone: () => mockResponse(body, ok, status),
   } as unknown as Response
+}
+
+export function mockApiService() {
+  return {
+    getUser: sinon.stub(),
+    getTeams: sinon.stub(),
+    getApps: sinon.stub(),
+    createApp: sinon.stub(),
+    getPresignedUpload: sinon.stub(),
+    createDeployment: sinon.stub(),
+    getDeploymentStatus: sinon.stub(),
+  } as unknown as sinon.SinonStubbedInstance<ApiService>
+}
+
+export function mockConfigService() {
+  return {
+    getConfig: sinon.stub(),
+    setConfig: sinon.stub(),
+    startWatching: sinon.stub(),
+    stopWatching: sinon.stub(),
+  } as unknown as sinon.SinonStubbedInstance<ConfigService>
 }

@@ -9,8 +9,9 @@ import {
 } from "../utils/telemetry"
 import { ApiService } from "./api"
 import { AUTH_PROVIDER_ID } from "./auth"
+import { deploy } from "./commands/deploy"
 import type { ConfigService } from "./config"
-import { createNewApp, pickExistingApp, pickTeam } from "./pickers"
+import { createOrLinkApp } from "./pickers"
 import type { App, Team } from "./types"
 
 interface AuthProvider {
@@ -18,19 +19,19 @@ interface AuthProvider {
 }
 
 export class CloudController {
-  private statusBarItem: vscode.StatusBarItem
+  readonly statusBarItem: vscode.StatusBarItem
   private currentApp: App | null = null
   private currentTeam: Team | null = null
   private hasConfig = false
-  private workspaceRoot: vscode.Uri | null = null
+  workspaceRoot: vscode.Uri | null = null
   private refreshing = false
   private appNotFoundWarningShown = false
   private sessionListener: vscode.Disposable | null = null
 
   constructor(
     private authProvider: AuthProvider,
-    private configService: ConfigService,
-    private apiService: ApiService,
+    readonly configService: ConfigService,
+    readonly apiService: ApiService,
   ) {
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Left,
@@ -144,36 +145,11 @@ export class CloudController {
     }
 
     if (!this.currentApp && !this.hasConfig) {
-      await this.showSetupMenu()
+      await this.linkProject()
     } else if (!this.currentApp && this.hasConfig) {
       await this.showBrokenLinkMenu()
     } else {
       await this.showAppMenu()
-    }
-  }
-
-  private async showSetupMenu() {
-    const items = [
-      {
-        label: "$(link) Link Existing App",
-        description: "Connect to an app on FastAPI Cloud",
-        id: "link",
-      },
-      {
-        label: "$(add) Create New App",
-        description: "Create a new app and link it",
-        id: "create",
-      },
-    ]
-
-    const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: "Set up FastAPI Cloud",
-    })
-
-    if (selected?.id === "link") {
-      vscode.commands.executeCommand("fastapi-vscode.linkApp")
-    } else if (selected?.id === "create") {
-      await this.createAndLinkProject()
     }
   }
 
@@ -196,6 +172,11 @@ export class CloudController {
       : undefined
     const items = [
       {
+        label: "$(cloud-upload) Deploy",
+        description: "Deploy the current project to FastAPI Cloud",
+        id: "deploy",
+      },
+      {
         label: "$(globe) Open App",
         description: app.url,
         id: "open",
@@ -214,6 +195,9 @@ export class CloudController {
 
     if (selected) {
       switch (selected.id) {
+        case "deploy":
+          await this.deploy()
+          break
         case "open":
           if (this.currentApp?.url) {
             vscode.env.openExternal(vscode.Uri.parse(this.currentApp.url))
@@ -237,26 +221,11 @@ export class CloudController {
     await this.configService.writeConfig(this.workspaceRoot!, {
       app_id: app.id,
       team_id: team.id,
+      app_slug: app.slug,
     })
     trackCloudProjectLinked(app.slug)
     vscode.window.showInformationMessage(`Linked to ${app.slug}`)
     await this.refresh()
-  }
-
-  async createAndLinkProject() {
-    if (!this.workspaceRoot) {
-      vscode.window.showErrorMessage("No workspace folder open")
-      return
-    }
-
-    const team = await pickTeam(this.apiService)
-    if (!team) return
-
-    const folderName = this.workspaceRoot.path.split("/").pop() || "my-app"
-    const app = await createNewApp(this.apiService, team, folderName)
-    if (!app) return
-
-    await this.saveLink(app, team)
   }
 
   async linkProject() {
@@ -265,12 +234,9 @@ export class CloudController {
       return
     }
 
-    const team = await pickTeam(this.apiService)
-    if (!team) return
-
-    const app = await pickExistingApp(this.apiService, team)
-    if (!app) return
-
+    const result = await createOrLinkApp(this.apiService, this.workspaceRoot)
+    if (!result) return
+    const { app, team } = result
     await this.saveLink(app, team)
   }
 
@@ -339,6 +305,11 @@ export class CloudController {
       this.appNotFoundWarningShown = false
       await this.refresh()
     }
+  }
+
+  async deploy() {
+    await deploy(this)
+    await this.refresh()
   }
 
   dispose() {

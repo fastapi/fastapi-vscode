@@ -74,12 +74,12 @@
       },
       {
         "command": "fastapi-vscode.linkApp",
-        "title": "Link Project",
+        "title": "Link Application",
         "category": "FastAPI Cloud"
       },
       {
         "command": "fastapi-vscode.unlinkApp",
-        "title": "Unlink Project",
+        "title": "Unlink Application",
         "category": "FastAPI Cloud"
       },
       {
@@ -90,6 +90,11 @@
       {
         "command": "fastapi-vscode.signOut",
         "title": "Sign Out",
+        "category": "FastAPI Cloud"
+      },
+      {
+        "command": "fastapi-vscode.deploy",
+        "title": "Deploy Application",
         "category": "FastAPI Cloud"
       }
     ],
@@ -120,6 +125,10 @@
         },
         {
           "command": "fastapi-vscode.signIn",
+          "when": "config.fastapi.cloud.enabled"
+        },
+        {
+          "command": "fastapi-vscode.deploy",
           "when": "config.fastapi.cloud.enabled"
         },
         {

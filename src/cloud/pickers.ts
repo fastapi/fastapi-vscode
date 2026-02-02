@@ -94,13 +94,44 @@ export async function createNewApp(
   if (!appName) return null
 
   try {
-    const app = await apiService.createApp(team.id, appName)
-    vscode.window.showInformationMessage(`Created app: ${app.slug}`)
-    return app
+    return await apiService.createApp(team.id, appName)
   } catch (error) {
     vscode.window.showErrorMessage(
       `Failed to create app: ${error instanceof Error ? error.message : "Unknown error"}`,
     )
     return null
   }
+}
+
+export async function createOrLinkApp(
+  apiService: ApiService,
+  workspaceRoot: vscode.Uri,
+): Promise<{ app: App; team: Team } | null> {
+  const team = await pickTeam(apiService)
+  if (!team) return null
+
+  const choice = await vscode.window.showQuickPick([
+    {
+      label: "$(link) Link Existing App",
+      description: "Connect to an app on FastAPI Cloud",
+      id: "link",
+    },
+    {
+      label: "$(add) Create New App",
+      description: "Create a new app and link it",
+      id: "create",
+    },
+  ])
+
+  if (!choice) return null
+
+  let app: App | null = null
+  if (choice.id === "create") {
+    const folderName = workspaceRoot.path.split("/").pop() || "my-app"
+    app = await createNewApp(apiService, team, folderName)
+  } else if (choice.id === "link") {
+    app = await pickExistingApp(apiService, team)
+  }
+  if (!app) return null
+  return { app, team }
 }
