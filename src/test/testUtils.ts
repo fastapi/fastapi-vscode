@@ -155,23 +155,28 @@ export function mockResponse(body: unknown, ok = true, status = 200): Response {
   } as unknown as Response
 }
 
-export function mockApiService() {
+export function mockApiService(overrides?: Partial<ApiService>) {
   return {
-    getUser: sinon.stub(),
-    getTeams: sinon.stub(),
-    getApps: sinon.stub(),
+    getUser: sinon.stub().resolves(null),
+    getTeams: sinon.stub().resolves([]),
+    getApps: sinon.stub().resolves([]),
     createApp: sinon.stub(),
+    getApp: sinon.stub(),
+    getTeam: sinon.stub(),
     getPresignedUpload: sinon.stub(),
     createDeployment: sinon.stub(),
     getDeploymentStatus: sinon.stub(),
+    ...overrides,
   } as unknown as sinon.SinonStubbedInstance<ApiService>
 }
 
 export function mockConfigService() {
   return {
     getConfig: sinon.stub(),
-    setConfig: sinon.stub(),
+    writeConfig: sinon.stub(),
+    deleteConfig: sinon.stub(),
     startWatching: sinon.stub(),
-    stopWatching: sinon.stub(),
+    dispose: sinon.stub(),
+    onConfigStateChanged: sinon.stub(),
   } as unknown as sinon.SinonStubbedInstance<ConfigService>
 }

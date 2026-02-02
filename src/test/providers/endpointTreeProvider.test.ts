@@ -9,7 +9,7 @@ import {
   getAppLabel,
   getRouteLabel,
   getRouterLabel,
-} from "../../providers/endpointTreeProvider"
+} from "../../vscode/endpointTreeProvider"
 import { groupAppsByWorkspace, mockApps } from "../fixtures/mockEndpointData"
 
 function makeRoute(method: string, path: string): RouteDefinition {

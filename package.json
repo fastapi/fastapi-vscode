@@ -74,12 +74,12 @@
       },
       {
         "command": "fastapi-vscode.linkApp",
-        "title": "Link Application",
+        "title": "Link Project",
         "category": "FastAPI Cloud"
       },
       {
         "command": "fastapi-vscode.unlinkApp",
-        "title": "Unlink Application",
+        "title": "Unlink Project",
         "category": "FastAPI Cloud"
       },
       {

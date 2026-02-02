@@ -6,19 +6,13 @@ import * as vscode from "vscode"
 import { discoverFastAPIApps } from "./appDiscovery"
 import { ApiService } from "./cloud/api"
 import { AUTH_PROVIDER_ID, CloudAuthenticationProvider } from "./cloud/auth"
-import { CloudController } from "./cloud/cloudController"
 import { ConfigService } from "./cloud/config"
+import { CloudController } from "./cloud/controller"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
 import { collectRoutes, countRouters } from "./core/treeUtils"
 import type { AppDefinition, SourceLocation } from "./core/types"
-import {
-  type EndpointTreeItem,
-  EndpointTreeProvider,
-  METHOD_ICONS,
-} from "./providers/endpointTreeProvider"
-import { TestCodeLensProvider } from "./providers/testCodeLensProvider"
 import { disposeLogger, log } from "./utils/logger"
 import {
   createTimer,
@@ -36,6 +30,12 @@ import {
   trackSearchExecuted,
   trackTreeViewVisible,
 } from "./utils/telemetry"
+import {
+  type EndpointTreeItem,
+  EndpointTreeProvider,
+  METHOD_ICONS,
+} from "./vscode/endpointTreeProvider"
+import { TestCodeLensProvider } from "./vscode/testCodeLensProvider"
 
 export const EXTENSION_ID = "FastAPILabs.fastapi-vscode"
 
@@ -217,31 +217,40 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const configService = new ConfigService()
     const apiService = new ApiService()
+
+    const statusBarItem = vscode.window.createStatusBarItem(
+      vscode.StatusBarAlignment.Left,
+      100,
+    )
+    statusBarItem.command = "fastapi-vscode.cloudMenu"
+
     const cloudController = new CloudController(
       authProvider,
       configService,
       apiService,
+      statusBarItem,
     )
 
-    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri
-    if (workspaceRoot) {
-      cloudController.initialize(workspaceRoot)
-    } else {
-      // In vscode.dev, workspace folders may not be available yet at activation
-      const folderDisposable = vscode.workspace.onDidChangeWorkspaceFolders(
-        (e) => {
-          const root = e.added[0]?.uri
-          if (root) {
-            folderDisposable.dispose()
-            cloudController.initialize(root)
-          }
-        },
-      )
-      context.subscriptions.push(folderDisposable)
-      // Show status bar immediately even without workspace
-      cloudController.showStatusBar()
-      cloudController.refresh()
-    }
+    // Show status bar immediately - don't wait for initialization
+    cloudController.showStatusBar()
+
+    // Initialize with all workspace folders
+    cloudController.initialize().catch((error) => {
+      log(`Cloud controller initialization failed: ${error}`)
+      // Continue even if initialization fails
+    })
+
+    // Handle workspace folder changes
+    context.subscriptions.push(
+      vscode.workspace.onDidChangeWorkspaceFolders((e) => {
+        for (const folder of e.added) {
+          cloudController.addWorkspaceFolder(folder.uri)
+        }
+        for (const folder of e.removed) {
+          cloudController.removeWorkspaceFolder(folder.uri)
+        }
+      }),
+    )
 
     context.subscriptions.push(
       { dispose: () => configService.dispose() },
@@ -282,22 +291,57 @@ function registerCloudCommands(
 ): vscode.Disposable {
   return vscode.Disposable.from(
     vscode.commands.registerCommand("fastapi-vscode.cloudMenu", async () => {
-      await cloudController.showMenu()
+      try {
+        await cloudController.showMenu()
+      } catch (error) {
+        log(`Cloud menu error: ${error}`)
+        vscode.window.showErrorMessage(
+          `Failed to show cloud menu: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
     }),
 
     vscode.commands.registerCommand("fastapi-vscode.linkApp", async () => {
-      await cloudController.linkProject()
+      try {
+        await cloudController.linkProject()
+      } catch (error) {
+        log(`Link app error: ${error}`)
+        vscode.window.showErrorMessage(
+          `Failed to link app: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
     }),
 
     vscode.commands.registerCommand("fastapi-vscode.unlinkApp", async () => {
-      await cloudController.unlinkProject()
+      try {
+        await cloudController.unlinkProject()
+      } catch (error) {
+        log(`Unlink app error: ${error}`)
+        vscode.window.showErrorMessage(
+          `Failed to unlink app: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
     }),
 
     vscode.commands.registerCommand("fastapi-vscode.signOut", async () => {
-      await cloudController.signOut()
+      try {
+        await cloudController.signOut()
+      } catch (error) {
+        log(`Sign out error: ${error}`)
+        vscode.window.showErrorMessage(
+          `Failed to sign out: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
     }),
     vscode.commands.registerCommand("fastapi-vscode.deploy", async () => {
-      await cloudController.deploy()
+      try {
+        await cloudController.deploy()
+      } catch (error) {
+        log(`Deploy error: ${error}`)
+        vscode.window.showErrorMessage(
+          `Failed to deploy: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
     }),
   )
 }

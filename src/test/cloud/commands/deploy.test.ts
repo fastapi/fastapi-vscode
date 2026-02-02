@@ -1,3 +1,5 @@
+import sinon from "sinon"
+
 suite("cloud/commands/deploy", () => {
   teardown(() => sinon.restore())
 
