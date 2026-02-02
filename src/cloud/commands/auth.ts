@@ -1,11 +1,8 @@
 import * as vscode from "vscode"
 import { trackCloudSignOut } from "../../utils/telemetry"
 import { AUTH_PROVIDER_ID } from "../auth"
+import { BTN_SIGN_OUT, MSG_SIGN_OUT_CONFIRM } from "../constants"
 import type { AuthProvider } from "../types"
-
-// Message constants
-const MSG_SIGN_OUT_CONFIRM = "Sign out of FastAPI Cloud?"
-const BTN_SIGN_OUT = "Sign Out"
 
 export class AuthCommands {
   constructor(

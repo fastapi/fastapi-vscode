@@ -1,14 +1,15 @@
 import * as vscode from "vscode"
 import { log } from "../../utils/logger"
 import { AUTH_PROVIDER_ID } from "../auth"
+import {
+  STATUS_BAR_DEFAULT,
+  STATUS_BAR_SETUP,
+  STATUS_BAR_SIGN_IN,
+  STATUS_BAR_WARNING,
+} from "../constants"
 import type { WorkspaceState } from "../types"
 
 const STATUS_BAR_UPDATE_DEBOUNCE_MS = 100
-
-const STATUS_BAR_DEFAULT = "$(cloud) FastAPI Cloud"
-const STATUS_BAR_SIGN_IN = "$(cloud) Sign into FastAPI Cloud"
-const STATUS_BAR_SETUP = "$(cloud) Set up FastAPI Cloud"
-const STATUS_BAR_WARNING = "$(warning) FastAPI Cloud"
 
 export class StatusBarManager {
   private activeEditorListener?: vscode.Disposable

@@ -5,14 +5,10 @@ import { AUTH_PROVIDER_ID } from "./auth"
 import { AuthCommands } from "./commands/auth"
 import { LinkCommands } from "./commands/project"
 import type { ConfigService } from "./config"
+import { BTN_UNLINK, MSG_APP_NOT_FOUND } from "./constants"
 import type { AuthProvider, WorkspaceState } from "./types"
 import { MenuHandler } from "./ui/menus"
 import { StatusBarManager } from "./ui/statusBar"
-
-// Message constants
-const MSG_APP_NOT_FOUND =
-  "This project is linked to a FastAPI Cloud app that could not be found. You may need to unlink and relink it."
-const BTN_UNLINK = "Unlink"
 
 export class CloudController {
   private workspaceStates = new Map<string, WorkspaceState>()

@@ -5,19 +5,16 @@ import {
 } from "../../utils/telemetry"
 import type { ApiService } from "../api"
 import type { ConfigService } from "../config"
+import {
+  BTN_UNLINK,
+  MSG_LINKED,
+  MSG_NO_WORKSPACE,
+  MSG_UNLINK_CONFIRM,
+  PICKER_SELECT_WORKSPACE_LINK,
+  PICKER_SELECT_WORKSPACE_UNLINK,
+} from "../constants"
 import type { WorkspaceState } from "../types"
 import { createNewApp, pickExistingApp, pickTeam } from "../ui/pickers"
-
-// Message constants
-const MSG_NO_WORKSPACE = "No workspace folder open"
-const MSG_LINKED = (appSlug: string) => `Linked to ${appSlug}`
-const MSG_UNLINK_CONFIRM = (label: string) =>
-  `Unlink "${label}" from this project?`
-const BTN_UNLINK = "Unlink"
-
-// Picker placeholder constants
-const PICKER_SELECT_WORKSPACE_LINK = "Select workspace folder to link"
-const PICKER_SELECT_WORKSPACE_UNLINK = "Select workspace folder to unlink"
 
 async function pickWorkspaceFolder(
   placeHolder: string,
@@ -78,7 +75,7 @@ export class LinkCommands {
       team_id: team.id,
     })
     trackCloudProjectLinked(app.slug)
-    vscode.window.showInformationMessage(`Linked to ${app.slug}`)
+    vscode.window.showInformationMessage(MSG_LINKED(app.slug))
     await this.onProjectLinked(targetFolder)
   }
 
