@@ -6,7 +6,7 @@ import type {
   RouteDefinition,
   RouterDefinition,
 } from "../../core/types"
-import { TestCodeLensProvider } from "../../providers/testCodeLensProvider"
+import { TestCodeLensProvider } from "../../vscode/testCodeLensProvider"
 import { wasmBinaries } from "../testUtils"
 
 function createMockApp(

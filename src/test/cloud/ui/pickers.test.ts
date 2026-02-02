@@ -1,18 +1,13 @@
 import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
-import type { ApiService } from "../../cloud/api"
-import { createNewApp, pickExistingApp, pickTeam } from "../../cloud/pickers"
-import type { App, Team } from "../../cloud/types"
-
-function mockApiService(overrides: Partial<ApiService> = {}): ApiService {
-  return {
-    getTeams: sinon.stub().resolves([]),
-    getApps: sinon.stub().resolves([]),
-    createApp: sinon.stub().resolves({ id: "a1", slug: "new-app", url: "" }),
-    ...overrides,
-  } as unknown as ApiService
-}
+import type { App, Team } from "../../../cloud/types"
+import {
+  createNewApp,
+  pickExistingApp,
+  pickTeam,
+} from "../../../cloud/ui/pickers"
+import { mockApiService } from "../../testUtils"
 
 const team1: Team = { id: "t1", name: "Team One", slug: "team-one" }
 const team2: Team = { id: "t2", name: "Team Two", slug: "team-two" }
@@ -29,7 +24,7 @@ const app2: App = {
   team_id: "t1",
 }
 
-suite("cloud/pickers", () => {
+suite("cloud/ui/pickers", () => {
   teardown(() => sinon.restore())
 
   suite("pickTeam", () => {

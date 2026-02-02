@@ -12,9 +12,9 @@ import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
 import { collectRoutes, countRouters } from "./core/treeUtils"
 import type { AppDefinition } from "./core/types"
-import { vscodeFileSystem } from "./providers/vscodeFileSystem"
 import { log } from "./utils/logger"
 import { createTimer, trackEntrypointDetected } from "./utils/telemetry"
+import { vscodeFileSystem } from "./vscode/vscodeFileSystem"
 
 export type { EntryPoint }
 

@@ -1,0 +1,126 @@
+import * as vscode from "vscode"
+import {
+  trackCloudProjectLinked,
+  trackCloudProjectUnlinked,
+} from "../../utils/telemetry"
+import type { ApiService } from "../api"
+import type { ConfigService } from "../config"
+import type { WorkspaceState } from "../types"
+import { createNewApp, pickExistingApp, pickTeam } from "../ui/pickers"
+
+function pickWorkspaceFolder(
+  placeHolder: string,
+  filter?: (uri: vscode.Uri) => boolean,
+): Promise<vscode.Uri | null> {
+  const workspaceFolders = vscode.workspace.workspaceFolders
+
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    vscode.window.showErrorMessage("No workspace folder open")
+    return Promise.resolve(null)
+  }
+
+  // Apply filter if provided
+  const filteredFolders = filter
+    ? workspaceFolders.filter((folder) => filter(folder.uri))
+    : workspaceFolders
+
+  if (filteredFolders.length === 0) {
+    return Promise.resolve(null)
+  }
+
+  if (filteredFolders.length === 1) {
+    return Promise.resolve(filteredFolders[0].uri)
+  }
+
+  // Multiple folders: let user choose
+  const items = filteredFolders.map((folder) => ({
+    label: folder.name,
+    description: folder.uri.fsPath,
+    uri: folder.uri,
+  }))
+
+  return vscode.window
+    .showQuickPick(items, { placeHolder })
+    .then((selected) => selected?.uri ?? null)
+}
+
+export class LinkCommands {
+  constructor(
+    private apiService: ApiService,
+    private configService: ConfigService,
+    private onProjectLinked: (uri: vscode.Uri) => Promise<void>,
+    private onProjectUnlinked: (uri: vscode.Uri) => Promise<void>,
+  ) {}
+
+  async linkProject(workspaceRoot?: vscode.Uri): Promise<void> {
+    const targetFolder =
+      workspaceRoot ??
+      (await pickWorkspaceFolder("Select workspace folder to link"))
+    if (!targetFolder) return
+
+    const team = await pickTeam(this.apiService)
+    if (!team) return
+
+    const app = await pickExistingApp(this.apiService, team)
+    if (!app) return
+
+    await this.configService.writeConfig(targetFolder, {
+      app_id: app.id,
+      team_id: team.id,
+    })
+    trackCloudProjectLinked(app.slug)
+    vscode.window.showInformationMessage(`Linked to ${app.slug}`)
+    await this.onProjectLinked(targetFolder)
+  }
+
+  async createAndLinkProject(workspaceRoot?: vscode.Uri): Promise<void> {
+    const targetFolder =
+      workspaceRoot ??
+      (await pickWorkspaceFolder("Select workspace folder to link"))
+    if (!targetFolder) return
+
+    const team = await pickTeam(this.apiService)
+    if (!team) return
+
+    const folderName = targetFolder.path.split("/").pop() || "my-app"
+    const app = await createNewApp(this.apiService, team, folderName)
+    if (!app) return
+
+    await this.configService.writeConfig(targetFolder, {
+      app_id: app.id,
+      team_id: team.id,
+    })
+    trackCloudProjectLinked(app.slug)
+    vscode.window.showInformationMessage(`Linked to ${app.slug}`)
+    await this.onProjectLinked(targetFolder)
+  }
+
+  async unlinkProject(
+    workspaceRoot: vscode.Uri | undefined,
+    getState: (uri: vscode.Uri) => WorkspaceState,
+  ): Promise<void> {
+    const targetFolder =
+      workspaceRoot ??
+      (await pickWorkspaceFolder("Select workspace folder to unlink", (uri) => {
+        const state = getState(uri)
+        // Only show folders that have a config (any state except not_configured)
+        return state.status !== "not_configured"
+      }))
+    if (!targetFolder) return
+
+    const state = getState(targetFolder)
+
+    const label = state.status === "linked" ? state.app.slug : "this app"
+    const confirm = await vscode.window.showWarningMessage(
+      `Unlink "${label}" from this project?`,
+      { modal: true },
+      "Unlink",
+    )
+
+    if (confirm === "Unlink") {
+      await this.configService.deleteConfig(targetFolder)
+      trackCloudProjectUnlinked(label)
+      await this.onProjectUnlinked(targetFolder)
+    }
+  }
+}
