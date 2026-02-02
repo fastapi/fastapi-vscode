@@ -42,7 +42,7 @@ export class MenuHandler {
       { silent: true },
     )
     if (!session) {
-      vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
+      void vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
         createIfNone: true,
       })
       return
@@ -134,10 +134,8 @@ export class MenuHandler {
     if (selected) {
       switch (selected.id) {
         case "open":
-          if (app?.url) {
-            vscode.env.openExternal(vscode.Uri.parse(app.url))
-            trackCloudAppOpened(app.slug)
-          }
+          vscode.env.openExternal(vscode.Uri.parse(app.url))
+          trackCloudAppOpened(app.slug)
           break
         case "dashboard":
           if (dashboardUrl) {
