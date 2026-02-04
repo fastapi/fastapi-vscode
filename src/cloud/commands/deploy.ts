@@ -8,7 +8,6 @@ import {
 import type { ApiService } from "../api"
 import { AUTH_PROVIDER_ID } from "../auth"
 import type { ConfigService } from "../config"
-import { Deploy } from "../constants"
 import { createOrLinkApp } from "../pickers"
 import {
   type Config,
@@ -18,17 +17,32 @@ import {
   statusMessages,
 } from "../types"
 
+// Exclusion patterns - aligned with fastapi-cloud-cli
+// See: https://github.com/fastapilabs/fastapi-cloud-cli/blob/main/src/fastapi_cloud_cli/commands/deploy.py
+const EXCLUDE_DIRS = new Set([
+  ".venv",
+  "__pycache__",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".git",
+])
+const EXCLUDE_FILES = new Set([".gitignore", ".fastapicloudignore"])
+
+// 300 attempts x 2 seconds = 10 minutes maximum
+const MAX_POLL_ATTEMPTS = 300
+const DEPLOYMENT_POLL_INTERVAL_MS = 2000
+
 export function shouldExclude(relativePath: string): boolean {
   const parts = relativePath.split("/")
   const fileName = parts[parts.length - 1]
 
   // Check if any path component is in exclude list
   for (const part of parts) {
-    if (Deploy.EXCLUDE_DIRS.has(part)) return true
+    if (EXCLUDE_DIRS.has(part)) return true
   }
 
   // Check file-level exclusions
-  if (Deploy.EXCLUDE_FILES.has(fileName)) return true
+  if (EXCLUDE_FILES.has(fileName)) return true
   if (fileName.endsWith(".pyc")) return true
 
   return false
@@ -58,7 +72,7 @@ export async function deploy(context: DeployContext): Promise<boolean> {
   })
   if (!session) {
     const result = await vscode.window.showErrorMessage(
-      "You need to sign in to deploy.",
+      "Please sign in to FastAPI Cloud first.",
       "Sign In",
     )
     if (result === "Sign In") {
@@ -197,7 +211,7 @@ async function pollDeploymentStatus(
   deploymentId: string,
   updateStatus: (text: string) => void,
 ): Promise<Deployment | null> {
-  for (let attempt = 0; attempt < Deploy.MAX_POLL_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     const deployment = await apiService.getDeployment(appId, deploymentId)
 
     if (
@@ -216,7 +230,7 @@ async function pollDeploymentStatus(
     updateStatus(message)
 
     await new Promise((resolve) =>
-      setTimeout(resolve, Deploy.DEPLOYMENT_POLL_INTERVAL_MS),
+      setTimeout(resolve, DEPLOYMENT_POLL_INTERVAL_MS),
     )
   }
 

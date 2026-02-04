@@ -7,7 +7,6 @@ import { ApiService } from "../api"
 import { AUTH_PROVIDER_ID } from "../auth"
 import type { AuthCommands } from "../commands/auth"
 import type { LinkCommands } from "../commands/project"
-import { Button, Menu, Project } from "../constants"
 import type { WorkspaceState } from "../types"
 
 export class MenuHandler {
@@ -34,7 +33,7 @@ export class MenuHandler {
 
     const activeFolder = this.getActiveWorkspaceFolder()
     if (!activeFolder) {
-      vscode.window.showErrorMessage(Project.MSG_NO_WORKSPACE)
+      vscode.window.showErrorMessage("No workspace folder open")
       return
     }
 
@@ -58,19 +57,19 @@ export class MenuHandler {
   private async showSetupMenu(workspaceRoot: vscode.Uri): Promise<void> {
     const items = [
       {
-        label: Menu.LINK_EXISTING,
-        description: Menu.LINK_EXISTING_DESC,
+        label: "$(link) Link Existing App",
+        description: "Connect to an app on FastAPI Cloud",
         id: "link",
       },
       {
-        label: Menu.CREATE_NEW,
-        description: Menu.CREATE_NEW_DESC,
+        label: "$(add) Create New App",
+        description: "Create a new app and link it",
         id: "create",
       },
     ]
 
     const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: Menu.PLACEHOLDER_SETUP,
+      placeHolder: "Set up FastAPI Cloud",
     })
 
     if (selected?.id === "link") {
@@ -82,11 +81,11 @@ export class MenuHandler {
 
   private async showBrokenLinkMenu(workspaceRoot: vscode.Uri): Promise<void> {
     const selected = await vscode.window.showWarningMessage(
-      Project.MSG_APP_NOT_FOUND,
-      Button.UNLINK,
+      "This project is linked to a FastAPI Cloud app that could not be found. Unlink it, then link to the correct app.",
+      "Unlink",
     )
 
-    if (selected === Button.UNLINK) {
+    if (selected === "Unlink") {
       await this.linkCommands.unlinkProject(workspaceRoot, this.getState)
     }
   }
@@ -99,21 +98,21 @@ export class MenuHandler {
     const dashboardUrl = ApiService.getDashboardUrl(team.slug, app.slug)
     const items = [
       {
-        label: Menu.DEPLOY_APP,
+        label: "$(rocket) Deploy App",
         description: "Deploy your FastAPI app",
         id: "deploy",
       },
       {
-        label: Menu.OPEN_APP,
+        label: "$(globe) Open App",
         description: app.url,
         id: "open",
       },
       {
-        label: Menu.DASHBOARD,
+        label: "$(link-external) Dashboard",
         description: dashboardUrl,
         id: "dashboard",
       },
-      { label: Menu.MORE, id: "more" },
+      { label: "$(ellipsis) More", id: "more" },
     ]
 
     const selected = await vscode.window.showQuickPick(items, {
@@ -145,19 +144,19 @@ export class MenuHandler {
   private async showMoreMenu(workspaceRoot: vscode.Uri): Promise<void> {
     const items = [
       {
-        label: Menu.UNLINK_PROJECT,
-        description: Menu.UNLINK_PROJECT_DESC,
+        label: "$(trash) Unlink Project",
+        description: "Disconnect from FastAPI Cloud app",
         id: "unlink",
       },
       {
-        label: Menu.SIGN_OUT,
-        description: Menu.SIGN_OUT_DESC,
+        label: "$(sign-out) Sign Out",
+        description: "Sign out of FastAPI Cloud",
         id: "signout",
       },
     ]
 
     const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: Menu.PLACEHOLDER_MORE,
+      placeHolder: "More options",
     })
 
     switch (selected?.id) {

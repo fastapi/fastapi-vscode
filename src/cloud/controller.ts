@@ -6,7 +6,6 @@ import { AuthCommands } from "./commands/auth"
 import { deploy } from "./commands/deploy"
 import { LinkCommands } from "./commands/project"
 import type { ConfigService } from "./config"
-import { Button, Project } from "./constants"
 import type { AuthProvider, WorkspaceState } from "./types"
 import { MenuHandler } from "./ui/menus"
 import { StatusBarManager } from "./ui/statusBar"
@@ -220,9 +219,12 @@ export class CloudController {
 
           if (shouldShowWarning) {
             vscode.window
-              .showWarningMessage(Project.MSG_APP_NOT_FOUND, Button.UNLINK)
+              .showWarningMessage(
+                "This project is linked to a FastAPI Cloud app that could not be found. Unlink it, then link to the correct app.",
+                "Unlink",
+              )
               .then((selected) => {
-                if (selected === Button.UNLINK) {
+                if (selected === "Unlink") {
                   // Fire-and-forget - user action triggered from warning
                   void this.unlinkProject(workspaceRoot)
                 }

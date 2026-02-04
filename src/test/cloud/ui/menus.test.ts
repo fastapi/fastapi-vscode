@@ -37,6 +37,7 @@ function createMenuHandler(
     linkCommands,
     getState,
     getActiveWorkspaceFolder,
+    sinon.stub().resolves(),
   )
 
   return { handler, authCommands, linkCommands }

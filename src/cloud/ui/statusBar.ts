@@ -1,10 +1,13 @@
 import * as vscode from "vscode"
 import { log } from "../../utils/logger"
 import { AUTH_PROVIDER_ID } from "../auth"
-import { StatusBar } from "../constants"
 import type { WorkspaceState } from "../types"
 
 const STATUS_BAR_UPDATE_DEBOUNCE_MS = 100
+const STATUS_DEFAULT = "$(cloud) FastAPI Cloud"
+const STATUS_SIGN_IN = "$(cloud) Sign into FastAPI Cloud"
+const STATUS_SETUP = "$(cloud) Set up FastAPI Cloud"
+const STATUS_WARNING = "$(warning) FastAPI Cloud"
 
 export class StatusBarManager {
   private activeEditorListener?: vscode.Disposable
@@ -17,7 +20,7 @@ export class StatusBarManager {
   ) {}
 
   show(): void {
-    this.statusBarItem.text = StatusBar.DEFAULT
+    this.statusBarItem.text = STATUS_DEFAULT
     this.statusBarItem.show()
 
     if (!this.activeEditorListener) {
@@ -44,13 +47,13 @@ export class StatusBarManager {
       )
 
       if (!session) {
-        this.statusBarItem.text = StatusBar.SIGN_IN
+        this.statusBarItem.text = STATUS_SIGN_IN
         return
       }
 
       const activeFolder = this.getActiveWorkspaceFolder()
       if (!activeFolder) {
-        this.statusBarItem.text = StatusBar.SETUP
+        this.statusBarItem.text = STATUS_SETUP
         return
       }
 
@@ -60,19 +63,19 @@ export class StatusBarManager {
         case "not_configured":
         case "error":
         case "refreshing":
-          this.statusBarItem.text = StatusBar.SETUP
+          this.statusBarItem.text = STATUS_SETUP
           break
         case "linked":
           this.statusBarItem.text = `$(cloud) ${state.app.slug}`
           break
         case "not_found":
-          this.statusBarItem.text = StatusBar.WARNING
+          this.statusBarItem.text = STATUS_WARNING
           break
       }
     } catch (err) {
       // Auth provider may not be ready yet
       log(`Failed to update status bar: ${err}`)
-      this.statusBarItem.text = StatusBar.SIGN_IN
+      this.statusBarItem.text = STATUS_SIGN_IN
     }
   }
 
