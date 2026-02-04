@@ -24,6 +24,12 @@ CodeLens links appear above HTTP client calls like `client.get('/items')`, letti
 
 ![CodeLens GIF](media/walkthrough/codelens.gif)
 
+### Deploy to FastAPI Cloud
+
+Deploy your application directly to [FastAPI Cloud](https://fastapicloud.com/) from the status bar with zero config or frustration.
+
+![Deploy GIF](media/walkthrough/deploy.gif)
+
 ## Settings and customization
 
 | Setting | Description | Default |
