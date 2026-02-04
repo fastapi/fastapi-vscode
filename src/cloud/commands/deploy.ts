@@ -148,7 +148,6 @@ export async function deploy(context: DeployContext): Promise<boolean> {
     )
 
     if (result) {
-      // Update status bar to show success before showing the message
       statusBarItem.text = `$(cloud) ${config.app_slug ?? "Deployed"}`
 
       const action = await ui.showInformationMessage(
