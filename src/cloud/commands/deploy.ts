@@ -126,7 +126,6 @@ export async function deploy(context: DeployContext): Promise<boolean> {
   }
 
   try {
-    // Set status immediately to prevent flash from config watcher triggering refresh
     updateStatus("Creating deployment...")
     const deployment = await apiService.createDeployment(config.app_id)
 

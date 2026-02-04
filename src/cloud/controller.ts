@@ -283,10 +283,7 @@ export class CloudController {
     })
 
     if (root) {
-      // Refresh state in background without updating status bar during refresh
-      // This avoids a flash when deploy succeeds (status bar is already correct)
       await this.refresh(root)
-      // Only update status bar on failure - success already set it correctly
       if (!success) {
         await this.statusBarManager.update()
       }
