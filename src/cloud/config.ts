@@ -26,9 +26,10 @@ export class ConfigService {
   readonly onConfigStateChanged = this._onConfigStateChanged.event
 
   startWatching(workspaceRoot: vscode.Uri) {
+    // Watch the directory - catches both file changes and directory deletion
     const pattern = new vscode.RelativePattern(
       workspaceRoot,
-      `${CONFIG_DIR}/${CONFIG_FILE}`,
+      `${CONFIG_DIR}/**`,
     )
     this.fileWatcher = vscode.workspace.createFileSystemWatcher(pattern)
     const fireConfig = async () => {
@@ -37,7 +38,7 @@ export class ConfigService {
     }
     this.fileWatcher.onDidChange(fireConfig)
     this.fileWatcher.onDidCreate(fireConfig)
-    this.fileWatcher.onDidDelete(() => this._onConfigStateChanged.fire(null))
+    this.fileWatcher.onDidDelete(fireConfig)
   }
 
   async getConfig(workspaceRoot: vscode.Uri): Promise<Config | null> {
