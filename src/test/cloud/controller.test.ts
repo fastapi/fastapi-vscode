@@ -142,9 +142,6 @@ suite("cloud/controller", () => {
 
       await deps.controller.showMenu()
 
-      // Deploy is called which shows the create/link picker (after team selection)
-      // First call is team picker (auto-selected since only one team)
-      // Second call is create/link picker
       assert.ok(quickPickStub.calledOnce)
       const items = quickPickStub.firstCall.args[0] as any[]
       assert.ok(items.some((i: any) => i.id === "link"))
@@ -557,7 +554,6 @@ suite("cloud/controller", () => {
         .resolves(undefined)
       await deps.controller.showMenu()
 
-      // Deploy is called which shows the create/link picker
       const items = quickPickStub.firstCall.args[0] as any[]
       assert.ok(items.some((i: any) => i.id === "link"))
       assert.ok(items.some((i: any) => i.id === "create"))
@@ -1225,10 +1221,6 @@ suite("cloud/controller", () => {
       getWorkspaceFolderStub
         .withArgs(editor2.document.uri)
         .returns(workspaceFolder2)
-
-      // Deploy is called directly when not configured - stub it to return early
-      // We just need to verify the menu handler calls deploy (not show a setup menu)
-      // The deploy flow is tested elsewhere
 
       dispose(deps)
     })
