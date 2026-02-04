@@ -277,6 +277,7 @@
     "test": "bun run compile && vscode-test",
     "test:coverage": "bash scripts/test-coverage.sh",
     "test:web": "bun run compile && bunx @vscode/test-web --extensionDevelopmentPath=. --browserType=none",
+    "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
   "devDependencies": {
