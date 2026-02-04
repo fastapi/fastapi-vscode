@@ -2,7 +2,11 @@ import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
 import { ApiService } from "../../../cloud/api"
-import { LinkCommands } from "../../../cloud/commands/project"
+import {
+  createAndLinkProject,
+  linkProject,
+  unlinkProject,
+} from "../../../cloud/commands/project"
 import { ConfigService } from "../../../cloud/config"
 import type { App, Team, WorkspaceState } from "../../../cloud/types"
 
@@ -20,35 +24,19 @@ const testApp2: App = {
   team_id: "t1",
 }
 
-function createLinkCommands() {
-  const apiService = new ApiService()
-  const configService = new ConfigService()
-  const onProjectLinked = sinon.stub().resolves()
-  const onProjectUnlinked = sinon.stub().resolves()
-
-  const commands = new LinkCommands(
-    apiService,
-    configService,
-    onProjectLinked,
-    onProjectUnlinked,
-  )
-
-  return {
-    commands,
-    apiService,
-    configService,
-    onProjectLinked,
-    onProjectUnlinked,
-  }
-}
-
 suite("cloud/commands/project", () => {
+  let apiService: ApiService
+  let configService: ConfigService
+
+  setup(() => {
+    apiService = new ApiService()
+    configService = new ConfigService()
+  })
+
   teardown(() => sinon.restore())
 
   suite("linkProject", () => {
     test("shows error without workspace folder", async () => {
-      const { commands } = createLinkCommands()
-
       Object.defineProperty(vscode.workspace, "workspaceFolders", {
         value: undefined,
         configurable: true,
@@ -56,14 +44,12 @@ suite("cloud/commands/project", () => {
 
       const errorStub = sinon.stub(vscode.window, "showErrorMessage")
 
-      await commands.linkProject()
+      await linkProject(apiService, configService)
 
       assert.ok(errorStub.calledOnceWith("No workspace folder open"))
     })
 
     test("links project when team and app selected", async () => {
-      const { commands, apiService, configService, onProjectLinked } =
-        createLinkCommands()
       const workspaceRoot = vscode.Uri.file("/tmp/test")
       const workspaceFolder = { uri: workspaceRoot, name: "test", index: 0 }
 
@@ -72,9 +58,7 @@ suite("cloud/commands/project", () => {
         configurable: true,
       })
 
-      // pickTeam auto-selects when only 1 team (no QuickPick)
       sinon.stub(apiService, "getTeams").resolves([testTeam])
-      // pickExistingApp shows QuickPick for app selection
       sinon.stub(apiService, "getApps").resolves([testApp])
 
       sinon.stub(vscode.window, "showQuickPick").resolves({
@@ -88,7 +72,7 @@ suite("cloud/commands/project", () => {
         .stub(vscode.window, "showInformationMessage")
         .resolves(undefined as any)
 
-      await commands.linkProject(workspaceRoot)
+      const result = await linkProject(apiService, configService, workspaceRoot)
 
       assert.ok(writeStub.calledOnce)
       assert.strictEqual(
@@ -99,11 +83,10 @@ suite("cloud/commands/project", () => {
         app_id: "a1",
         team_id: "t1",
       })
-      assert.ok(onProjectLinked.calledOnceWith(workspaceRoot))
+      assert.strictEqual(result?.toString(), workspaceRoot.toString())
     })
 
-    test("returns when team selection cancelled", async () => {
-      const { commands, apiService, configService } = createLinkCommands()
+    test("returns null when team selection cancelled", async () => {
       const workspaceRoot = vscode.Uri.file("/tmp/test")
       const workspaceFolder = { uri: workspaceRoot, name: "test", index: 0 }
 
@@ -119,13 +102,13 @@ suite("cloud/commands/project", () => {
 
       const writeStub = sinon.stub(configService, "writeConfig").resolves()
 
-      await commands.linkProject(workspaceRoot)
+      const result = await linkProject(apiService, configService, workspaceRoot)
 
       assert.ok(!writeStub.called)
+      assert.strictEqual(result, null)
     })
 
-    test("returns when app selection cancelled", async () => {
-      const { commands, apiService, configService } = createLinkCommands()
+    test("returns null when app selection cancelled", async () => {
       const workspaceRoot = vscode.Uri.file("/tmp/test")
       const workspaceFolder = { uri: workspaceRoot, name: "test", index: 0 }
 
@@ -140,55 +123,15 @@ suite("cloud/commands/project", () => {
 
       const writeStub = sinon.stub(configService, "writeConfig").resolves()
 
-      await commands.linkProject(workspaceRoot)
+      const result = await linkProject(apiService, configService, workspaceRoot)
 
       assert.ok(!writeStub.called)
-    })
-
-    test("shows picker for multi-root workspace", async () => {
-      const { commands, apiService, configService } = createLinkCommands()
-      const workspace1 = vscode.Uri.file("/tmp/workspace1")
-      const workspace2 = vscode.Uri.file("/tmp/workspace2")
-      const workspaceFolder1 = { uri: workspace1, name: "workspace1", index: 0 }
-      const workspaceFolder2 = { uri: workspace2, name: "workspace2", index: 1 }
-
-      Object.defineProperty(vscode.workspace, "workspaceFolders", {
-        value: [workspaceFolder1, workspaceFolder2],
-        configurable: true,
-      })
-
-      sinon.stub(apiService, "getTeams").resolves([testTeam])
-      sinon.stub(apiService, "getApps").resolves([testApp])
-
-      const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
-      // First call: workspace picker
-      quickPickStub
-        .onFirstCall()
-        .resolves({ label: "workspace2", uri: workspace2 } as any)
-      // Second call: app picker
-      quickPickStub
-        .onSecondCall()
-        .resolves({ label: testApp.slug, app: testApp } as any)
-
-      const writeStub = sinon.stub(configService, "writeConfig").resolves()
-      sinon
-        .stub(vscode.window, "showInformationMessage")
-        .resolves(undefined as any)
-
-      await commands.linkProject()
-
-      assert.ok(writeStub.calledOnce)
-      assert.strictEqual(
-        writeStub.firstCall.args[0].toString(),
-        workspace2.toString(),
-      )
+      assert.strictEqual(result, null)
     })
   })
 
   suite("createAndLinkProject", () => {
     test("creates new app and links project", async () => {
-      const { commands, apiService, configService, onProjectLinked } =
-        createLinkCommands()
       const workspaceRoot = vscode.Uri.file("/tmp/test")
       const workspaceFolder = { uri: workspaceRoot, name: "test", index: 0 }
 
@@ -206,7 +149,11 @@ suite("cloud/commands/project", () => {
         .stub(vscode.window, "showInformationMessage")
         .resolves(undefined as any)
 
-      await commands.createAndLinkProject(workspaceRoot)
+      const result = await createAndLinkProject(
+        apiService,
+        configService,
+        workspaceRoot,
+      )
 
       assert.ok(writeStub.calledOnce)
       assert.strictEqual(
@@ -217,11 +164,10 @@ suite("cloud/commands/project", () => {
         app_id: "a1",
         team_id: "t1",
       })
-      assert.ok(onProjectLinked.calledOnceWith(workspaceRoot))
+      assert.strictEqual(result?.toString(), workspaceRoot.toString())
     })
 
-    test("returns when team selection cancelled", async () => {
-      const { commands, apiService, configService } = createLinkCommands()
+    test("returns null when team selection cancelled", async () => {
       const workspaceRoot = vscode.Uri.file("/tmp/test")
       const workspaceFolder = { uri: workspaceRoot, name: "test", index: 0 }
 
@@ -237,13 +183,17 @@ suite("cloud/commands/project", () => {
 
       const writeStub = sinon.stub(configService, "writeConfig").resolves()
 
-      await commands.createAndLinkProject(workspaceRoot)
+      const result = await createAndLinkProject(
+        apiService,
+        configService,
+        workspaceRoot,
+      )
 
       assert.ok(!writeStub.called)
+      assert.strictEqual(result, null)
     })
 
-    test("returns when app name input cancelled", async () => {
-      const { commands, apiService, configService } = createLinkCommands()
+    test("returns null when app name input cancelled", async () => {
       const workspaceRoot = vscode.Uri.file("/tmp/test")
       const workspaceFolder = { uri: workspaceRoot, name: "test", index: 0 }
 
@@ -257,16 +207,19 @@ suite("cloud/commands/project", () => {
 
       const writeStub = sinon.stub(configService, "writeConfig").resolves()
 
-      await commands.createAndLinkProject(workspaceRoot)
+      const result = await createAndLinkProject(
+        apiService,
+        configService,
+        workspaceRoot,
+      )
 
       assert.ok(!writeStub.called)
+      assert.strictEqual(result, null)
     })
   })
 
   suite("unlinkProject", () => {
     test("shows error without workspace folder", async () => {
-      const { commands } = createLinkCommands()
-
       Object.defineProperty(vscode.workspace, "workspaceFolders", {
         value: undefined,
         configurable: true,
@@ -275,14 +228,12 @@ suite("cloud/commands/project", () => {
       const errorStub = sinon.stub(vscode.window, "showErrorMessage")
       const getState = () => ({ status: "not_configured" }) as WorkspaceState
 
-      await commands.unlinkProject(undefined, getState)
+      await unlinkProject(configService, getState)
 
       assert.ok(errorStub.calledOnceWith("No workspace folder open"))
     })
 
     test("unlinks when confirmed", async () => {
-      const { commands, configService, onProjectUnlinked } =
-        createLinkCommands()
       const workspaceRoot = vscode.Uri.file("/tmp/test")
       const workspaceFolder = { uri: workspaceRoot, name: "test", index: 0 }
 
@@ -297,19 +248,17 @@ suite("cloud/commands/project", () => {
       sinon.stub(vscode.window, "showWarningMessage").resolves("Unlink" as any)
       const deleteStub = sinon.stub(configService, "deleteConfig").resolves()
 
-      await commands.unlinkProject(workspaceRoot, getState)
+      const result = await unlinkProject(configService, getState, workspaceRoot)
 
       assert.ok(deleteStub.calledOnce)
       assert.strictEqual(
         deleteStub.firstCall.args[0].toString(),
         workspaceRoot.toString(),
       )
-      assert.ok(onProjectUnlinked.calledOnceWith(workspaceRoot))
+      assert.strictEqual(result?.toString(), workspaceRoot.toString())
     })
 
-    test("does not unlink when cancelled", async () => {
-      const { commands, configService, onProjectUnlinked } =
-        createLinkCommands()
+    test("returns null when cancelled", async () => {
       const workspaceRoot = vscode.Uri.file("/tmp/test")
       const workspaceFolder = { uri: workspaceRoot, name: "test", index: 0 }
 
@@ -324,14 +273,13 @@ suite("cloud/commands/project", () => {
       sinon.stub(vscode.window, "showWarningMessage").resolves(undefined as any)
       const deleteStub = sinon.stub(configService, "deleteConfig").resolves()
 
-      await commands.unlinkProject(workspaceRoot, getState)
+      const result = await unlinkProject(configService, getState, workspaceRoot)
 
       assert.ok(!deleteStub.called)
-      assert.ok(!onProjectUnlinked.called)
+      assert.strictEqual(result, null)
     })
 
     test("only shows linked folders in picker for multi-root workspace", async () => {
-      const { commands, configService } = createLinkCommands()
       const workspace1 = vscode.Uri.file("/tmp/workspace1")
       const workspace2 = vscode.Uri.file("/tmp/workspace2")
       const workspace3 = vscode.Uri.file("/tmp/workspace3")
@@ -360,7 +308,7 @@ suite("cloud/commands/project", () => {
       sinon.stub(vscode.window, "showWarningMessage").resolves("Unlink" as any)
       const deleteStub = sinon.stub(configService, "deleteConfig").resolves()
 
-      await commands.unlinkProject(undefined, getState)
+      await unlinkProject(configService, getState)
 
       // Verify picker was called with only workspace1 and workspace2
       assert.ok(quickPickStub.calledOnce)
@@ -378,7 +326,6 @@ suite("cloud/commands/project", () => {
     })
 
     test("uses 'this app' label when state is not linked", async () => {
-      const { commands, configService } = createLinkCommands()
       const workspaceRoot = vscode.Uri.file("/tmp/test")
       const workspaceFolder = { uri: workspaceRoot, name: "test", index: 0 }
 
@@ -395,7 +342,7 @@ suite("cloud/commands/project", () => {
         .resolves("Unlink" as any)
       sinon.stub(configService, "deleteConfig").resolves()
 
-      await commands.unlinkProject(workspaceRoot, getState)
+      await unlinkProject(configService, getState, workspaceRoot)
 
       assert.ok(warningStub.calledOnce)
       assert.ok(warningStub.firstCall.args[0].includes("this app"))

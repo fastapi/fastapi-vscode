@@ -1,10 +1,18 @@
+/**
+ * CloudController manages the state and interactions of FastAPI Cloud status bar,
+ * including authentication, project linking, and deployment.
+ */
 import * as vscode from "vscode"
 import { log } from "../utils/logger"
 import type { ApiService } from "./api"
 import { AUTH_PROVIDER_ID } from "./auth"
-import { AuthCommands } from "./commands/auth"
+import { signOut } from "./commands/auth"
 import { deploy } from "./commands/deploy"
-import { LinkCommands } from "./commands/project"
+import {
+  createAndLinkProject,
+  linkProject,
+  unlinkProject,
+} from "./commands/project"
 import type { ConfigService } from "./config"
 import type { AuthProvider, WorkspaceState } from "./types"
 import { MenuHandler } from "./ui/menus"
@@ -14,9 +22,7 @@ export class CloudController {
   private workspaceStates = new Map<string, WorkspaceState>()
   private statusBarManager: StatusBarManager
   private menuHandler: MenuHandler
-  private authCommands: AuthCommands
-  private linkCommands: LinkCommands
-  private deployCommand = deploy
+  private authProvider: AuthProvider
   private sessionListener?: vscode.Disposable
   private refreshPromises = new Map<string, Promise<void>>()
   private statusBarItem: vscode.StatusBarItem
@@ -27,24 +33,8 @@ export class CloudController {
     private apiService: ApiService,
     statusBarItem: vscode.StatusBarItem,
   ) {
+    this.authProvider = authProvider
     this.statusBarItem = statusBarItem
-    this.authCommands = new AuthCommands(authProvider, () => {
-      this.workspaceStates.clear()
-      this.statusBarManager.update()
-    })
-
-    this.linkCommands = new LinkCommands(
-      apiService,
-      configService,
-      async (uri) => {
-        await this.refresh(uri)
-        await this.statusBarManager.update()
-      },
-      async (uri) => {
-        await this.refresh(uri)
-        await this.statusBarManager.update()
-      },
-    )
 
     this.statusBarManager = new StatusBarManager(
       statusBarItem,
@@ -53,19 +43,14 @@ export class CloudController {
     )
 
     this.menuHandler = new MenuHandler(
-      this.authCommands,
-      this.linkCommands,
       (uri) => this.getState(uri),
       () => this.getActiveWorkspaceFolder(),
-      async (workspaceRoot) => {
-        await this.deployCommand({
-          workspaceRoot,
-          configService: this.configService,
-          apiService: this.apiService,
-          statusBarItem: this.statusBarItem,
-        })
-        await this.refresh(workspaceRoot)
-        await this.statusBarManager.update()
+      {
+        signOut: () => this.signOut(),
+        linkProject: (uri) => this.linkProject(uri),
+        createAndLinkProject: (uri) => this.createAndLinkProject(uri),
+        unlinkProject: (uri) => this.unlinkProject(uri),
+        deploy: (uri) => this.deploy(uri),
       },
     )
   }
@@ -120,20 +105,17 @@ export class CloudController {
       }),
     )
 
-    // Fire-and-forget status bar update (UI-only, doesn't affect logic)
     this.statusBarManager.update()
   }
 
   async addWorkspaceFolder(uri: vscode.Uri): Promise<void> {
     this.configService.startWatching(uri)
     await this.refresh(uri)
-    // Fire-and-forget status bar update (UI-only, doesn't affect logic)
     this.statusBarManager.update()
   }
 
   removeWorkspaceFolder(uri: vscode.Uri): void {
     this.deleteState(uri)
-    // Fire-and-forget status bar update (UI-only, doesn't affect logic)
     this.statusBarManager.update()
   }
 
@@ -142,7 +124,6 @@ export class CloudController {
     for (const folder of workspaceFolders) {
       await this.refresh(folder.uri)
     }
-    // Fire-and-forget status bar update (UI-only, doesn't affect logic)
     this.statusBarManager.update()
   }
 
@@ -178,7 +159,6 @@ export class CloudController {
           silent: true,
         })
       } catch (err) {
-        // Auth provider may not be ready yet or session request was canceled
         log(`Failed to get session: ${err}`)
         this.setState(workspaceRoot, { status: "not_configured" })
         return
@@ -225,10 +205,8 @@ export class CloudController {
               )
               .then((selected) => {
                 if (selected === "Unlink") {
-                  // Fire-and-forget - user action triggered from warning
                   void this.unlinkProject(workspaceRoot)
                 }
-                // Mark warning as shown after user dismisses it
                 const state = this.getState(workspaceRoot)
                 if (state.status === "not_found") {
                   this.setState(workspaceRoot, {
@@ -239,7 +217,6 @@ export class CloudController {
               })
           }
         } else {
-          // Transient error (network, 500, etc.)
           this.setState(workspaceRoot, { status: "error" })
         }
       }
@@ -253,37 +230,62 @@ export class CloudController {
     await this.menuHandler.showMenu()
   }
 
-  async createAndLinkProject(workspaceRoot?: vscode.Uri): Promise<void> {
-    await this.linkCommands.createAndLinkProject(workspaceRoot)
+  async signOut(): Promise<void> {
+    const didSignOut = await signOut(this.authProvider)
+    if (didSignOut) {
+      this.workspaceStates.clear()
+      this.statusBarManager.update()
+    }
   }
 
   async linkProject(workspaceRoot?: vscode.Uri): Promise<void> {
-    await this.linkCommands.linkProject(workspaceRoot)
+    const linked = await linkProject(
+      this.apiService,
+      this.configService,
+      workspaceRoot,
+    )
+    if (linked) {
+      await this.refresh(linked)
+      await this.statusBarManager.update()
+    }
   }
 
-  async signOut(): Promise<void> {
-    await this.authCommands.signOut()
+  async createAndLinkProject(workspaceRoot?: vscode.Uri): Promise<void> {
+    const linked = await createAndLinkProject(
+      this.apiService,
+      this.configService,
+      workspaceRoot,
+    )
+    if (linked) {
+      await this.refresh(linked)
+      await this.statusBarManager.update()
+    }
   }
 
   async unlinkProject(workspaceRoot?: vscode.Uri): Promise<void> {
-    await this.linkCommands.unlinkProject(workspaceRoot, (uri) =>
-      this.getState(uri),
+    const unlinked = await unlinkProject(
+      this.configService,
+      (uri) => this.getState(uri),
+      workspaceRoot,
     )
+    if (unlinked) {
+      await this.refresh(unlinked)
+      await this.statusBarManager.update()
+    }
   }
 
-  async deploy(): Promise<void> {
-    const workspaceRoot = this.getActiveWorkspaceFolder()
+  async deploy(workspaceRoot?: vscode.Uri): Promise<void> {
+    const root = workspaceRoot ?? this.getActiveWorkspaceFolder()
 
-    await this.deployCommand({
-      workspaceRoot,
+    await deploy({
+      workspaceRoot: root,
       configService: this.configService,
       apiService: this.apiService,
       statusBarItem: this.statusBarItem,
     })
 
-    // Refresh after deploy completes
-    if (workspaceRoot) {
-      await this.refresh(workspaceRoot)
+    if (root) {
+      await this.refresh(root)
       await this.statusBarManager.update()
     }
   }

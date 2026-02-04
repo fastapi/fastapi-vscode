@@ -5,17 +5,25 @@ import {
 } from "../../utils/telemetry"
 import { ApiService } from "../api"
 import { AUTH_PROVIDER_ID } from "../auth"
-import type { AuthCommands } from "../commands/auth"
-import type { LinkCommands } from "../commands/project"
 import type { WorkspaceState } from "../types"
 
+export interface MenuActions {
+  signOut: () => Promise<void>
+  linkProject: (uri: vscode.Uri) => Promise<void>
+  createAndLinkProject: (uri: vscode.Uri) => Promise<void>
+  unlinkProject: (uri: vscode.Uri) => Promise<void>
+  deploy: (uri: vscode.Uri) => Promise<void>
+}
+
+/**
+ * MenuHandler shows interactive menus for FastAPI Cloud actions in the status bar.
+ * It adapts the menu options based on the current workspace state.
+ */
 export class MenuHandler {
   constructor(
-    private authCommands: AuthCommands,
-    private linkCommands: LinkCommands,
     private getState: (uri: vscode.Uri) => WorkspaceState,
     private getActiveWorkspaceFolder: () => vscode.Uri | null,
-    private onDeploy: (workspaceRoot: vscode.Uri) => Promise<void>,
+    private actions: MenuActions,
   ) {}
 
   async showMenu(): Promise<void> {
@@ -42,11 +50,9 @@ export class MenuHandler {
     switch (state.status) {
       case "not_configured":
       case "refreshing":
-        await this.showSetupMenu(activeFolder)
-        break
       case "not_found":
       case "error":
-        await this.showBrokenLinkMenu(activeFolder)
+        await this.showSetupMenu(activeFolder)
         break
       case "linked":
         await this.showAppMenu(activeFolder)
@@ -73,20 +79,9 @@ export class MenuHandler {
     })
 
     if (selected?.id === "link") {
-      await this.linkCommands.linkProject(workspaceRoot)
+      await this.actions.linkProject(workspaceRoot)
     } else if (selected?.id === "create") {
-      await this.linkCommands.createAndLinkProject(workspaceRoot)
-    }
-  }
-
-  private async showBrokenLinkMenu(workspaceRoot: vscode.Uri): Promise<void> {
-    const selected = await vscode.window.showWarningMessage(
-      "This project is linked to a FastAPI Cloud app that could not be found. Unlink it, then link to the correct app.",
-      "Unlink",
-    )
-
-    if (selected === "Unlink") {
-      await this.linkCommands.unlinkProject(workspaceRoot, this.getState)
+      await this.actions.createAndLinkProject(workspaceRoot)
     }
   }
 
@@ -122,7 +117,7 @@ export class MenuHandler {
     if (selected) {
       switch (selected.id) {
         case "deploy":
-          await this.onDeploy(workspaceRoot)
+          await this.actions.deploy(workspaceRoot)
           break
         case "open":
           vscode.env.openExternal(vscode.Uri.parse(app.url))
@@ -161,10 +156,10 @@ export class MenuHandler {
 
     switch (selected?.id) {
       case "unlink":
-        await this.linkCommands.unlinkProject(workspaceRoot, this.getState)
+        await this.actions.unlinkProject(workspaceRoot)
         break
       case "signout":
-        await this.authCommands.signOut()
+        await this.actions.signOut()
         break
     }
   }
