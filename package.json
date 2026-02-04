@@ -2,7 +2,7 @@
   "name": "fastapi-vscode",
   "displayName": "FastAPI Extension",
   "description": "VS Code extension for FastAPI development",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "FastAPILabs",
   "license": "MIT",
   "repository": {
@@ -307,6 +307,7 @@
   },
   "dependencies": {
     "posthog-node": "^5.24.1",
+    "tinytar": "^0.1.0",
     "toml": "^3.0.0",
     "web-tree-sitter": "^0.26.3"
   },
