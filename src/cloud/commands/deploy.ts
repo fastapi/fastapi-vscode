@@ -125,7 +125,6 @@ export async function deploy(context: DeployContext): Promise<boolean> {
     await configService.writeConfig(workspaceRoot, config)
   }
 
-  // Start deployment process
   try {
     updateStatus("Creating deployment...")
     const deployment = await apiService.createDeployment(config.app_id)
@@ -187,7 +186,6 @@ export async function deploy(context: DeployContext): Promise<boolean> {
 }
 
 async function createArchive(workspaceRoot: vscode.Uri): Promise<Uint8Array> {
-  // Find all files, excluding common patterns via glob
   const files = await vscode.workspace.findFiles(
     new vscode.RelativePattern(workspaceRoot, "**/*"),
     "{**/.venv/**,**/__pycache__/**,**/.git/**}",
@@ -225,7 +223,6 @@ async function uploadToS3(
     formData.append(key, value)
   }
 
-  // Add the file
   formData.append("file", new Blob([archive]))
 
   const response = await fetch(url, {
