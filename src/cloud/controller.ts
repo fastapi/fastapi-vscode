@@ -275,7 +275,7 @@ export class CloudController {
   async deploy(workspaceRoot?: vscode.Uri): Promise<void> {
     const root = workspaceRoot ?? this.getActiveWorkspaceFolder()
 
-    await deploy({
+    const success = await deploy({
       workspaceRoot: root,
       configService: this.configService,
       apiService: this.apiService,
@@ -283,8 +283,13 @@ export class CloudController {
     })
 
     if (root) {
+      // Refresh state in background without updating status bar during refresh
+      // This avoids a flash when deploy succeeds (status bar is already correct)
       await this.refresh(root)
-      await this.statusBarManager.update()
+      // Only update status bar on failure - success already set it correctly
+      if (!success) {
+        await this.statusBarManager.update()
+      }
     }
   }
 

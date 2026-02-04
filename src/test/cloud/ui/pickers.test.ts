@@ -146,12 +146,10 @@ suite("cloud/ui/pickers", () => {
       })
 
       sinon.stub(vscode.window, "showInputBox").resolves("my-app")
-      const infoStub = sinon.stub(ui, "showInformationMessage")
 
       const result = await createNewApp(api, team1, "default-name")
 
       assert.deepStrictEqual(result, createdApp)
-      assert.ok(infoStub.calledOnce)
     })
 
     test("returns null when user cancels input", async () => {

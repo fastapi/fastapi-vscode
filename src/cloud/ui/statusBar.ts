@@ -59,11 +59,18 @@ export class StatusBarManager {
 
       const state = this.getState(activeFolder)
 
+      // Don't interrupt an active deployment (spinning icon)
+      if (this.statusBarItem.text.includes("$(sync~spin)")) {
+        return
+      }
+
       switch (state.status) {
         case "not_configured":
         case "error":
-        case "refreshing":
           this.statusBarItem.text = STATUS_DEPLOY
+          break
+        case "refreshing":
+          // Don't change status bar during refresh to avoid flashing
           break
         case "linked":
           this.statusBarItem.text = `$(cloud) ${state.app.slug}`
