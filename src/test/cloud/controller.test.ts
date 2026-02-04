@@ -415,8 +415,8 @@ suite("cloud/cloudController", () => {
 
       await deps.controller.initialize()
 
-      // Explicitly wait for status bar update since it's fire-and-forget
-      await deps.controller["statusBarManager"].update()
+      // Trigger status bar update via refreshAll
+      await deps.controller.refreshAll()
 
       assert.strictEqual(deps.statusBar.text, "$(warning) FastAPI Cloud")
       assert.ok(warnStub.calledOnce)
@@ -488,7 +488,8 @@ suite("cloud/cloudController", () => {
           newWorkspace,
         ),
       )
-      assert.strictEqual(deps.controller["workspaceStates"].size, 1)
+      // Verify state was set by checking that getApp was called (indicates refresh happened)
+      assert.ok((deps.apiService.getApp as sinon.SinonStub).calledOnce)
 
       dispose(deps)
     })
@@ -515,11 +516,33 @@ suite("cloud/cloudController", () => {
       sinon.stub(deps.apiService, "getApp").resolves(testApp)
       sinon.stub(deps.apiService, "getTeam").resolves(testTeam)
 
+      // Set up active editor to point to workspace
+      const activeEditor = {
+        document: { uri: vscode.Uri.file("/tmp/workspace/file.py") },
+      }
+      Object.defineProperty(vscode.window, "activeTextEditor", {
+        value: activeEditor,
+        configurable: true,
+      })
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .returns(workspaceFolder)
+
       await deps.controller.initialize()
-      assert.strictEqual(deps.controller["workspaceStates"].size, 1)
+
+      assert.strictEqual(deps.statusBar.text, "$(cloud) test-app")
 
       deps.controller.removeWorkspaceFolder(workspace)
-      assert.strictEqual(deps.controller["workspaceStates"].size, 0)
+
+      // Verify state was deleted by showing menu - should show setup menu (not_configured)
+      const quickPickStub = sinon
+        .stub(vscode.window, "showQuickPick")
+        .resolves(undefined)
+      await deps.controller.showMenu()
+
+      const items = quickPickStub.firstCall.args[0] as any[]
+      assert.ok(items.some((i: any) => i.id === "link"))
+      assert.ok(items.some((i: any) => i.id === "create"))
 
       dispose(deps)
     })
@@ -554,7 +577,11 @@ suite("cloud/cloudController", () => {
 
       await deps.controller.refreshAll()
 
-      assert.strictEqual(deps.controller["workspaceStates"].size, 2)
+      // Verify both workspaces were refreshed by checking getApp was called twice
+      assert.strictEqual(
+        (deps.apiService.getApp as sinon.SinonStub).callCount,
+        2,
+      )
 
       dispose(deps)
     })
@@ -609,6 +636,17 @@ suite("cloud/cloudController", () => {
         configurable: true,
       })
 
+      const activeEditor = {
+        document: { uri: vscode.Uri.file("/tmp/workspace/file.py") },
+      }
+      Object.defineProperty(vscode.window, "activeTextEditor", {
+        value: activeEditor,
+        configurable: true,
+      })
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .returns(workspaceFolder)
+
       sinon
         .stub(vscode.authentication, "getSession")
         .rejects(new Error("Auth error"))
@@ -616,8 +654,11 @@ suite("cloud/cloudController", () => {
 
       await deps.controller.initialize()
 
-      const state = deps.controller["getState"](workspace)
-      assert.strictEqual(state.status, "not_configured")
+      // Verify state is not_configured by checking status bar shows sign-in
+      assert.strictEqual(
+        deps.statusBar.text,
+        "$(cloud) Sign into FastAPI Cloud",
+      )
 
       dispose(deps)
     })
@@ -632,6 +673,17 @@ suite("cloud/cloudController", () => {
         configurable: true,
       })
 
+      const activeEditor = {
+        document: { uri: vscode.Uri.file("/tmp/workspace/file.py") },
+      }
+      Object.defineProperty(vscode.window, "activeTextEditor", {
+        value: activeEditor,
+        configurable: true,
+      })
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .returns(workspaceFolder)
+
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
@@ -642,8 +694,8 @@ suite("cloud/cloudController", () => {
 
       await deps.controller.initialize()
 
-      const state = deps.controller["getState"](workspace)
-      assert.strictEqual(state.status, "error")
+      // Verify state is error by checking status bar shows setup (error state shows setup)
+      assert.strictEqual(deps.statusBar.text, "$(cloud) Set up FastAPI Cloud")
 
       dispose(deps)
     })
@@ -679,13 +731,7 @@ suite("cloud/cloudController", () => {
       await deps.controller.initialize()
       assert.strictEqual(warnStub.callCount, 1)
 
-      // Manually mark warning as shown
-      deps.controller["setState"](workspace, {
-        status: "not_found",
-        warningShown: true,
-      })
-
-      // Second refresh - should NOT show warning again
+      // Second refresh - warning was dismissed (resolved undefined), so should NOT show again
       await deps.controller.refresh(workspace)
       assert.strictEqual(warnStub.callCount, 1) // Still 1, not 2
 
@@ -753,6 +799,17 @@ suite("cloud/cloudController", () => {
         configurable: true,
       })
 
+      const activeEditor = {
+        document: { uri: vscode.Uri.file("/tmp/workspace/file.py") },
+      }
+      Object.defineProperty(vscode.window, "activeTextEditor", {
+        value: activeEditor,
+        configurable: true,
+      })
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .returns(workspaceFolder)
+
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
@@ -772,8 +829,8 @@ suite("cloud/cloudController", () => {
 
       await deps.controller.createAndLinkProject(workspace)
 
-      const state = deps.controller["getState"](workspace)
-      assert.strictEqual(state.status, "linked")
+      // Verify state is linked by checking status bar shows app slug
+      assert.strictEqual(deps.statusBar.text, "$(cloud) test-app")
 
       dispose(deps)
     })
@@ -859,7 +916,7 @@ suite("cloud/cloudController", () => {
         .withArgs(editor1.document.uri)
         .returns(workspaceFolder1)
 
-      await deps.controller["statusBarManager"].update()
+      await deps.controller.refreshAll()
       assert.strictEqual(deps.statusBar.text, "$(cloud) test-app")
 
       // Switch to workspace2 file
@@ -874,7 +931,7 @@ suite("cloud/cloudController", () => {
         .withArgs(editor2.document.uri)
         .returns(workspaceFolder2)
 
-      await deps.controller["statusBarManager"].update()
+      await deps.controller.refreshAll()
       assert.strictEqual(deps.statusBar.text, "$(cloud) test-app-2")
 
       dispose(deps)
@@ -925,7 +982,7 @@ suite("cloud/cloudController", () => {
         .withArgs(editor1.document.uri)
         .returns(workspaceFolder1)
 
-      await deps.controller["statusBarManager"].update()
+      await deps.controller.refreshAll()
       assert.strictEqual(deps.statusBar.text, "$(cloud) test-app")
 
       // workspace2 file shows setup
@@ -940,7 +997,7 @@ suite("cloud/cloudController", () => {
         .withArgs(editor2.document.uri)
         .returns(workspaceFolder2)
 
-      await deps.controller["statusBarManager"].update()
+      await deps.controller.refreshAll()
       assert.strictEqual(deps.statusBar.text, "$(cloud) Set up FastAPI Cloud")
 
       dispose(deps)
@@ -1166,6 +1223,18 @@ suite("cloud/cloudController", () => {
         configurable: true,
       })
 
+      // Set up active editor
+      const editor1 = {
+        document: { uri: vscode.Uri.file("/tmp/workspace1/file.py") },
+      }
+      Object.defineProperty(vscode.window, "activeTextEditor", {
+        value: editor1,
+        configurable: true,
+      })
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .returns(workspaceFolder1)
+
       const getSessionStub = sinon.stub(vscode.authentication, "getSession")
       getSessionStub.resolves(mockSession as any)
 
@@ -1178,7 +1247,8 @@ suite("cloud/cloudController", () => {
 
       await deps.controller.initialize()
 
-      assert.strictEqual(deps.controller["workspaceStates"].size, 2)
+      // Verify workspaces are linked by checking status bar shows app
+      assert.strictEqual(deps.statusBar.text, "$(cloud) test-app")
 
       sinon
         .stub(vscode.window, "showWarningMessage")
@@ -1190,8 +1260,11 @@ suite("cloud/cloudController", () => {
 
       await deps.controller.signOut()
 
-      // All workspace states should be cleared
-      assert.strictEqual(deps.controller["workspaceStates"].size, 0)
+      // All workspace states should be cleared - status bar shows sign-in
+      assert.strictEqual(
+        deps.statusBar.text,
+        "$(cloud) Sign into FastAPI Cloud",
+      )
 
       dispose(deps)
     })
