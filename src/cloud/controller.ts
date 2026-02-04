@@ -3,7 +3,7 @@ import { log } from "../utils/logger"
 import type { ApiService } from "./api"
 import { AUTH_PROVIDER_ID } from "./auth"
 import { AuthCommands } from "./commands/auth"
-import { deploy as deployCommand } from "./commands/deploy"
+import { deploy } from "./commands/deploy"
 import { LinkCommands } from "./commands/project"
 import type { ConfigService } from "./config"
 import { Button, Project } from "./constants"
@@ -17,6 +17,7 @@ export class CloudController {
   private menuHandler: MenuHandler
   private authCommands: AuthCommands
   private linkCommands: LinkCommands
+  private deployCommand = deploy
   private sessionListener?: vscode.Disposable
   private refreshPromises = new Map<string, Promise<void>>()
   private statusBarItem: vscode.StatusBarItem
@@ -57,6 +58,16 @@ export class CloudController {
       this.linkCommands,
       (uri) => this.getState(uri),
       () => this.getActiveWorkspaceFolder(),
+      async (workspaceRoot) => {
+        await this.deployCommand({
+          workspaceRoot,
+          configService: this.configService,
+          apiService: this.apiService,
+          statusBarItem: this.statusBarItem,
+        })
+        await this.refresh(workspaceRoot)
+        await this.statusBarManager.update()
+      },
     )
   }
 
@@ -261,7 +272,7 @@ export class CloudController {
   async deploy(): Promise<void> {
     const workspaceRoot = this.getActiveWorkspaceFolder()
 
-    await deployCommand({
+    await this.deployCommand({
       workspaceRoot,
       configService: this.configService,
       apiService: this.apiService,

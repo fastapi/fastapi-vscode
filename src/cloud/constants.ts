@@ -53,6 +53,7 @@ export const Menu = {
   LINK_EXISTING_DESC: "Connect to an app on FastAPI Cloud",
   CREATE_NEW: "$(add) Create New App",
   CREATE_NEW_DESC: "Create a new app and link it",
+  DEPLOY_APP: "$(rocket) Deploy App",
   OPEN_APP: "$(globe) Open App",
   DASHBOARD: "$(link-external) Dashboard",
   MORE: "$(ellipsis) More",
@@ -60,4 +61,20 @@ export const Menu = {
   UNLINK_PROJECT_DESC: "Disconnect from FastAPI Cloud app",
   SIGN_OUT: `$(sign-out) ${LABEL_SIGN_OUT}`,
   SIGN_OUT_DESC: "Sign out of FastAPI Cloud",
+} as const
+
+export const Deploy = {
+  // Exclusion patterns - aligned with fastapi-cloud-cli
+  // See: https://github.com/fastapilabs/fastapi-cloud-cli/blob/main/src/fastapi_cloud_cli/commands/deploy.py
+  EXCLUDE_DIRS: new Set([
+    ".venv",
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".git",
+  ]),
+  EXCLUDE_FILES: new Set([".gitignore", ".fastapicloudignore"]),
+  // 300 attempts x 2 seconds = 10 minutes maximum
+  MAX_POLL_ATTEMPTS: 300,
+  DEPLOYMENT_POLL_INTERVAL_MS: 2000,
 } as const

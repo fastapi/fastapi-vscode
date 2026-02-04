@@ -67,6 +67,7 @@ export const statusMessages: Record<DeploymentStatus, string> = {
 export interface Config {
   app_id: string
   team_id: string
+  app_slug?: string
 }
 
 export interface UploadInfo {
@@ -88,7 +89,6 @@ export interface AuthProvider {
   signOut(): Promise<void>
 }
 
-// Discriminated union representing the state machine for a workspace's cloud integration
 export type WorkspaceState =
   | { status: "not_configured" } // No config file exists
   | { status: "linked"; app: App; team: Team } // Successfully linked to an app

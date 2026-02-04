@@ -8,6 +8,7 @@ import {
 import type { ApiService } from "../api"
 import { AUTH_PROVIDER_ID } from "../auth"
 import type { ConfigService } from "../config"
+import { Deploy } from "../constants"
 import { createOrLinkApp } from "../pickers"
 import {
   type Config,
@@ -17,50 +18,18 @@ import {
   statusMessages,
 } from "../types"
 
-// Exclusion patterns - aligned with fastapi-cloud-cli plus VS Code extras
-export const EXCLUDE_DIRS = new Set([
-  // Core exclusions (same as CLI)
-  ".venv",
-  "__pycache__",
-  ".mypy_cache",
-  ".pytest_cache",
-  ".git",
-  ".fastapicloud",
-  // Additional exclusions for VS Code users
-  "node_modules",
-  ".ruff_cache",
-  ".tox",
-  "dist",
-  "build",
-])
-
-const EXCLUDE_FILES = new Set([
-  // CLI excludes these patterns
-  ".gitignore",
-  ".fastapicloudignore",
-  // VS Code extras
-  ".DS_Store",
-  "Thumbs.db",
-])
-
-// 300 attempts x 2 seconds = 10 minutes maximum
-const MAX_POLL_ATTEMPTS = 300
-const DEPLOYMENT_POLL_INTERVAL_MS = 2000
-
 export function shouldExclude(relativePath: string): boolean {
   const parts = relativePath.split("/")
   const fileName = parts[parts.length - 1]
 
   // Check if any path component is in exclude list
   for (const part of parts) {
-    if (EXCLUDE_DIRS.has(part)) return true
-    if (part.endsWith(".egg-info")) return true
+    if (Deploy.EXCLUDE_DIRS.has(part)) return true
   }
 
   // Check file-level exclusions
-  if (EXCLUDE_FILES.has(fileName)) return true
-  if (fileName.startsWith(".env")) return true // .env, .env.local, etc.
-  if (fileName.endsWith(".pyc")) return true // Same as CLI
+  if (Deploy.EXCLUDE_FILES.has(fileName)) return true
+  if (fileName.endsWith(".pyc")) return true
 
   return false
 }
@@ -84,7 +53,6 @@ export async function deploy(context: DeployContext): Promise<boolean> {
     statusBarItem.text = `$(sync~spin) ${text}`
   }
 
-  // Check auth
   const session = await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
     silent: true,
   })
@@ -99,7 +67,6 @@ export async function deploy(context: DeployContext): Promise<boolean> {
     return false
   }
 
-  // Ensure app is linked
   const existingConfig = await configService.getConfig(workspaceRoot)
   const config: Config = existingConfig ?? { app_id: "", team_id: "" }
   if (!config.app_id) {
@@ -176,7 +143,7 @@ async function createArchive(workspaceRoot: vscode.Uri): Promise<Uint8Array> {
   // Find all files, excluding common patterns via glob
   const files = await vscode.workspace.findFiles(
     new vscode.RelativePattern(workspaceRoot, "**/*"),
-    "{**/.venv/**,**/__pycache__/**,**/.git/**,**/.fastapicloud/**,**/node_modules/**}",
+    "{**/.venv/**,**/__pycache__/**,**/.git/**}",
   )
 
   const tarFiles: Array<{ name: string; data: Uint8Array }> = []
@@ -184,7 +151,6 @@ async function createArchive(workspaceRoot: vscode.Uri): Promise<Uint8Array> {
   for (const file of files) {
     const relativePath = file.path.replace(`${workspaceRoot.path}/`, "")
 
-    // Additional filtering
     if (shouldExclude(relativePath)) continue
 
     try {
@@ -208,7 +174,6 @@ async function uploadToS3(
 ): Promise<void> {
   const formData = new FormData()
 
-  // Add all presigned fields
   for (const [key, value] of Object.entries(fields)) {
     formData.append(key, value)
   }
@@ -232,7 +197,7 @@ async function pollDeploymentStatus(
   deploymentId: string,
   updateStatus: (text: string) => void,
 ): Promise<Deployment | null> {
-  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < Deploy.MAX_POLL_ATTEMPTS; attempt++) {
     const deployment = await apiService.getDeployment(appId, deploymentId)
 
     if (
@@ -251,7 +216,7 @@ async function pollDeploymentStatus(
     updateStatus(message)
 
     await new Promise((resolve) =>
-      setTimeout(resolve, DEPLOYMENT_POLL_INTERVAL_MS),
+      setTimeout(resolve, Deploy.DEPLOYMENT_POLL_INTERVAL_MS),
     )
   }
 

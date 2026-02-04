@@ -16,6 +16,7 @@ export class MenuHandler {
     private linkCommands: LinkCommands,
     private getState: (uri: vscode.Uri) => WorkspaceState,
     private getActiveWorkspaceFolder: () => vscode.Uri | null,
+    private onDeploy: (workspaceRoot: vscode.Uri) => Promise<void>,
   ) {}
 
   async showMenu(): Promise<void> {
@@ -98,6 +99,11 @@ export class MenuHandler {
     const dashboardUrl = ApiService.getDashboardUrl(team.slug, app.slug)
     const items = [
       {
+        label: Menu.DEPLOY_APP,
+        description: "Deploy your FastAPI app",
+        id: "deploy",
+      },
+      {
         label: Menu.OPEN_APP,
         description: app.url,
         id: "open",
@@ -116,6 +122,9 @@ export class MenuHandler {
 
     if (selected) {
       switch (selected.id) {
+        case "deploy":
+          await this.onDeploy(workspaceRoot)
+          break
         case "open":
           vscode.env.openExternal(vscode.Uri.parse(app.url))
           trackCloudAppOpened(app.slug)
