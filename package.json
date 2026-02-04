@@ -235,6 +235,19 @@
             }
           },
           {
+            "id": "cloud-deploy",
+            "title": "Deploy to FastAPI Cloud",
+            "description": "Deploy your FastAPI app with one click. You'll be prompted to sign in and link your project if needed.\n\n[Deploy](command:fastapi-vscode.deploy)",
+            "media": {
+              "image": "media/walkthrough/deploy.gif",
+              "altText": "Deploying a FastAPI app to FastAPI Cloud"
+            },
+            "when": "config.fastapi.cloud.enabled",
+            "completionEvents": [
+              "onCommand:fastapi-vscode.deploy"
+            ]
+          },
+          {
             "id": "feedback",
             "title": "Give Feedback & Get Help",
             "description": "Help us improve! Report bugs, request features, or contribute to the project.\n\n[Report an Issue](command:fastapi-vscode.reportIssue)\n[View on GitHub](https://github.com/fastapi/fastapi-vscode)",
