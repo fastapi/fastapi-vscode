@@ -8,7 +8,6 @@ import {
 import type { ApiService } from "../api"
 import { AUTH_PROVIDER_ID } from "../auth"
 import type { ConfigService } from "../config"
-import { createOrLinkApp } from "../pickers"
 import {
   type Config,
   type Deployment,
@@ -16,6 +15,7 @@ import {
   failedStatuses,
   statusMessages,
 } from "../types"
+import { createOrLinkApp } from "../ui/pickers"
 
 // Exclusion patterns - aligned with fastapi-cloud-cli
 // See: https://github.com/fastapilabs/fastapi-cloud-cli/blob/main/src/fastapi_cloud_cli/commands/deploy.py
