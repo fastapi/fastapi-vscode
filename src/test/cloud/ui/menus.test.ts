@@ -22,8 +22,6 @@ function createMenuHandler(
 ) {
   const actions: MenuActions = {
     signOut: sinon.stub().resolves(),
-    linkProject: sinon.stub().resolves(),
-    createAndLinkProject: sinon.stub().resolves(),
     unlinkProject: sinon.stub().resolves(),
     deploy: sinon.stub().resolves(),
   }
@@ -70,43 +68,36 @@ suite("cloud/ui/menus", () => {
       assert.ok(errorStub.calledOnceWith("No workspace folder open"))
     })
 
-    test("shows setup menu when not configured", async () => {
-      const { handler } = createMenuHandler(() => ({
+    test("calls deploy when not configured", async () => {
+      const { handler, actions } = createMenuHandler(() => ({
         status: "not_configured",
       }))
 
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      const quickPickStub = sinon
-        .stub(vscode.window, "showQuickPick")
-        .resolves(undefined)
 
       await handler.showMenu()
 
-      assert.ok(quickPickStub.calledOnce)
-      const items = quickPickStub.firstCall.args[0] as any[]
-      assert.ok(items.some((i) => i.id === "link"))
-      assert.ok(items.some((i) => i.id === "create"))
+      assert.ok((actions.deploy as sinon.SinonStub).calledOnce)
     })
 
-    test("shows setup menu when refreshing", async () => {
-      const { handler } = createMenuHandler(() => ({ status: "refreshing" }))
+    test("calls deploy when refreshing", async () => {
+      const { handler, actions } = createMenuHandler(() => ({
+        status: "refreshing",
+      }))
 
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      const quickPickStub = sinon
-        .stub(vscode.window, "showQuickPick")
-        .resolves(undefined)
 
       await handler.showMenu()
 
-      assert.ok(quickPickStub.calledOnce)
+      assert.ok((actions.deploy as sinon.SinonStub).calledOnce)
     })
 
-    test("shows setup menu when app not found", async () => {
-      const { handler } = createMenuHandler(() => ({
+    test("calls deploy when app not found", async () => {
+      const { handler, actions } = createMenuHandler(() => ({
         status: "not_found",
         warningShown: false,
       }))
@@ -114,31 +105,24 @@ suite("cloud/ui/menus", () => {
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      const quickPickStub = sinon
-        .stub(vscode.window, "showQuickPick")
-        .resolves(undefined)
 
       await handler.showMenu()
 
-      assert.ok(quickPickStub.calledOnce)
-      const items = quickPickStub.firstCall.args[0] as any[]
-      assert.ok(items.some((i) => i.id === "link"))
-      assert.ok(items.some((i) => i.id === "create"))
+      assert.ok((actions.deploy as sinon.SinonStub).calledOnce)
     })
 
-    test("shows setup menu on error", async () => {
-      const { handler } = createMenuHandler(() => ({ status: "error" }))
+    test("calls deploy on error", async () => {
+      const { handler, actions } = createMenuHandler(() => ({
+        status: "error",
+      }))
 
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      const quickPickStub = sinon
-        .stub(vscode.window, "showQuickPick")
-        .resolves(undefined)
 
       await handler.showMenu()
 
-      assert.ok(quickPickStub.calledOnce)
+      assert.ok((actions.deploy as sinon.SinonStub).calledOnce)
     })
 
     test("shows app menu when linked", async () => {
@@ -167,40 +151,6 @@ suite("cloud/ui/menus", () => {
       assert.ok(items.some((i) => i.id === "open"))
       assert.ok(items.some((i) => i.id === "dashboard"))
       assert.ok(items.some((i) => i.id === "more"))
-    })
-  })
-
-  suite("setup menu", () => {
-    test("calls linkProject when link selected", async () => {
-      const { handler, actions } = createMenuHandler(() => ({
-        status: "not_configured",
-      }))
-
-      sinon
-        .stub(vscode.authentication, "getSession")
-        .resolves(mockSession as any)
-      sinon.stub(ui, "showQuickPick").resolves({ id: "link" } as any)
-
-      await handler.showMenu()
-
-      assert.ok((actions.linkProject as sinon.SinonStub).calledOnce)
-    })
-
-    test("calls createAndLinkProject when create selected", async () => {
-      const { handler, actions } = createMenuHandler(() => ({
-        status: "not_configured",
-      }))
-
-      sinon
-        .stub(vscode.authentication, "getSession")
-        .resolves(mockSession as any)
-      sinon
-        .stub(vscode.window, "showQuickPick")
-        .resolves({ id: "create" } as any)
-
-      await handler.showMenu()
-
-      assert.ok((actions.createAndLinkProject as sinon.SinonStub).calledOnce)
     })
   })
 

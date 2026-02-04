@@ -29,7 +29,7 @@ suite("cloud/ui/statusBar", () => {
       assert.strictEqual(statusBarItem.text, "$(cloud) Sign into FastAPI Cloud")
     })
 
-    test("shows set up when no workspace folder", async () => {
+    test("shows deploy when no workspace folder", async () => {
       const statusBarItem = mockStatusBarItem()
       const manager = new StatusBarManager(
         statusBarItem,
@@ -41,10 +41,13 @@ suite("cloud/ui/statusBar", () => {
 
       await manager.update()
 
-      assert.strictEqual(statusBarItem.text, "$(cloud) Set up FastAPI Cloud")
+      assert.strictEqual(
+        statusBarItem.text,
+        "$(rocket) Deploy to FastAPI Cloud",
+      )
     })
 
-    test("shows set up when workspace not configured", async () => {
+    test("shows deploy when workspace not configured", async () => {
       const statusBarItem = mockStatusBarItem()
       const manager = new StatusBarManager(
         statusBarItem,
@@ -56,7 +59,10 @@ suite("cloud/ui/statusBar", () => {
 
       await manager.update()
 
-      assert.strictEqual(statusBarItem.text, "$(cloud) Set up FastAPI Cloud")
+      assert.strictEqual(
+        statusBarItem.text,
+        "$(rocket) Deploy to FastAPI Cloud",
+      )
     })
 
     test("shows app slug when linked", async () => {

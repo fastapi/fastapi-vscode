@@ -10,8 +10,6 @@ import { ui } from "./dialogs"
 
 export interface MenuActions {
   signOut: () => Promise<void>
-  linkProject: (uri: vscode.Uri) => Promise<void>
-  createAndLinkProject: (uri: vscode.Uri) => Promise<void>
   unlinkProject: (uri: vscode.Uri) => Promise<void>
   deploy: (uri: vscode.Uri) => Promise<void>
 }
@@ -53,36 +51,12 @@ export class MenuHandler {
       case "refreshing":
       case "not_found":
       case "error":
-        await this.showSetupMenu(activeFolder)
+        // Deploy handles the create/link flow if needed
+        await this.actions.deploy(activeFolder)
         break
       case "linked":
         await this.showAppMenu(activeFolder)
         break
-    }
-  }
-
-  private async showSetupMenu(workspaceRoot: vscode.Uri): Promise<void> {
-    const items = [
-      {
-        label: "$(link) Link Existing App",
-        description: "Connect to an app on FastAPI Cloud",
-        id: "link",
-      },
-      {
-        label: "$(add) Create New App",
-        description: "Create a new app and link it",
-        id: "create",
-      },
-    ]
-
-    const selected = await ui.showQuickPick(items, {
-      placeHolder: "Set up FastAPI Cloud",
-    })
-
-    if (selected?.id === "link") {
-      await this.actions.linkProject(workspaceRoot)
-    } else if (selected?.id === "create") {
-      await this.actions.createAndLinkProject(workspaceRoot)
     }
   }
 

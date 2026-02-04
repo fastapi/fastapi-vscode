@@ -96,14 +96,14 @@ export async function deploy(context: DeployContext): Promise<boolean> {
     const choice = await ui.showQuickPick(
       [
         {
-          label: "$(link) Link Existing App",
-          description: "Connect to an app on FastAPI Cloud",
-          id: "link",
+          label: "$(add) Create New App",
+          description: "Create a new app and deploy",
+          id: "create",
         },
         {
-          label: "$(add) Create New App",
-          description: "Create a new app and link it",
-          id: "create",
+          label: "$(link) Link Existing App",
+          description: "Connect to an app already on FastAPI Cloud",
+          id: "link",
         },
       ],
       { placeHolder: "Set up FastAPI Cloud" },

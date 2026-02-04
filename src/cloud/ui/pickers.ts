@@ -95,9 +95,7 @@ export async function createNewApp(
   if (!appName) return null
 
   try {
-    const app = await apiService.createApp(team.id, appName)
-    ui.showInformationMessage(`Created app: ${app.slug}`)
-    return app
+    return await apiService.createApp(team.id, appName)
   } catch (error) {
     ui.showErrorMessage(
       `Failed to create app: ${error instanceof Error ? error.message : "Unknown error"}`,

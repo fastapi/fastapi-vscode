@@ -6,7 +6,7 @@ import type { WorkspaceState } from "../types"
 const STATUS_BAR_UPDATE_DEBOUNCE_MS = 100
 const STATUS_DEFAULT = "$(cloud) FastAPI Cloud"
 const STATUS_SIGN_IN = "$(cloud) Sign into FastAPI Cloud"
-const STATUS_SETUP = "$(cloud) Set up FastAPI Cloud"
+const STATUS_DEPLOY = "$(rocket) Deploy to FastAPI Cloud"
 const STATUS_WARNING = "$(warning) FastAPI Cloud"
 
 export class StatusBarManager {
@@ -53,7 +53,7 @@ export class StatusBarManager {
 
       const activeFolder = this.getActiveWorkspaceFolder()
       if (!activeFolder) {
-        this.statusBarItem.text = STATUS_SETUP
+        this.statusBarItem.text = STATUS_DEPLOY
         return
       }
 
@@ -63,7 +63,7 @@ export class StatusBarManager {
         case "not_configured":
         case "error":
         case "refreshing":
-          this.statusBarItem.text = STATUS_SETUP
+          this.statusBarItem.text = STATUS_DEPLOY
           break
         case "linked":
           this.statusBarItem.text = `$(cloud) ${state.app.slug}`

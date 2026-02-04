@@ -47,8 +47,6 @@ export class CloudController {
       () => this.getActiveWorkspaceFolder(),
       {
         signOut: () => this.signOut(),
-        linkProject: (uri) => this.linkProject(uri),
-        createAndLinkProject: (uri) => this.createAndLinkProject(uri),
         unlinkProject: (uri) => this.unlinkProject(uri),
         deploy: (uri) => this.deploy(uri),
       },
