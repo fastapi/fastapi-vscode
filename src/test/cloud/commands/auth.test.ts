@@ -1,8 +1,8 @@
 import * as assert from "node:assert"
 import sinon from "sinon"
-import * as vscode from "vscode"
 import { signOut } from "../../../cloud/commands/auth"
 import type { AuthProvider } from "../../../cloud/types"
+import { ui } from "../../../cloud/ui/dialogs"
 
 suite("cloud/commands/auth", () => {
   teardown(() => sinon.restore())
@@ -13,9 +13,7 @@ suite("cloud/commands/auth", () => {
         signOut: sinon.stub().resolves(),
       } as unknown as AuthProvider
 
-      sinon
-        .stub(vscode.window, "showWarningMessage")
-        .resolves("Sign Out" as any)
+      sinon.stub(ui, "showWarningMessage").resolves("Sign Out")
 
       const result = await signOut(authProvider)
 
@@ -28,7 +26,7 @@ suite("cloud/commands/auth", () => {
         signOut: sinon.stub().resolves(),
       } as unknown as AuthProvider
 
-      sinon.stub(vscode.window, "showWarningMessage").resolves(undefined as any)
+      sinon.stub(ui, "showWarningMessage").resolves(undefined)
 
       const result = await signOut(authProvider)
 

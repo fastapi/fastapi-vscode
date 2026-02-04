@@ -6,6 +6,7 @@ import {
 import { ApiService } from "../api"
 import { AUTH_PROVIDER_ID } from "../auth"
 import type { WorkspaceState } from "../types"
+import { ui } from "./dialogs"
 
 export interface MenuActions {
   signOut: () => Promise<void>
@@ -41,7 +42,7 @@ export class MenuHandler {
 
     const activeFolder = this.getActiveWorkspaceFolder()
     if (!activeFolder) {
-      vscode.window.showErrorMessage("No workspace folder open")
+      ui.showErrorMessage("No workspace folder open")
       return
     }
 
@@ -74,7 +75,7 @@ export class MenuHandler {
       },
     ]
 
-    const selected = await vscode.window.showQuickPick(items, {
+    const selected = await ui.showQuickPick(items, {
       placeHolder: "Set up FastAPI Cloud",
     })
 
@@ -110,7 +111,7 @@ export class MenuHandler {
       { label: "$(ellipsis) More", id: "more" },
     ]
 
-    const selected = await vscode.window.showQuickPick(items, {
+    const selected = await ui.showQuickPick(items, {
       placeHolder: app.slug,
     })
 
@@ -150,7 +151,7 @@ export class MenuHandler {
       },
     ]
 
-    const selected = await vscode.window.showQuickPick(items, {
+    const selected = await ui.showQuickPick(items, {
       placeHolder: "More options",
     })
 

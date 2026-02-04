@@ -9,24 +9,27 @@ import type { ApiService } from "../api"
 import { AUTH_PROVIDER_ID } from "../auth"
 import type { ConfigService } from "../config"
 import {
+  type App,
   type Config,
   type Deployment,
   DeploymentStatus,
   failedStatuses,
   statusMessages,
 } from "../types"
-import { createOrLinkApp } from "../ui/pickers"
+import { ui } from "../ui/dialogs"
+import { createNewApp, pickExistingApp, pickTeam } from "../ui/pickers"
 
 // Exclusion patterns - aligned with fastapi-cloud-cli
 // See: https://github.com/fastapilabs/fastapi-cloud-cli/blob/main/src/fastapi_cloud_cli/commands/deploy.py
-const EXCLUDE_DIRS = new Set([
+const EXCLUDE_PARTS = [
   ".venv",
   "__pycache__",
   ".mypy_cache",
   ".pytest_cache",
   ".git",
-])
-const EXCLUDE_FILES = new Set([".gitignore", ".fastapicloudignore"])
+  ".gitignore",
+  ".fastapicloudignore",
+]
 
 // 300 attempts x 2 seconds = 10 minutes maximum
 const MAX_POLL_ATTEMPTS = 300
@@ -34,16 +37,19 @@ const DEPLOYMENT_POLL_INTERVAL_MS = 2000
 
 export function shouldExclude(relativePath: string): boolean {
   const parts = relativePath.split("/")
-  const fileName = parts[parts.length - 1]
 
-  // Check if any path component is in exclude list
-  for (const part of parts) {
-    if (EXCLUDE_DIRS.has(part)) return true
+  if (parts.some((part) => EXCLUDE_PARTS.includes(part))) {
+    return true
   }
 
-  // Check file-level exclusions
-  if (EXCLUDE_FILES.has(fileName)) return true
-  if (fileName.endsWith(".pyc")) return true
+  if (relativePath.endsWith(".pyc")) {
+    return true
+  }
+
+  const fileName = parts[parts.length - 1]
+  if (fileName === ".env" || fileName.startsWith(".env.")) {
+    return true
+  }
 
   return false
 }
@@ -59,7 +65,7 @@ export async function deploy(context: DeployContext): Promise<boolean> {
   const { workspaceRoot, configService, apiService, statusBarItem } = context
 
   if (!workspaceRoot) {
-    vscode.window.showErrorMessage("No workspace folder open")
+    ui.showErrorMessage("No workspace folder open")
     return false
   }
 
@@ -71,7 +77,7 @@ export async function deploy(context: DeployContext): Promise<boolean> {
     silent: true,
   })
   if (!session) {
-    const result = await vscode.window.showErrorMessage(
+    const result = await ui.showErrorMessage(
       "Please sign in to FastAPI Cloud first.",
       "Sign In",
     )
@@ -84,11 +90,38 @@ export async function deploy(context: DeployContext): Promise<boolean> {
   const existingConfig = await configService.getConfig(workspaceRoot)
   const config: Config = existingConfig ?? { app_id: "", team_id: "" }
   if (!config.app_id) {
-    const app = await createOrLinkApp(apiService, workspaceRoot)
+    const team = await pickTeam(apiService)
+    if (!team) return false
+
+    const choice = await ui.showQuickPick(
+      [
+        {
+          label: "$(link) Link Existing App",
+          description: "Connect to an app on FastAPI Cloud",
+          id: "link",
+        },
+        {
+          label: "$(add) Create New App",
+          description: "Create a new app and link it",
+          id: "create",
+        },
+      ],
+      { placeHolder: "Set up FastAPI Cloud" },
+    )
+    if (!choice) return false
+
+    let app: App | null
+    if (choice.id === "create") {
+      const folderName = workspaceRoot.path.split("/").pop() || "my-app"
+      app = await createNewApp(apiService, team, folderName)
+    } else {
+      app = await pickExistingApp(apiService, team)
+    }
     if (!app) return false
-    config.app_id = app.app.id
-    config.team_id = app.team.id
-    config.app_slug = app.app.slug
+
+    config.app_id = app.id
+    config.team_id = team.id
+    config.app_slug = app.slug
     await configService.writeConfig(workspaceRoot, config)
   }
 
@@ -116,7 +149,7 @@ export async function deploy(context: DeployContext): Promise<boolean> {
     )
 
     if (result) {
-      const action = await vscode.window.showInformationMessage(
+      const action = await ui.showInformationMessage(
         "Deployed successfully!",
         "Open App",
         "View Dashboard",

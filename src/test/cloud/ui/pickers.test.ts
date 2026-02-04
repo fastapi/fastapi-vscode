@@ -2,6 +2,7 @@ import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
 import type { App, Team } from "../../../cloud/types"
+import { ui } from "../../../cloud/ui/dialogs"
 import {
   createNewApp,
   pickExistingApp,
@@ -44,7 +45,7 @@ suite("cloud/ui/pickers", () => {
       })
 
       sinon
-        .stub(vscode.window, "showQuickPick")
+        .stub(ui, "showQuickPick")
         .resolves({ label: team1.name, team: team1 } as any)
 
       const result = await pickTeam(api)
@@ -54,7 +55,7 @@ suite("cloud/ui/pickers", () => {
 
     test("returns null when no teams", async () => {
       const api = mockApiService()
-      const errorStub = sinon.stub(vscode.window, "showErrorMessage")
+      const errorStub = sinon.stub(ui, "showErrorMessage")
 
       const result = await pickTeam(api)
 
@@ -66,7 +67,7 @@ suite("cloud/ui/pickers", () => {
       const api = mockApiService({
         getTeams: sinon.stub().rejects(new Error("Network error")),
       })
-      const errorStub = sinon.stub(vscode.window, "showErrorMessage")
+      const errorStub = sinon.stub(ui, "showErrorMessage")
 
       const result = await pickTeam(api)
 
@@ -79,7 +80,7 @@ suite("cloud/ui/pickers", () => {
         getTeams: sinon.stub().resolves([team1, team2]),
       })
 
-      sinon.stub(vscode.window, "showQuickPick").resolves(undefined)
+      sinon.stub(ui, "showQuickPick").resolves(undefined)
 
       const result = await pickTeam(api)
 
@@ -104,7 +105,7 @@ suite("cloud/ui/pickers", () => {
 
     test("returns null when no apps", async () => {
       const api = mockApiService()
-      const errorStub = sinon.stub(vscode.window, "showErrorMessage")
+      const errorStub = sinon.stub(ui, "showErrorMessage")
 
       const result = await pickExistingApp(api, team1)
 
@@ -116,7 +117,7 @@ suite("cloud/ui/pickers", () => {
       const api = mockApiService({
         getApps: sinon.stub().rejects(new Error("Network error")),
       })
-      const errorStub = sinon.stub(vscode.window, "showErrorMessage")
+      const errorStub = sinon.stub(ui, "showErrorMessage")
 
       const result = await pickExistingApp(api, team1)
 
@@ -129,7 +130,7 @@ suite("cloud/ui/pickers", () => {
         getApps: sinon.stub().resolves([app1]),
       })
 
-      sinon.stub(vscode.window, "showQuickPick").resolves(undefined)
+      sinon.stub(ui, "showQuickPick").resolves(undefined)
 
       const result = await pickExistingApp(api, team1)
 
@@ -145,7 +146,7 @@ suite("cloud/ui/pickers", () => {
       })
 
       sinon.stub(vscode.window, "showInputBox").resolves("my-app")
-      const infoStub = sinon.stub(vscode.window, "showInformationMessage")
+      const infoStub = sinon.stub(ui, "showInformationMessage")
 
       const result = await createNewApp(api, team1, "default-name")
 
@@ -195,7 +196,7 @@ suite("cloud/ui/pickers", () => {
       })
 
       sinon.stub(vscode.window, "showInputBox").resolves("my-app")
-      const errorStub = sinon.stub(vscode.window, "showErrorMessage")
+      const errorStub = sinon.stub(ui, "showErrorMessage")
 
       const result = await createNewApp(api, team1, "default-name")
 

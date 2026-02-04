@@ -163,9 +163,10 @@ export function mockApiService(overrides?: Partial<ApiService>) {
     createApp: sinon.stub(),
     getApp: sinon.stub(),
     getTeam: sinon.stub(),
-    getPresignedUpload: sinon.stub(),
     createDeployment: sinon.stub(),
-    getDeploymentStatus: sinon.stub(),
+    getUploadUrl: sinon.stub(),
+    completeUpload: sinon.stub(),
+    getDeployment: sinon.stub(),
     ...overrides,
   } as unknown as sinon.SinonStubbedInstance<ApiService>
 }

@@ -2,6 +2,7 @@ import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
 import type { WorkspaceState } from "../../../cloud/types"
+import { ui } from "../../../cloud/ui/dialogs"
 import { type MenuActions, MenuHandler } from "../../../cloud/ui/menus"
 
 const mockSession = {
@@ -62,7 +63,7 @@ suite("cloud/ui/menus", () => {
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      const errorStub = sinon.stub(vscode.window, "showErrorMessage")
+      const errorStub = sinon.stub(ui, "showErrorMessage")
 
       await handler.showMenu()
 
@@ -178,7 +179,7 @@ suite("cloud/ui/menus", () => {
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      sinon.stub(vscode.window, "showQuickPick").resolves({ id: "link" } as any)
+      sinon.stub(ui, "showQuickPick").resolves({ id: "link" } as any)
 
       await handler.showMenu()
 
@@ -219,7 +220,7 @@ suite("cloud/ui/menus", () => {
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      sinon.stub(vscode.window, "showQuickPick").resolves({ id: "open" } as any)
+      sinon.stub(ui, "showQuickPick").resolves({ id: "open" } as any)
       const openStub = sinon.stub(vscode.env, "openExternal")
 
       await handler.showMenu()
@@ -272,7 +273,7 @@ suite("cloud/ui/menus", () => {
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
+      const quickPickStub = sinon.stub(ui, "showQuickPick")
       // First call: main menu selects "more"
       quickPickStub.onFirstCall().resolves({ id: "more" } as any)
       // Second call: more menu
@@ -303,7 +304,7 @@ suite("cloud/ui/menus", () => {
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
+      const quickPickStub = sinon.stub(ui, "showQuickPick")
       quickPickStub.onFirstCall().resolves({ id: "more" } as any)
       quickPickStub.onSecondCall().resolves({ id: "unlink" } as any)
 
@@ -327,7 +328,7 @@ suite("cloud/ui/menus", () => {
       sinon
         .stub(vscode.authentication, "getSession")
         .resolves(mockSession as any)
-      const quickPickStub = sinon.stub(vscode.window, "showQuickPick")
+      const quickPickStub = sinon.stub(ui, "showQuickPick")
       quickPickStub.onFirstCall().resolves({ id: "more" } as any)
       quickPickStub.onSecondCall().resolves({ id: "signout" } as any)
 

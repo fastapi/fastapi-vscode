@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { ApiService } from "../api"
 import type { App, Team } from "../types"
+import { ui } from "./dialogs"
 
 /**
  * Shows a quick pick to select a team. Auto-selects if only one team.
@@ -14,12 +15,12 @@ export async function pickTeam(apiService: ApiService): Promise<Team | null> {
       error instanceof Error && error.message === "Not authenticated"
         ? "Please sign in to FastAPI Cloud first."
         : "Failed to fetch teams. Please check your connection."
-    vscode.window.showErrorMessage(message)
+    ui.showErrorMessage(message)
     return null
   }
 
   if (teams.length === 0) {
-    vscode.window.showErrorMessage(
+    ui.showErrorMessage(
       "No teams found. Please create a team on FastAPI Cloud first.",
     )
     return null
@@ -30,7 +31,7 @@ export async function pickTeam(apiService: ApiService): Promise<Team | null> {
   }
 
   const teamItems = teams.map((t) => ({ label: t.name, team: t }))
-  const picked = await vscode.window.showQuickPick(teamItems, {
+  const picked = await ui.showQuickPick(teamItems, {
     placeHolder: "Select a team",
   })
 
@@ -48,14 +49,12 @@ export async function pickExistingApp(
   try {
     apps = await apiService.getApps(team.id)
   } catch {
-    vscode.window.showErrorMessage(
-      "Failed to fetch apps. Please check your connection.",
-    )
+    ui.showErrorMessage("Failed to fetch apps. Please check your connection.")
     return null
   }
 
   if (apps.length === 0) {
-    vscode.window.showErrorMessage(
+    ui.showErrorMessage(
       "No apps found for this team. Please create an app on FastAPI Cloud first.",
     )
     return null
@@ -66,7 +65,7 @@ export async function pickExistingApp(
     description: a.url,
     app: a,
   }))
-  const picked = await vscode.window.showQuickPick(appItems, {
+  const picked = await ui.showQuickPick(appItems, {
     placeHolder: "Select an app",
   })
 
@@ -97,48 +96,12 @@ export async function createNewApp(
 
   try {
     const app = await apiService.createApp(team.id, appName)
-    vscode.window.showInformationMessage(`Created app: ${app.slug}`)
+    ui.showInformationMessage(`Created app: ${app.slug}`)
     return app
   } catch (error) {
-    vscode.window.showErrorMessage(
+    ui.showErrorMessage(
       `Failed to create app: ${error instanceof Error ? error.message : "Unknown error"}`,
     )
     return null
   }
-}
-
-/**
- * Shows picker to create or link an app for deployment.
- */
-export async function createOrLinkApp(
-  apiService: ApiService,
-  workspaceRoot: vscode.Uri,
-): Promise<{ app: App; team: Team } | null> {
-  const team = await pickTeam(apiService)
-  if (!team) return null
-
-  const choice = await vscode.window.showQuickPick([
-    {
-      label: "$(link) Link Existing App",
-      description: "Connect to an app on FastAPI Cloud",
-      id: "link",
-    },
-    {
-      label: "$(add) Create New App",
-      description: "Create a new app and link it",
-      id: "create",
-    },
-  ])
-
-  if (!choice) return null
-
-  let app: App | null = null
-  if (choice.id === "create") {
-    const folderName = workspaceRoot.path.split("/").pop() || "my-app"
-    app = await createNewApp(apiService, team, folderName)
-  } else if (choice.id === "link") {
-    app = await pickExistingApp(apiService, team)
-  }
-  if (!app) return null
-  return { app, team }
 }
