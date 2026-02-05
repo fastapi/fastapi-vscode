@@ -173,7 +173,7 @@ export async function deploy(context: DeployContext): Promise<boolean> {
       "View Logs",
     )
     if (action === "View Logs") {
-      vscode.commands.executeCommand("fastapi-vscode.viewLogs")
+      vscode.commands.executeCommand("fastapi-vscode.viewLogs") //TODO: Wire this up
     }
     return false
   } catch (error) {
