@@ -225,7 +225,7 @@ async function uploadToS3(
     formData.append(key, value)
   }
 
-  formData.append("file", new Blob([archive]))
+  formData.append("file", new Blob([archive.slice().buffer]))
 
   const response = await fetch(url, {
     method: "POST",

@@ -220,6 +220,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const apiService = new ApiService()
 
     const logsViewProvider = new LogsViewProvider(
+      context.extensionUri,
       configService,
       apiService,
       getActiveWorkspaceFolder,
