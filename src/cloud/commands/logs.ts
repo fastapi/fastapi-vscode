@@ -99,7 +99,7 @@ export function getWebviewHtml(
 <html>
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource};">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' ${webview.cspSource}; script-src ${webview.cspSource};">
 <link rel="stylesheet" href="${stylesUri}">
 </head>
 <body>
@@ -229,7 +229,19 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
         follow: true,
         signal,
       })
+
+      // If no entries arrive quickly, update status so user knows we're connected
+      const connectedTimer = setTimeout(() => {
+        if (count === 0 && this.view && !signal.aborted) {
+          this.view.webview.postMessage({
+            type: "status",
+            text: "Connected. Waiting for new logs...",
+          })
+        }
+      }, 2000)
+
       for await (const entry of logStream) {
+        if (count === 0) clearTimeout(connectedTimer)
         if (!this.view) return
         count++
         this.view.webview.postMessage({
@@ -237,6 +249,7 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
           html: formatLogEntry(entry),
         })
       }
+      clearTimeout(connectedTimer)
       if (count === 0) {
         this.view?.webview.postMessage({
           type: "status",
