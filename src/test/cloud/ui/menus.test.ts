@@ -24,6 +24,7 @@ function createMenuHandler(
     signOut: sinon.stub().resolves(),
     unlinkProject: sinon.stub().resolves(),
     deploy: sinon.stub().resolves(),
+    viewLogs: sinon.stub().resolves(),
   }
 
   const handler = new MenuHandler(getState, getActiveWorkspaceFolder, actions)
@@ -82,7 +83,7 @@ suite("cloud/ui/menus", () => {
       assert.ok((actions.deploy as sinon.SinonStub).calledOnce)
     })
 
-    test("calls deploy when refreshing", async () => {
+    test("does nothing when refreshing", async () => {
       const { handler, actions } = createMenuHandler(() => ({
         status: "refreshing",
       }))
@@ -93,7 +94,7 @@ suite("cloud/ui/menus", () => {
 
       await handler.showMenu()
 
-      assert.ok((actions.deploy as sinon.SinonStub).calledOnce)
+      assert.ok((actions.deploy as sinon.SinonStub).notCalled)
     })
 
     test("calls deploy when app not found", async () => {
@@ -151,6 +152,30 @@ suite("cloud/ui/menus", () => {
       assert.ok(items.some((i) => i.id === "open"))
       assert.ok(items.some((i) => i.id === "dashboard"))
       assert.ok(items.some((i) => i.id === "more"))
+    })
+
+    test("opens logs panel when view logs selected", async () => {
+      const { handler, actions } = createMenuHandler(() => ({
+        status: "linked",
+        app: {
+          id: "a1",
+          slug: "test-app",
+          url: "https://test-app.example.com",
+          team_id: "t1",
+        },
+        team: { id: "t1", name: "Test Team", slug: "test-team" },
+      }))
+
+      sinon
+        .stub(vscode.authentication, "getSession")
+        .resolves(mockSession as any)
+      sinon
+        .stub(vscode.window, "showQuickPick")
+        .resolves({ id: "viewLogs" } as any)
+
+      await handler.showMenu()
+
+      assert.ok((actions.viewLogs as sinon.SinonStub).calledOnce)
     })
   })
 

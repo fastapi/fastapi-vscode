@@ -12,6 +12,7 @@ export interface MenuActions {
   signOut: () => Promise<void>
   unlinkProject: (uri: vscode.Uri) => Promise<void>
   deploy: (uri: vscode.Uri) => Promise<void>
+  viewLogs: () => Promise<void>
 }
 
 /**
@@ -48,7 +49,6 @@ export class MenuHandler {
 
     switch (state.status) {
       case "not_configured":
-      case "refreshing":
       case "not_found":
       case "error":
         // Deploy handles the create/link flow if needed
@@ -73,6 +73,11 @@ export class MenuHandler {
         id: "deploy",
       },
       {
+        label: "$(output) Open Application Logs",
+        description: "View and stream application logs",
+        id: "viewLogs",
+      },
+      {
         label: "$(globe) Open App",
         description: app.url,
         id: "open",
@@ -93,6 +98,9 @@ export class MenuHandler {
       switch (selected.id) {
         case "deploy":
           await this.actions.deploy(workspaceRoot)
+          break
+        case "viewLogs":
+          await this.actions.viewLogs()
           break
         case "open":
           vscode.env.openExternal(vscode.Uri.parse(app.url))

@@ -8,6 +8,7 @@ import type { ApiService } from "./api"
 import { AUTH_PROVIDER_ID } from "./auth"
 import { signOut } from "./commands/auth"
 import { deploy } from "./commands/deploy"
+import { LOGS_VIEW_ID, type LogsViewProvider } from "./commands/logs"
 import {
   createAndLinkProject,
   linkProject,
@@ -17,6 +18,19 @@ import type { ConfigService } from "./config"
 import type { AuthProvider, WorkspaceState } from "./types"
 import { MenuHandler } from "./ui/menus"
 import { StatusBarManager } from "./ui/statusBar"
+
+export function getActiveWorkspaceFolder(): vscode.Uri | null {
+  const activeEditor = vscode.window.activeTextEditor
+  if (activeEditor) {
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(
+      activeEditor.document.uri,
+    )
+    if (workspaceFolder) {
+      return workspaceFolder.uri
+    }
+  }
+  return vscode.workspace.workspaceFolders?.[0]?.uri ?? null
+}
 
 export class CloudController {
   private workspaceStates = new Map<string, WorkspaceState>()
@@ -31,6 +45,7 @@ export class CloudController {
     authProvider: AuthProvider,
     private configService: ConfigService,
     private apiService: ApiService,
+    private logsViewProvider: LogsViewProvider,
     statusBarItem: vscode.StatusBarItem,
   ) {
     this.authProvider = authProvider
@@ -39,16 +54,17 @@ export class CloudController {
     this.statusBarManager = new StatusBarManager(
       statusBarItem,
       (uri) => this.getState(uri),
-      () => this.getActiveWorkspaceFolder(),
+      () => getActiveWorkspaceFolder(),
     )
 
     this.menuHandler = new MenuHandler(
       (uri) => this.getState(uri),
-      () => this.getActiveWorkspaceFolder(),
+      () => getActiveWorkspaceFolder(),
       {
         signOut: () => this.signOut(),
         unlinkProject: (uri) => this.unlinkProject(uri),
         deploy: (uri) => this.deploy(uri),
+        viewLogs: () => this.viewLogs(),
       },
     )
   }
@@ -64,21 +80,6 @@ export class CloudController {
 
   private deleteState(uri: vscode.Uri): void {
     this.workspaceStates.delete(uri.toString())
-  }
-
-  private getActiveWorkspaceFolder(): vscode.Uri | null {
-    const activeEditor = vscode.window.activeTextEditor
-    if (activeEditor) {
-      const workspaceFolder = vscode.workspace.getWorkspaceFolder(
-        activeEditor.document.uri,
-      )
-      if (workspaceFolder) {
-        return workspaceFolder.uri
-      }
-    }
-
-    // Fallback to first workspace folder
-    return vscode.workspace.workspaceFolders?.[0]?.uri ?? null
   }
 
   showStatusBar(): void {
@@ -272,8 +273,12 @@ export class CloudController {
     }
   }
 
+  async viewLogs(): Promise<void> {
+    await vscode.commands.executeCommand(`${LOGS_VIEW_ID}.focus`)
+  }
+
   async deploy(workspaceRoot?: vscode.Uri): Promise<void> {
-    const root = workspaceRoot ?? this.getActiveWorkspaceFolder()
+    const root = workspaceRoot ?? getActiveWorkspaceFolder()
 
     const success = await deploy({
       workspaceRoot: root,
@@ -293,5 +298,6 @@ export class CloudController {
   dispose(): void {
     this.sessionListener?.dispose()
     this.statusBarManager.dispose()
+    this.logsViewProvider.dispose()
   }
 }

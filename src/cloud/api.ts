@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { getExtensionVersion } from "../extension"
+import { log } from "../utils/logger"
 import { AUTH_PROVIDER_ID } from "./auth"
 import type {
   App,
@@ -16,6 +17,19 @@ export const DASHBOARD_URL = "https://dashboard.fastapicloud.com"
 function getUserAgentHeaders(): Record<string, string> {
   if (vscode.env.uiKind === vscode.UIKind.Web) return {}
   return { "User-Agent": `fastapi-vscode/${getExtensionVersion()}` }
+}
+
+export interface AppLogEntry {
+  timestamp: string
+  message: string
+  level: string
+}
+
+export class StreamLogError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "StreamLogError"
+  }
 }
 
 export class ApiService {
@@ -124,6 +138,88 @@ export class ApiService {
     return this.request<Deployment>(
       `/apps/${appId}/deployments/${deploymentId}/`,
     )
+  }
+
+  async *streamAppLogs(options: {
+    appId: string
+    tail: number
+    since: string
+    follow: boolean
+    signal?: AbortSignal
+  }): AsyncGenerator<AppLogEntry> {
+    const { appId, tail, since, follow, signal } = options
+    const session = await vscode.authentication.getSession(
+      AUTH_PROVIDER_ID,
+      [],
+      { silent: true },
+    )
+    if (!session) {
+      throw new Error("Not authenticated")
+    }
+
+    const params = new URLSearchParams({
+      tail: String(tail),
+      since,
+      follow: String(follow),
+    })
+    const response = await fetch(
+      `${BASE_URL}/apps/${appId}/logs/stream?${params}`,
+      {
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          ...getUserAgentHeaders(),
+        },
+        signal,
+      },
+    )
+
+    if (!response.ok || !response.body) {
+      throw new Error(
+        `Failed to stream logs: ${response.status} ${response.statusText}`,
+      )
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ""
+
+    try {
+      while (true) {
+        if (signal?.aborted) return
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop()! // last element may be incomplete
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+
+          let data: Record<string, unknown>
+          try {
+            data = JSON.parse(line)
+          } catch {
+            log(`Failed to parse log line: ${line}`)
+            continue
+          }
+
+          if (data.type === "heartbeat") continue
+
+          if (data.type === "error") {
+            throw new StreamLogError(
+              (data.message as string) ?? "Unknown error",
+            )
+          }
+          if (data.timestamp && data.message && data.level) {
+            yield data as unknown as AppLogEntry
+          } else {
+            log(`Unexpected log entry format: ${line}`)
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
   }
 
   static async requestDeviceCode(clientId: string): Promise<{
