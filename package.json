@@ -99,7 +99,7 @@
       },
       {
         "command": "fastapi-vscode.viewLogs",
-        "title": "Open Application Logs",
+        "title": "Stream Application Logs",
         "category": "FastAPI Cloud"
       }
     ],

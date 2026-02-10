@@ -73,7 +73,7 @@ export class MenuHandler {
         id: "deploy",
       },
       {
-        label: "$(output) Open Application Logs",
+        label: "$(output) Stream Application Logs",
         description: "View and stream application logs",
         id: "viewLogs",
       },
