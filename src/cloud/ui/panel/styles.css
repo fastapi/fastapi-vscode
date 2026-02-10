@@ -15,11 +15,6 @@ body {
   background: var(--vscode-editor-background);
 }
 
-#logs {
-  font-family: var(--vscode-editor-font-family, "Menlo", "Consolas", monospace);
-  font-size: var(--vscode-editor-font-size, 13px);
-}
-
 .toolbar {
   position: sticky;
   top: 0;
@@ -106,6 +101,10 @@ body {
   fill: var(--vscode-foreground);
 }
 
+.filter-wrapper {
+  position: relative;
+}
+
 .filter-popup {
   display: none;
   position: absolute;
@@ -171,6 +170,7 @@ body {
   border-radius: 3px;
   font-size: 0.8em;
   background: var(--vscode-button-secondaryBackground, #3c3c3c);
+  color: var(--vscode-button-secondaryForeground, #fff);
   opacity: 0.6;
 }
 
@@ -224,6 +224,8 @@ body {
 }
 
 #logs {
+  font-family: var(--vscode-editor-font-family, "Menlo", "Consolas", monospace);
+  font-size: var(--vscode-editor-font-size, 13px);
   white-space: pre-wrap;
   word-break: break-word;
   padding: 4px 8px;

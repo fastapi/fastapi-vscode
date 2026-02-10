@@ -118,17 +118,17 @@ export function getWebviewHtml(
 <body>
 <div class="toolbar">
     <select id="since-filter">${getSinceOptionsHtml()}</select>
-    <div style="position: relative;">
+    <div class="filter-wrapper">
         <button class="secondary-btn" id="filter-btn" title="Filter displayed logs">Filter <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M4 6l4 4 4-4z"/></svg></button>
         <div class="filter-popup" id="filter-popup">
             <div class="filter-row">
-                <label>Log Level</label>
+                <label for="level-list">Log Level</label>
                 <div class="level-list" id="level-list">
 ${getLevelChipsHtml()}
                 </div>
             </div>
             <div class="filter-row">
-                <label>Search</label>
+                <label for="search-input">Search</label>
                 <input id="search-input" type="text" placeholder="Filter text..." />
             </div>
             <div class="filter-hint">Filters apply to displayed logs</div>
