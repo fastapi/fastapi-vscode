@@ -3,7 +3,6 @@ import { log } from "../../utils/logger"
 import { trackCloudLogsOpened } from "../../utils/telemetry"
 import { type ApiService, type AppLogEntry, StreamLogError } from "../api"
 import type { ConfigService } from "../config"
-import { pickWorkspaceFolder } from "../ui/pickers"
 
 const DEFAULT_TAIL = 100
 export const LOGS_VIEW_ID = "fastapi-cloud-logs"
@@ -87,7 +86,7 @@ export function formatLogEntry(entry: AppLogEntry): string {
 function getLevelChipsHtml(): string {
   return FILTER_CHIPS.map(
     ({ level, label }) =>
-      `                    <div class="level-item" data-level="${level}"><span>${label}</span><span class="check">✓</span></div>`,
+      `<div class="level-item" data-level="${level}"><span>${label}</span><span class="check">✓</span></div>`,
   ).join("\n")
 }
 
@@ -125,7 +124,7 @@ export function getWebviewHtml(
             <div class="filter-row">
                 <label for="level-list">Log Level</label>
                 <div class="level-list" id="level-list">
-${getLevelChipsHtml()}
+                  ${getLevelChipsHtml()}
                 </div>
             </div>
             <div class="filter-row">
@@ -145,8 +144,6 @@ ${getLevelChipsHtml()}
 </body>
 </html>`
 }
-
-// --- Provider ---
 
 export class LogsViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined
@@ -211,20 +208,13 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
       if (config?.app_id) return activeFolder
     }
 
-    // Check which folders have linked configs
-    const configuredUris: vscode.Uri[] = []
+    // Active folder not linked — use the first configured folder
     for (const folder of workspaceFolders) {
       const config = await this.configService.getConfig(folder.uri)
-      if (config?.app_id) configuredUris.push(folder.uri)
+      if (config?.app_id) return folder.uri
     }
 
-    if (configuredUris.length === 0) return activeFolder
-    if (configuredUris.length === 1) return configuredUris[0]
-
-    // Multiple linked folders — let the user pick
-    return pickWorkspaceFolder("Select workspace to stream logs from", (uri) =>
-      configuredUris.some((u) => u.toString() === uri.toString()),
-    )
+    return activeFolder
   }
 
   async streamLogs(options?: { since?: string; tail?: number }): Promise<void> {

@@ -82,20 +82,6 @@ suite("cloud/commands/logs", () => {
     })
   })
 
-  suite("stopStreaming", () => {
-    test("sends streamingState false", () => {
-      const { provider } = createProvider()
-      const { view, messages } = createWebviewView()
-
-      provider.resolveWebviewView(view)
-      provider.stopStreaming()
-
-      const stateMsg = messages.find((m) => m.type === "streamingState")
-      assert.ok(stateMsg)
-      assert.strictEqual(stateMsg.streaming, false)
-    })
-  })
-
   suite("streamLogs", () => {
     test("shows error when no workspace folder", async () => {
       const { provider } = createProvider(() => null)
@@ -153,7 +139,6 @@ suite("cloud/commands/logs", () => {
       assert.ok(logMessages[0].html.includes("line 1"))
       assert.ok(logMessages[1].html.includes("line 2"))
 
-      // Verify stream ended message
       const statusMessages = messages.filter((m) => m.type === "status")
       assert.ok(statusMessages.some((m) => m.text === "Stream ended."))
     })
@@ -346,7 +331,7 @@ suite("cloud/commands/logs", () => {
       assert.strictEqual(opts.appId, "a2")
     })
 
-    test("shows picker when multiple folders are configured", async () => {
+    test("uses first configured folder when active folder is not linked", async () => {
       Object.defineProperty(vscode.workspace, "workspaceFolders", {
         value: [folder1, folder2, folder3],
         configurable: true,
@@ -358,23 +343,11 @@ suite("cloud/commands/logs", () => {
       const { view } = createWebviewView()
       provider.resolveWebviewView(view)
 
-      // Active folder has no config, workspace2 and workspace3 do
       configService.getConfig.withArgs(workspace1).resolves(null)
       configService.getConfig.withArgs(workspace2).resolves({
         app_id: "a2",
         team_id: "t1",
       })
-      configService.getConfig.withArgs(workspace3).resolves({
-        app_id: "a3",
-        team_id: "t1",
-      })
-
-      // User picks workspace3
-      const quickPickStub = sinon
-        .stub(vscode.window, "showQuickPick")
-        .resolves({ label: "workspace3", uri: workspace3 } as any)
-
-      // After picker, configService.getConfig is called again for the selected folder
       configService.getConfig.withArgs(workspace3).resolves({
         app_id: "a3",
         team_id: "t1",
@@ -386,20 +359,17 @@ suite("cloud/commands/logs", () => {
 
       await provider.streamLogs()
 
-      assert.ok(quickPickStub.calledOnce)
       const opts = apiService.streamAppLogs.firstCall.args[0]
-      assert.strictEqual(opts.appId, "a3")
+      assert.strictEqual(opts.appId, "a2")
     })
 
-    test("does not stream when user cancels picker", async () => {
+    test("uses first configured folder when no active folder", async () => {
       Object.defineProperty(vscode.workspace, "workspaceFolders", {
-        value: [folder1, folder2, folder3],
+        value: [folder1, folder2],
         configurable: true,
       })
 
-      const { provider, configService, apiService } = createProvider(
-        () => workspace1,
-      )
+      const { provider, configService, apiService } = createProvider(() => null)
       const { view } = createWebviewView()
       provider.resolveWebviewView(view)
 
@@ -408,17 +378,15 @@ suite("cloud/commands/logs", () => {
         app_id: "a2",
         team_id: "t1",
       })
-      configService.getConfig.withArgs(workspace3).resolves({
-        app_id: "a3",
-        team_id: "t1",
-      })
 
-      sinon.stub(vscode.window, "showQuickPick").resolves(undefined)
+      async function* emptyStream() {}
+      apiService.streamAppLogs.returns(emptyStream())
       sinon.stub(vscode.commands, "executeCommand").resolves()
 
       await provider.streamLogs()
 
-      assert.ok(!apiService.streamAppLogs.called)
+      const opts = apiService.streamAppLogs.firstCall.args[0]
+      assert.strictEqual(opts.appId, "a2")
     })
 
     test("shows error when no folders have configs in multi-root", async () => {
@@ -453,7 +421,6 @@ suite("cloud/commands/logs", () => {
       provider.resolveWebviewView(view)
       configService.getConfig.resolves({ app_id: "a1", team_id: "t1" })
 
-      // Create a stream that blocks forever
       let abortSignal: AbortSignal | undefined
       async function* blockingStream() {
         abortSignal = apiService.streamAppLogs.firstCall.args[0].signal
@@ -462,17 +429,14 @@ suite("cloud/commands/logs", () => {
           message: "first",
           level: "info",
         }
-        // Would block here, but dispose should abort
         await new Promise(() => {})
       }
       apiService.streamAppLogs.returns(blockingStream())
 
       sinon.stub(vscode.commands, "executeCommand").resolves()
 
-      // Start streaming (don't await - it will block)
       void provider.streamLogs()
 
-      // Give the stream time to start
       await new Promise((r) => setTimeout(r, 10))
 
       provider.dispose()

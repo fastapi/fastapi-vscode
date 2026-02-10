@@ -28,7 +28,7 @@ export default defineConfig({
       "**/appDiscovery.js",
       "**/vscodeFileSystem.js",
       "**/telemetry/vscode.js",
-      "**/webview/logs/webview.js",
+      "**/cloud/ui/panel/webview.js",
     ],
     reporter: ["text", "html", "json-summary"],
     output: "./coverage",

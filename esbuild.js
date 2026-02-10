@@ -50,9 +50,7 @@ async function main() {
 
   const testEntryPoints = !production ? globSync("src/test/**/*.test.ts") : []
   const sourceEntryPoints = noBundleForCoverage
-    ? globSync("src/**/*.ts").filter(
-        (f) => f !== "src/cloud/ui/panel/webview.ts",
-      )
+    ? globSync("src/**/*.ts")
     : ["src/extension.ts"]
 
   // Shared esbuild options
