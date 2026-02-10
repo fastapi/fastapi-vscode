@@ -30,6 +30,12 @@ Deploy your application directly to [FastAPI Cloud](https://fastapicloud.com/) f
 
 ![Deploy GIF](media/walkthrough/deploy.gif)
 
+### View FastAPI Cloud application logs
+
+View real-time logs from your FastAPI Cloud deployed applications directly within VS Code, with support for filtering by log level and text search.
+
+![Logs GIF](media/walkthrough/logs.gif)
+
 ## Settings and customization
 
 | Setting | Description | Default |

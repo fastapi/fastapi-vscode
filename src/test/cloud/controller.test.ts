@@ -24,20 +24,37 @@ const mockSession = {
   scopes: [],
 } as vscode.AuthenticationSession
 
+function createLogsViewProviderStub() {
+  return {
+    resolveWebviewView: sinon.stub(),
+    streamLogs: sinon.stub().resolves(),
+    dispose: sinon.stub(),
+  }
+}
+
 function createController() {
   const statusBar = createStatusBarStub()
   const authProvider = { signOut: sinon.stub().resolves() }
   const configService = new ConfigService()
   const apiService = new ApiService()
+  const logsViewProvider = createLogsViewProviderStub()
 
   const controller = new CloudController(
     authProvider,
     configService,
     apiService,
+    logsViewProvider as any,
     statusBar,
   )
 
-  return { controller, authProvider, configService, apiService, statusBar }
+  return {
+    controller,
+    authProvider,
+    configService,
+    apiService,
+    logsViewProvider,
+    statusBar,
+  }
 }
 
 const testTeam: Team = { id: "t1", name: "Test Team", slug: "test-team" }

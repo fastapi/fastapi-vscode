@@ -4,6 +4,42 @@ import type { App, Team } from "../types"
 import { ui } from "./dialogs"
 
 /**
+ * Shows a quick pick to select a workspace folder. Auto-selects if only one matches.
+ */
+export async function pickWorkspaceFolder(
+  placeHolder: string,
+  filter?: (uri: vscode.Uri) => boolean,
+): Promise<vscode.Uri | null> {
+  const workspaceFolders = vscode.workspace.workspaceFolders
+
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    vscode.window.showErrorMessage("No workspace folder open")
+    return null
+  }
+
+  const filteredFolders = filter
+    ? workspaceFolders.filter((folder) => filter(folder.uri))
+    : workspaceFolders
+
+  if (filteredFolders.length === 0) {
+    return null
+  }
+
+  if (filteredFolders.length === 1) {
+    return filteredFolders[0].uri
+  }
+
+  const items = filteredFolders.map((folder) => ({
+    label: folder.name,
+    description: folder.uri.fsPath,
+    uri: folder.uri,
+  }))
+
+  const selected = await vscode.window.showQuickPick(items, { placeHolder })
+  return selected?.uri ?? null
+}
+
+/**
  * Shows a quick pick to select a team. Auto-selects if only one team.
  */
 export async function pickTeam(apiService: ApiService): Promise<Team | null> {

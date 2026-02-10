@@ -2,7 +2,7 @@
   "name": "fastapi-vscode",
   "displayName": "FastAPI Extension",
   "description": "VS Code extension for FastAPI development",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "FastAPILabs",
   "license": "MIT",
   "repository": {
@@ -96,6 +96,11 @@
         "command": "fastapi-vscode.deploy",
         "title": "Deploy Application",
         "category": "FastAPI Cloud"
+      },
+      {
+        "command": "fastapi-vscode.viewLogs",
+        "title": "Stream Application Logs",
+        "category": "FastAPI Cloud"
       }
     ],
     "keybindings": [
@@ -134,6 +139,10 @@
         {
           "command": "fastapi-vscode.signOut",
           "when": "config.fastapi.cloud.enabled"
+        },
+        {
+          "command": "fastapi-vscode.viewLogs",
+          "when": "config.fastapi.cloud.enabled"
         }
       ],
       "view/title": [
@@ -168,6 +177,13 @@
           "title": "FastAPI",
           "icon": "media/icons/logo-outline.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "fastapi-cloud-panel",
+          "title": "FastAPI Cloud",
+          "icon": "media/icons/logo-outline.svg"
+        }
       ]
     },
     "views": {
@@ -176,6 +192,14 @@
           "id": "endpoint-explorer",
           "name": "Endpoint Explorer",
           "icon": "media/icons/logo-outline.svg"
+        }
+      ],
+      "fastapi-cloud-panel": [
+        {
+          "id": "fastapi-cloud-logs",
+          "name": "Logs",
+          "type": "webview",
+          "when": "config.fastapi.cloud.enabled"
         }
       ]
     },
@@ -245,6 +269,19 @@
             "when": "config.fastapi.cloud.enabled",
             "completionEvents": [
               "onCommand:fastapi-vscode.deploy"
+            ]
+          },
+          {
+            "id": "cloud-logs",
+            "title": "View FastAPI Cloud Application Logs",
+            "description": "Stream logs for your FastAPI Cloud deployed app in real-time directly within VS Code.\n\n[View Logs](command:fastapi-vscode.viewLogs)",
+            "media": {
+              "image": "media/walkthrough/logs.gif",
+              "altText": "Streaming application logs in FastAPI Cloud panel"
+            },
+            "when": "config.fastapi.cloud.enabled",
+            "completionEvents": [
+              "onCommand:fastapi-vscode.viewLogs"
             ]
           },
           {

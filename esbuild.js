@@ -32,8 +32,21 @@ function copyWasmFiles() {
   console.log("Copied tree-sitter-python.wasm -> dist/wasm/")
 }
 
+function copyWebviewAssets() {
+  const destDir = path.join(import.meta.dirname, "dist", "webview", "logs")
+  mkdirSync(destDir, { recursive: true })
+
+  const srcDir = path.join(import.meta.dirname, "src", "cloud", "ui", "panel")
+  copyFileSync(
+    path.join(srcDir, "styles.css"),
+    path.join(destDir, "styles.css"),
+  )
+  console.log("Copied webview assets -> dist/webview/logs/")
+}
+
 async function main() {
   copyWasmFiles()
+  copyWebviewAssets()
 
   const testEntryPoints = !production ? globSync("src/test/**/*.test.ts") : []
   const sourceEntryPoints = noBundleForCoverage
@@ -69,6 +82,22 @@ async function main() {
     ...(noBundleForCoverage ? {} : { external: ["vscode", "web-tree-sitter"] }),
   })
 
+  // Webview script (runs inside VS Code logs panel webview)
+  const webviewCtx = noBundleForCoverage
+    ? null
+    : await esbuild.context({
+        entryPoints: ["src/cloud/ui/panel/webview.ts"],
+        bundle: true,
+        minify: production,
+        sourcemap: !production,
+        sourcesContent: false,
+        format: "iife",
+        platform: "browser",
+        target: "es2022",
+        outfile: "dist/webview/logs/webview.js",
+        logLevel: "info",
+      })
+
   // Browser build (vscode.dev) - skip for unbundled builds
   const browserCtx = noBundleForCoverage
     ? null
@@ -99,16 +128,14 @@ async function main() {
         ],
       })
 
+  const allContexts = [nodeCtx, browserCtx, webviewCtx].filter(Boolean)
+
   if (watch) {
-    await Promise.all([nodeCtx.watch(), browserCtx?.watch()].filter(Boolean))
+    await Promise.all(allContexts.map((ctx) => ctx.watch()))
     console.log("Watching for changes...")
   } else {
-    await Promise.all(
-      [nodeCtx.rebuild(), browserCtx?.rebuild()].filter(Boolean),
-    )
-    await Promise.all(
-      [nodeCtx.dispose(), browserCtx?.dispose()].filter(Boolean),
-    )
+    await Promise.all(allContexts.map((ctx) => ctx.rebuild()))
+    await Promise.all(allContexts.map((ctx) => ctx.dispose()))
   }
 }
 

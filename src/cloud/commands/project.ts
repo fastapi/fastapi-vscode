@@ -6,40 +6,12 @@ import {
 import type { ApiService } from "../api"
 import type { ConfigService } from "../config"
 import type { WorkspaceState } from "../types"
-import { createNewApp, pickExistingApp, pickTeam } from "../ui/pickers"
-
-async function pickWorkspaceFolder(
-  placeHolder: string,
-  filter?: (uri: vscode.Uri) => boolean,
-): Promise<vscode.Uri | null> {
-  const workspaceFolders = vscode.workspace.workspaceFolders
-
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    vscode.window.showErrorMessage("No workspace folder open")
-    return null
-  }
-
-  const filteredFolders = filter
-    ? workspaceFolders.filter((folder) => filter(folder.uri))
-    : workspaceFolders
-
-  if (filteredFolders.length === 0) {
-    return null
-  }
-
-  if (filteredFolders.length === 1) {
-    return filteredFolders[0].uri
-  }
-
-  const items = filteredFolders.map((folder) => ({
-    label: folder.name,
-    description: folder.uri.fsPath,
-    uri: folder.uri,
-  }))
-
-  const selected = await vscode.window.showQuickPick(items, { placeHolder })
-  return selected?.uri ?? null
-}
+import {
+  createNewApp,
+  pickExistingApp,
+  pickTeam,
+  pickWorkspaceFolder,
+} from "../ui/pickers"
 
 export async function linkProject(
   apiService: ApiService,

@@ -6,8 +6,9 @@ import * as vscode from "vscode"
 import { discoverFastAPIApps } from "./appDiscovery"
 import { ApiService } from "./cloud/api"
 import { AUTH_PROVIDER_ID, CloudAuthenticationProvider } from "./cloud/auth"
+import { LOGS_VIEW_ID, LogsViewProvider } from "./cloud/commands/logs"
 import { ConfigService } from "./cloud/config"
-import { CloudController } from "./cloud/controller"
+import { CloudController, getActiveWorkspaceFolder } from "./cloud/controller"
 import { clearImportCache } from "./core/importResolver"
 import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
@@ -218,6 +219,17 @@ export async function activate(context: vscode.ExtensionContext) {
     const configService = new ConfigService()
     const apiService = new ApiService()
 
+    const logsViewProvider = new LogsViewProvider(
+      context.extensionUri,
+      configService,
+      apiService,
+      getActiveWorkspaceFolder,
+    )
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider(LOGS_VIEW_ID, logsViewProvider),
+      { dispose: () => logsViewProvider.dispose() },
+    )
+
     const statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Left,
       100,
@@ -228,6 +240,7 @@ export async function activate(context: vscode.ExtensionContext) {
       authProvider,
       configService,
       apiService,
+      logsViewProvider,
       statusBarItem,
     )
 
@@ -340,6 +353,17 @@ function registerCloudCommands(
         log(`Deploy error: ${error}`)
         vscode.window.showErrorMessage(
           `Failed to deploy: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
+    }),
+
+    vscode.commands.registerCommand("fastapi-vscode.viewLogs", async () => {
+      try {
+        await cloudController.viewLogs()
+      } catch (error) {
+        log(`View logs error: ${error}`)
+        vscode.window.showErrorMessage(
+          `Failed to view logs: ${error instanceof Error ? error.message : String(error)}`,
         )
       }
     }),

@@ -7,6 +7,7 @@ import {
   createNewApp,
   pickExistingApp,
   pickTeam,
+  pickWorkspaceFolder,
 } from "../../../cloud/ui/pickers"
 import { mockApiService } from "../../testUtils"
 
@@ -27,6 +28,132 @@ const app2: App = {
 
 suite("cloud/ui/pickers", () => {
   teardown(() => sinon.restore())
+
+  suite("pickWorkspaceFolder", () => {
+    test("returns null when no workspace folders", async () => {
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: undefined,
+        configurable: true,
+      })
+
+      const errorStub = sinon.stub(vscode.window, "showErrorMessage")
+
+      const result = await pickWorkspaceFolder("Select folder")
+
+      assert.strictEqual(result, null)
+      assert.ok(errorStub.calledOnceWith("No workspace folder open"))
+    })
+
+    test("auto-selects when only one folder", async () => {
+      const folder = {
+        uri: vscode.Uri.file("/tmp/project"),
+        name: "project",
+        index: 0,
+      }
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder],
+        configurable: true,
+      })
+
+      const result = await pickWorkspaceFolder("Select folder")
+
+      assert.strictEqual(result?.toString(), folder.uri.toString())
+    })
+
+    test("shows picker when multiple folders", async () => {
+      const folder1 = {
+        uri: vscode.Uri.file("/tmp/project1"),
+        name: "project1",
+        index: 0,
+      }
+      const folder2 = {
+        uri: vscode.Uri.file("/tmp/project2"),
+        name: "project2",
+        index: 1,
+      }
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder1, folder2],
+        configurable: true,
+      })
+
+      sinon
+        .stub(vscode.window, "showQuickPick")
+        .resolves({ label: "project2", uri: folder2.uri } as any)
+
+      const result = await pickWorkspaceFolder("Select folder")
+
+      assert.strictEqual(result?.toString(), folder2.uri.toString())
+    })
+
+    test("returns null when user cancels picker", async () => {
+      const folder1 = {
+        uri: vscode.Uri.file("/tmp/project1"),
+        name: "project1",
+        index: 0,
+      }
+      const folder2 = {
+        uri: vscode.Uri.file("/tmp/project2"),
+        name: "project2",
+        index: 1,
+      }
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder1, folder2],
+        configurable: true,
+      })
+
+      sinon.stub(vscode.window, "showQuickPick").resolves(undefined)
+
+      const result = await pickWorkspaceFolder("Select folder")
+
+      assert.strictEqual(result, null)
+    })
+
+    test("applies filter to folders", async () => {
+      const folder1 = {
+        uri: vscode.Uri.file("/tmp/project1"),
+        name: "project1",
+        index: 0,
+      }
+      const folder2 = {
+        uri: vscode.Uri.file("/tmp/project2"),
+        name: "project2",
+        index: 1,
+      }
+      const folder3 = {
+        uri: vscode.Uri.file("/tmp/project3"),
+        name: "project3",
+        index: 2,
+      }
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder1, folder2, folder3],
+        configurable: true,
+      })
+
+      // Only folder2 passes the filter → auto-selected
+      const result = await pickWorkspaceFolder(
+        "Select folder",
+        (uri) => uri.fsPath === folder2.uri.fsPath,
+      )
+
+      assert.strictEqual(result?.toString(), folder2.uri.toString())
+    })
+
+    test("returns null when filter matches no folders", async () => {
+      const folder1 = {
+        uri: vscode.Uri.file("/tmp/project1"),
+        name: "project1",
+        index: 0,
+      }
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder1],
+        configurable: true,
+      })
+
+      const result = await pickWorkspaceFolder("Select folder", () => false)
+
+      assert.strictEqual(result, null)
+    })
+  })
 
   suite("pickTeam", () => {
     test("auto-selects when only one team", async () => {
