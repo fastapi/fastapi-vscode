@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { log } from "../../utils/logger"
+import { trackCloudLogsOpened } from "../../utils/telemetry"
 import { type ApiService, type AppLogEntry, StreamLogError } from "../api"
 import type { ConfigService } from "../config"
 
@@ -52,20 +53,28 @@ function formatTimestamp(ts: string): string {
   }
 }
 
-function normalizeLevel(level: string): string {
-  if (level === "warn") return "warning"
-  if (level === "fatal") return "critical"
-  return level
+const MESSAGE_LEVEL_RE = /^\s*(DEBUG|INFO|WARNING|WARN|ERROR|CRITICAL|FATAL)\b/i
+
+function normalizeLevel(level: string, message?: string): string {
+  // The streaming API returns "unknown" for new logs (Loki limitation) so try to infer from message prefix
+  let resolved = level
+  if (resolved === "unknown" && message) {
+    const match = message.match(MESSAGE_LEVEL_RE)
+    if (match) resolved = match[1].toLowerCase()
+  }
+  if (resolved === "warn") return "warning"
+  if (resolved === "fatal") return "critical"
+  return resolved
 }
 
 export function formatLogEntry(entry: AppLogEntry): string {
   const rawLevel = (entry.level ?? "info").toLowerCase()
-  const level = normalizeLevel(rawLevel)
-  const color = LEVEL_COLORS[rawLevel] ?? LEVEL_COLORS.default
+  const level = normalizeLevel(rawLevel, entry.message)
+  const pipeColor = LEVEL_COLORS[level] ?? LEVEL_COLORS.default
   const ts = escapeHtml(formatTimestamp(entry.timestamp))
   const msg = escapeHtml(entry.message)
   const escapedLevel = escapeHtml(level)
-  return `<div class="log-line" data-level="${escapedLevel}"><span class="pipe" style="color:${color}">┃</span> <span class="ts">${ts}</span> ${msg}</div>`
+  return `<div class="log-line" data-level="${escapedLevel}"><span class="pipe" style="color:${pipeColor}">┃</span> <span class="ts">${ts}</span> ${msg}</div>`
 }
 
 // --- Webview HTML ---
@@ -145,6 +154,7 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
+    trackCloudLogsOpened()
     this.view = webviewView
     webviewView.webview.options = {
       enableScripts: true,

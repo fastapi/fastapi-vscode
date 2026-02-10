@@ -27,6 +27,7 @@ export const Events = {
   CLOUD_PROJECT_UNLINKED: "extension_cloud_project_unlinked",
   CLOUD_DASHBOARD_OPENED: "extension_cloud_dashboard_opened",
   CLOUD_APP_OPENED: "extension_cloud_app_opened",
+  CLOUD_LOGS_OPENED: "extension_cloud_logs_opened",
 } as const
 
 // Session counters for aggregated tracking
@@ -188,5 +189,9 @@ export function trackCloudDashboardOpened(appName: string): void {
 
 export function trackCloudAppOpened(appName: string): void {
   client.capture(Events.CLOUD_APP_OPENED, { app_name: appName })
+}
+
+export function trackCloudLogsOpened(): void {
+  client.capture(Events.CLOUD_LOGS_OPENED)
 }
 /* c8 ignore stop */

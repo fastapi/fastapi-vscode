@@ -352,6 +352,16 @@ suite("cloud/commands/logs", () => {
       assert.ok(html.includes('data-level="critical"'))
     })
 
+    test("infers level from message prefix when level is unknown", () => {
+      const html = formatLogEntry({
+        timestamp: "2025-01-15T10:30:00Z",
+        message: '      INFO   50.35.91.231:0 - "GET / HTTP/1.1" 200',
+        level: "unknown",
+      })
+      assert.ok(html.includes('data-level="info"'))
+      assert.ok(html.includes("color:#00cccc"))
+    })
+
     test("defaults to info when level is missing", () => {
       const html = formatLogEntry({
         timestamp: "2025-01-15T10:30:00Z",

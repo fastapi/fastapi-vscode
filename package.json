@@ -272,6 +272,19 @@
             ]
           },
           {
+            "id": "cloud-logs",
+            "title": "View FastAPI Cloud Application Logs",
+            "description": "Stream logs for your FastAPI Cloud deployed app in real-time directly within VS Code.\n\n[View Logs](command:fastapi-vscode.viewLogs)",
+            "media": {
+              "image": "media/walkthrough/logs.gif",
+              "altText": "Streaming application logs in FastAPI Cloud panel"
+            },
+            "when": "config.fastapi.cloud.enabled",
+            "completionEvents": [
+              "onCommand:fastapi-vscode.viewLogs"
+            ]
+          },
+          {
             "id": "feedback",
             "title": "Give Feedback & Get Help",
             "description": "Help us improve! Report bugs, request features, or contribute to the project.\n\n[Report an Issue](command:fastapi-vscode.reportIssue)\n[View on GitHub](https://github.com/fastapi/fastapi-vscode)",
