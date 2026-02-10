@@ -283,6 +283,169 @@ suite("cloud/commands/logs", () => {
     })
   })
 
+  suite("multi-root workspace resolution", () => {
+    const workspace1 = vscode.Uri.file("/tmp/workspace1")
+    const workspace2 = vscode.Uri.file("/tmp/workspace2")
+    const workspace3 = vscode.Uri.file("/tmp/workspace3")
+    const folder1 = { uri: workspace1, name: "workspace1", index: 0 }
+    const folder2 = { uri: workspace2, name: "workspace2", index: 1 }
+    const folder3 = { uri: workspace3, name: "workspace3", index: 2 }
+
+    test("uses active folder when it has a config in multi-root", async () => {
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder1, folder2],
+        configurable: true,
+      })
+
+      const { provider, configService, apiService } = createProvider(
+        () => workspace1,
+      )
+      const { view } = createWebviewView()
+      provider.resolveWebviewView(view)
+
+      // Active folder has a config
+      configService.getConfig.resolves({ app_id: "a1", team_id: "t1" })
+
+      async function* emptyStream() {}
+      apiService.streamAppLogs.returns(emptyStream())
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs()
+
+      // Should stream from workspace1's app
+      const opts = apiService.streamAppLogs.firstCall.args[0]
+      assert.strictEqual(opts.appId, "a1")
+    })
+
+    test("falls back to the only configured folder when active has no config", async () => {
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder1, folder2],
+        configurable: true,
+      })
+
+      const { provider, configService, apiService } = createProvider(
+        () => workspace1,
+      )
+      const { view } = createWebviewView()
+      provider.resolveWebviewView(view)
+
+      // Active folder has no config, workspace2 does
+      configService.getConfig.withArgs(workspace1).resolves(null)
+      configService.getConfig.withArgs(workspace2).resolves({
+        app_id: "a2",
+        team_id: "t1",
+      })
+
+      async function* emptyStream() {}
+      apiService.streamAppLogs.returns(emptyStream())
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs()
+
+      const opts = apiService.streamAppLogs.firstCall.args[0]
+      assert.strictEqual(opts.appId, "a2")
+    })
+
+    test("shows picker when multiple folders are configured", async () => {
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder1, folder2, folder3],
+        configurable: true,
+      })
+
+      const { provider, configService, apiService } = createProvider(
+        () => workspace1,
+      )
+      const { view } = createWebviewView()
+      provider.resolveWebviewView(view)
+
+      // Active folder has no config, workspace2 and workspace3 do
+      configService.getConfig.withArgs(workspace1).resolves(null)
+      configService.getConfig.withArgs(workspace2).resolves({
+        app_id: "a2",
+        team_id: "t1",
+      })
+      configService.getConfig.withArgs(workspace3).resolves({
+        app_id: "a3",
+        team_id: "t1",
+      })
+
+      // User picks workspace3
+      const quickPickStub = sinon
+        .stub(vscode.window, "showQuickPick")
+        .resolves({ label: "workspace3", uri: workspace3 } as any)
+
+      // After picker, configService.getConfig is called again for the selected folder
+      configService.getConfig.withArgs(workspace3).resolves({
+        app_id: "a3",
+        team_id: "t1",
+      })
+
+      async function* emptyStream() {}
+      apiService.streamAppLogs.returns(emptyStream())
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs()
+
+      assert.ok(quickPickStub.calledOnce)
+      const opts = apiService.streamAppLogs.firstCall.args[0]
+      assert.strictEqual(opts.appId, "a3")
+    })
+
+    test("does not stream when user cancels picker", async () => {
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder1, folder2, folder3],
+        configurable: true,
+      })
+
+      const { provider, configService, apiService } = createProvider(
+        () => workspace1,
+      )
+      const { view } = createWebviewView()
+      provider.resolveWebviewView(view)
+
+      configService.getConfig.withArgs(workspace1).resolves(null)
+      configService.getConfig.withArgs(workspace2).resolves({
+        app_id: "a2",
+        team_id: "t1",
+      })
+      configService.getConfig.withArgs(workspace3).resolves({
+        app_id: "a3",
+        team_id: "t1",
+      })
+
+      sinon.stub(vscode.window, "showQuickPick").resolves(undefined)
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs()
+
+      assert.ok(!apiService.streamAppLogs.called)
+    })
+
+    test("shows error when no folders have configs in multi-root", async () => {
+      Object.defineProperty(vscode.workspace, "workspaceFolders", {
+        value: [folder1, folder2],
+        configurable: true,
+      })
+
+      const { provider, configService, apiService } = createProvider(
+        () => workspace1,
+      )
+      const { view } = createWebviewView()
+      provider.resolveWebviewView(view)
+
+      configService.getConfig.resolves(null)
+
+      const errorStub = sinon.stub(vscode.window, "showErrorMessage")
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs()
+
+      assert.ok(errorStub.calledOnce)
+      assert.ok(errorStub.firstCall.args[0].includes("No app linked"))
+      assert.ok(!apiService.streamAppLogs.called)
+    })
+  })
+
   suite("dispose", () => {
     test("aborts active stream", async () => {
       const { provider, configService, apiService } = createProvider()

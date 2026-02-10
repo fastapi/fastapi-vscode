@@ -3,6 +3,7 @@ import { log } from "../../utils/logger"
 import { trackCloudLogsOpened } from "../../utils/telemetry"
 import { type ApiService, type AppLogEntry, StreamLogError } from "../api"
 import type { ConfigService } from "../config"
+import { pickWorkspaceFolder } from "../ui/pickers"
 
 const DEFAULT_TAIL = 100
 export const LOGS_VIEW_ID = "fastapi-cloud-logs"
@@ -135,6 +136,7 @@ ${getLevelChipsHtml()}
         </div>
     </div>
     <button id="stream-btn" title="Start streaming"><span id="stream-label">Stream</span></button>
+    <span id="app-label"></span>
     <div class="spacer"></div>
     <button class="icon-btn" id="clear-btn" title="Clear logs"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>Clear</button>
 </div>
@@ -194,8 +196,39 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
     this.view?.webview.postMessage({ type: "streamingState", streaming: false })
   }
 
+  private async resolveWorkspaceFolder(): Promise<vscode.Uri | null> {
+    const activeFolder = this.getActiveWorkspaceFolder()
+
+    // Single workspace or no workspace — use as-is
+    const workspaceFolders = vscode.workspace.workspaceFolders
+    if (!workspaceFolders || workspaceFolders.length <= 1) {
+      return activeFolder
+    }
+
+    // Multi-root: if active folder has a linked config, use it directly
+    if (activeFolder) {
+      const config = await this.configService.getConfig(activeFolder)
+      if (config?.app_id) return activeFolder
+    }
+
+    // Check which folders have linked configs
+    const configuredUris: vscode.Uri[] = []
+    for (const folder of workspaceFolders) {
+      const config = await this.configService.getConfig(folder.uri)
+      if (config?.app_id) configuredUris.push(folder.uri)
+    }
+
+    if (configuredUris.length === 0) return activeFolder
+    if (configuredUris.length === 1) return configuredUris[0]
+
+    // Multiple linked folders — let the user pick
+    return pickWorkspaceFolder("Select workspace to stream logs from", (uri) =>
+      configuredUris.some((u) => u.toString() === uri.toString()),
+    )
+  }
+
   async streamLogs(options?: { since?: string; tail?: number }): Promise<void> {
-    const workspaceRoot = this.getActiveWorkspaceFolder()
+    const workspaceRoot = await this.resolveWorkspaceFolder()
 
     if (!workspaceRoot) {
       vscode.window.showErrorMessage("No workspace folder open.")
@@ -225,13 +258,20 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
     // Reveal the panel view
     await vscode.commands.executeCommand(`${LOGS_VIEW_ID}.focus`)
 
+    const appLabel =
+      config.app_slug ?? workspaceRoot.path.split("/").pop() ?? ""
+
     if (this.view) {
       this.view.webview.postMessage({ type: "clear" })
       this.view.webview.postMessage({
         type: "status",
         text: "Connecting to log stream...",
       })
-      this.view.webview.postMessage({ type: "streamingState", streaming: true })
+      this.view.webview.postMessage({
+        type: "streamingState",
+        streaming: true,
+        appLabel,
+      })
     }
 
     try {

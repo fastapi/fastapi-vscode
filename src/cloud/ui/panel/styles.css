@@ -76,6 +76,15 @@ body {
   outline: 1px solid var(--vscode-focusBorder, #007fd4);
 }
 
+#app-label {
+  font-size: 0.85em;
+  opacity: 0.6;
+}
+
+#app-label:empty {
+  display: none;
+}
+
 .spacer {
   flex: 1;
 }
@@ -233,26 +242,6 @@ body {
 
 .log-line {
   padding: 1px 0;
-}
-
-/* Pipe colors by log level — matches LEVEL_COLORS in logs.ts */
-.pipe {
-  color: #888;
-}
-.log-line[data-level="debug"] .pipe {
-  color: #4488ff;
-}
-.log-line[data-level="info"] .pipe {
-  color: #00cccc;
-}
-.log-line[data-level="warning"] .pipe {
-  color: #ccaa00;
-}
-.log-line[data-level="error"] .pipe {
-  color: #f14c4c;
-}
-.log-line[data-level="critical"] .pipe {
-  color: #cc66cc;
 }
 
 .log-line.filtered {

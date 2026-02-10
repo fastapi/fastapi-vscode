@@ -12,6 +12,7 @@ const clearBtn = document.getElementById("clear-btn")!
 const filterBtn = document.getElementById("filter-btn")!
 const filterPopup = document.getElementById("filter-popup")!
 const levelList = document.getElementById("level-list")!
+const appLabelEl = document.getElementById("app-label")!
 let firstEntry = true
 let isStreaming = false
 
@@ -105,7 +106,7 @@ function applyFilters(): void {
   }
 }
 
-function setStreamingState(streaming: boolean): void {
+function setStreamingState(streaming: boolean, appLabel?: string): void {
   isStreaming = streaming
   const label = document.getElementById("stream-label")!
   if (streaming) {
@@ -116,6 +117,8 @@ function setStreamingState(streaming: boolean): void {
     streamBtn.title = "Start streaming"
   }
   sinceFilter.disabled = streaming
+  appLabelEl.textContent =
+    streaming && appLabel ? `Streaming logs for ${appLabel}...` : ""
 }
 
 window.addEventListener("message", (event) => {
@@ -146,6 +149,6 @@ window.addEventListener("message", (event) => {
     logs.innerHTML = ""
     firstEntry = true
   } else if (msg.type === "streamingState") {
-    setStreamingState(msg.streaming)
+    setStreamingState(msg.streaming, msg.appLabel)
   }
 })
