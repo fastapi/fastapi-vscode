@@ -36,24 +36,28 @@ const FILTER_CHIPS = [
   { level: "critical", label: "CRITICAL" },
 ]
 
+const HTML_ESCAPE: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+}
+
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+  return text.replace(/[&<>"]/g, (ch) => HTML_ESCAPE[ch])
 }
 
 function formatTimestamp(ts: string): string {
-  try {
-    const d = new Date(ts)
-    return `${d.toISOString().slice(0, 23)}Z`
-  } catch {
-    return ts
-  }
+  const d = new Date(ts)
+  return Number.isNaN(d.getTime()) ? ts : `${d.toISOString().slice(0, 23)}Z`
 }
 
-const MESSAGE_LEVEL_RE = /^\s*(DEBUG|INFO|WARNING|WARN|ERROR|CRITICAL|FATAL)\b/i
+const MESSAGE_LEVEL_RE = new RegExp(
+  `^\\s*(${Object.keys(LEVEL_COLORS)
+    .filter((k) => k !== "default")
+    .join("|")})\\b`,
+  "i",
+)
 
 function normalizeLevel(level: string, message?: string): string {
   // The streaming API returns "unknown" for new logs (Loki limitation) so try to infer from message prefix
