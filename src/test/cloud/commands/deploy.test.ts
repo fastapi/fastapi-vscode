@@ -213,4 +213,201 @@ suite("cloud/commands/deploy", () => {
     )
     assert.ok(fetchStub.calledOnce)
   })
+
+  test("shows dashboard link on deployment failure", async () => {
+    sinon.stub(vscode.authentication, "getSession").resolves({
+      accessToken: "test-token",
+      account: { id: "test-id", label: "test-user" },
+      id: "session-id",
+      scopes: [],
+    })
+    const statusBarItem = { text: "" } as vscode.StatusBarItem
+    const workspaceRoot = vscode.Uri.file("/test/workspace")
+
+    const configService = mockConfigService()
+    configService.getConfig.resolves({ app_id: "app123", team_id: "team123" })
+
+    const mockDeployment: Deployment = {
+      id: "deploy123",
+      slug: "deploy-slug",
+      status: DeploymentStatus.waiting_upload,
+      url: "https://app.example.com",
+      dashboard_url:
+        "https://dashboard.fastapicloud.com/team-slug/apps/my-app/deployments",
+    }
+    const mockFailedDeployment: Deployment = {
+      ...mockDeployment,
+      status: DeploymentStatus.building_image_failed,
+    }
+
+    const apiService = mockApiService()
+    apiService.createDeployment.resolves(mockDeployment)
+    apiService.getUploadUrl.resolves({
+      url: "https://s3.example.com",
+      fields: {},
+    })
+    apiService.completeUpload.resolves()
+    apiService.getDeployment.resolves(mockFailedDeployment)
+
+    sinon
+      .stub(vscode.workspace, "findFiles")
+      .resolves([vscode.Uri.file("/test/workspace/main.py")])
+    const fs = stubFs()
+    fs.fake.readFile.resolves(new Uint8Array([1, 2, 3]))
+    sinon.stub(global, "fetch").resolves({ ok: true, status: 200 } as Response)
+
+    const openExternalStub = sinon
+      .stub(vscode.env, "openExternal")
+      .resolves(true)
+    const errorMessageStub = sinon
+      .stub(vscode.window, "showErrorMessage")
+      .resolves("View Dashboard" as any)
+
+    const result = await deploy({
+      workspaceRoot,
+      configService,
+      apiService,
+      statusBarItem,
+    })
+
+    assert.strictEqual(result, false)
+    assert.strictEqual(statusBarItem.text, "$(cloud) Deploy failed")
+    assert.ok(errorMessageStub.calledOnce)
+    assert.strictEqual(errorMessageStub.firstCall.args[0], "Deployment failed.")
+    assert.ok(openExternalStub.calledOnce)
+    assert.strictEqual(
+      openExternalStub.firstCall.args[0].toString(),
+      "https://dashboard.fastapicloud.com/team-slug/apps/my-app/deployments",
+    )
+  })
+
+  test("does not open dashboard when user dismisses failure dialog", async () => {
+    sinon.stub(vscode.authentication, "getSession").resolves({
+      accessToken: "test-token",
+      account: { id: "test-id", label: "test-user" },
+      id: "session-id",
+      scopes: [],
+    })
+    const statusBarItem = { text: "" } as vscode.StatusBarItem
+    const workspaceRoot = vscode.Uri.file("/test/workspace")
+
+    const configService = mockConfigService()
+    configService.getConfig.resolves({ app_id: "app123", team_id: "team123" })
+
+    const mockDeployment: Deployment = {
+      id: "deploy123",
+      slug: "deploy-slug",
+      status: DeploymentStatus.waiting_upload,
+      url: "https://app.example.com",
+      dashboard_url:
+        "https://dashboard.fastapicloud.com/team-slug/apps/my-app/deployments",
+    }
+
+    const apiService = mockApiService()
+    apiService.createDeployment.resolves(mockDeployment)
+    apiService.getUploadUrl.resolves({
+      url: "https://s3.example.com",
+      fields: {},
+    })
+    apiService.completeUpload.resolves()
+    apiService.getDeployment.resolves({
+      ...mockDeployment,
+      status: DeploymentStatus.building_image_failed,
+    })
+
+    sinon
+      .stub(vscode.workspace, "findFiles")
+      .resolves([vscode.Uri.file("/test/workspace/main.py")])
+    const fs = stubFs()
+    fs.fake.readFile.resolves(new Uint8Array([1, 2, 3]))
+    sinon.stub(global, "fetch").resolves({ ok: true, status: 200 } as Response)
+
+    const openExternalStub = sinon
+      .stub(vscode.env, "openExternal")
+      .resolves(true)
+    // User dismisses the dialog (clicks nothing)
+    sinon.stub(vscode.window, "showErrorMessage").resolves(undefined as any)
+
+    const result = await deploy({
+      workspaceRoot,
+      configService,
+      apiService,
+      statusBarItem,
+    })
+
+    assert.strictEqual(result, false)
+    assert.ok(openExternalStub.notCalled)
+  })
+
+  test("does not open dashboard on poll timeout", async () => {
+    const clock = sinon.useFakeTimers({ shouldClearNativeTimers: true })
+
+    sinon.stub(vscode.authentication, "getSession").resolves({
+      accessToken: "test-token",
+      account: { id: "test-id", label: "test-user" },
+      id: "session-id",
+      scopes: [],
+    })
+    const statusBarItem = { text: "" } as vscode.StatusBarItem
+    const workspaceRoot = vscode.Uri.file("/test/workspace")
+
+    const configService = mockConfigService()
+    configService.getConfig.resolves({ app_id: "app123", team_id: "team123" })
+
+    const mockDeployment: Deployment = {
+      id: "deploy123",
+      slug: "deploy-slug",
+      status: DeploymentStatus.waiting_upload,
+      url: "https://app.example.com",
+      dashboard_url:
+        "https://dashboard.fastapicloud.com/team-slug/apps/my-app/deployments",
+    }
+
+    const apiService = mockApiService()
+    apiService.createDeployment.resolves(mockDeployment)
+    apiService.getUploadUrl.resolves({
+      url: "https://s3.example.com",
+      fields: {},
+    })
+    apiService.completeUpload.resolves()
+    // Always returns "building" so poll never resolves to success or failure
+    apiService.getDeployment.resolves({
+      ...mockDeployment,
+      status: DeploymentStatus.building,
+    })
+
+    sinon
+      .stub(vscode.workspace, "findFiles")
+      .resolves([vscode.Uri.file("/test/workspace/main.py")])
+    const fs = stubFs()
+    fs.fake.readFile.resolves(new Uint8Array([1, 2, 3]))
+    sinon.stub(global, "fetch").resolves({ ok: true, status: 200 } as Response)
+
+    const openExternalStub = sinon
+      .stub(vscode.env, "openExternal")
+      .resolves(true)
+    // User clicks "View Dashboard" but result is null (timeout)
+    sinon
+      .stub(vscode.window, "showErrorMessage")
+      .resolves("View Dashboard" as any)
+
+    // Start deploy without awaiting, then advance the clock past all 300 polls
+    const resultPromise = deploy({
+      workspaceRoot,
+      configService,
+      apiService,
+      statusBarItem,
+    })
+
+    // 300 polls x 2000ms = 600000ms
+    await clock.tickAsync(600_000)
+
+    const result = await resultPromise
+
+    assert.strictEqual(result, false)
+    assert.strictEqual(statusBarItem.text, "$(cloud) Deploy failed")
+    assert.ok(openExternalStub.notCalled)
+
+    clock.restore()
+  })
 })

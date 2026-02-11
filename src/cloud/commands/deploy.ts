@@ -147,7 +147,12 @@ export async function deploy(context: DeployContext): Promise<boolean> {
       updateStatus,
     )
 
-    if (result) {
+    const isSuccess =
+      result !== null &&
+      (result.status === DeploymentStatus.success ||
+        result.status === DeploymentStatus.verifying_skipped)
+
+    if (isSuccess) {
       statusBarItem.text = `$(cloud) ${config.app_slug ?? "Deployed"}`
 
       const action = await ui.showInformationMessage(
@@ -165,15 +170,15 @@ export async function deploy(context: DeployContext): Promise<boolean> {
       }
       return true
     }
-    if (statusBarItem) {
-      statusBarItem.text = "$(cloud) Deploy failed"
-    }
+
+    statusBarItem.text = "$(cloud) Deploy failed"
     const action = await vscode.window.showErrorMessage(
       "Deployment failed.",
-      "View Logs",
+      "View Dashboard",
     )
-    if (action === "View Logs") {
-      vscode.commands.executeCommand("fastapi-vscode.viewLogs") //TODO: Wire this up
+    if (action === "View Dashboard" && result?.dashboard_url) {
+      vscode.env.openExternal(vscode.Uri.parse(result.dashboard_url))
+      trackCloudDashboardOpened(config.app_id)
     }
     return false
   } catch (error) {
@@ -254,7 +259,7 @@ async function pollDeploymentStatus(
     }
 
     if (failedStatuses.includes(deployment.status)) {
-      return null
+      return deployment
     }
 
     const message =
