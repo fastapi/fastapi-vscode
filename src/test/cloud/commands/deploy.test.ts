@@ -325,7 +325,6 @@ suite("cloud/commands/deploy", () => {
     const openExternalStub = sinon
       .stub(vscode.env, "openExternal")
       .resolves(true)
-    // User dismisses the dialog (clicks nothing)
     sinon.stub(vscode.window, "showErrorMessage").resolves(undefined as any)
 
     const result = await deploy({
@@ -370,7 +369,6 @@ suite("cloud/commands/deploy", () => {
       fields: {},
     })
     apiService.completeUpload.resolves()
-    // Always returns "building" so poll never resolves to success or failure
     apiService.getDeployment.resolves({
       ...mockDeployment,
       status: DeploymentStatus.building,
@@ -386,12 +384,10 @@ suite("cloud/commands/deploy", () => {
     const openExternalStub = sinon
       .stub(vscode.env, "openExternal")
       .resolves(true)
-    // User clicks "View Dashboard" but result is null (timeout)
     sinon
       .stub(vscode.window, "showErrorMessage")
       .resolves("View Dashboard" as any)
 
-    // Start deploy without awaiting, then advance the clock past all 300 polls
     const resultPromise = deploy({
       workspaceRoot,
       configService,
