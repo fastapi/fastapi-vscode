@@ -22,6 +22,17 @@ export type EndpointTreeItem =
   | { type: "route"; route: RouteDefinition }
   | { type: "message"; text: string }
 
+const METHOD_ORDER: Record<RouteMethod, number> = {
+  GET: 0,
+  POST: 1,
+  PUT: 2,
+  PATCH: 3,
+  DELETE: 4,
+  OPTIONS: 5,
+  HEAD: 6,
+  WEBSOCKET: 7,
+}
+
 export const METHOD_ICONS: Record<RouteMethod, string> = {
   GET: "arrow-right",
   POST: "plus",
@@ -92,11 +103,15 @@ function sortedChildren(
       ),
     ...routes
       .map((route) => ({ type: "route" as const, route }))
-      .sort((a, b) =>
-        getRouteLabel(a.route)
+      .sort((a, b) => {
+        // If negative, a comes first. If positive, b comes first. If 0, sort by label.
+        const methodOrder =
+          METHOD_ORDER[a.route.method] - METHOD_ORDER[b.route.method]
+        if (methodOrder !== 0) return methodOrder
+        return getRouteLabel(a.route)
           .toLowerCase()
-          .localeCompare(getRouteLabel(b.route).toLowerCase()),
-      ),
+          .localeCompare(getRouteLabel(b.route).toLowerCase())
+      }),
   ]
 }
 
