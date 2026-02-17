@@ -136,6 +136,7 @@ async function buildRouterGraphInternal(
       function: r.function,
       line: r.line,
       column: r.column,
+      docstring: r.docstring,
     })),
     children: [],
   }
@@ -232,6 +233,7 @@ async function resolveRouterReference(
         function: r.function,
         line: r.line,
         column: r.column,
+        docstring: r.docstring,
       })),
       children: [],
     }
@@ -348,6 +350,7 @@ async function resolveRouterReference(
           function: r.function,
           line: r.line,
           column: r.column,
+          docstring: r.docstring,
         })),
         children: [],
       }

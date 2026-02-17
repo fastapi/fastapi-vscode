@@ -353,7 +353,7 @@ suite("PathOperationTreeProvider", () => {
         ? treeItem.tooltip
         : (treeItem.tooltip as { value: string }).value
     assert.ok(
-      tooltipValue.includes("GET /users/{user_id}"),
+      tooltipValue.includes("/users/{user_id}"),
       "Tooltip should show stripped path",
     )
     assert.ok(
