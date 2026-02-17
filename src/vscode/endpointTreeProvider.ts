@@ -104,6 +104,7 @@ function sortedChildren(
     ...routes
       .map((route) => ({ type: "route" as const, route }))
       .sort((a, b) => {
+        // If negative, a comes first. If positive, b comes first. If 0, sort by label.
         const methodOrder =
           METHOD_ORDER[a.route.method] - METHOD_ORDER[b.route.method]
         if (methodOrder !== 0) return methodOrder
