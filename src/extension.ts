@@ -272,12 +272,17 @@ export async function activate(context: vscode.ExtensionContext) {
     )
   }
 
-  // Watch for cloud.enabled setting changes
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (e) => {
-      if (e.affectsConfiguration("fastapi.cloud.enabled")) {
+      const requiresReload =
+        e.affectsConfiguration("fastapi.cloud.enabled") ||
+        e.affectsConfiguration("fastapi.codeLens.enabled") ||
+        e.affectsConfiguration("fastapi.entryPoint") ||
+        e.affectsConfiguration("fastapi.telemetry.enabled")
+
+      if (requiresReload) {
         const action = await vscode.window.showWarningMessage(
-          "FastAPI Cloud setting changed. Reload the window to apply changes.",
+          "FastAPI setting changed. Reload the window to apply changes.",
           "Reload Window",
         )
         if (action === "Reload Window") {
