@@ -19,6 +19,25 @@ import { vscodeFileSystem } from "./vscode/vscodeFileSystem"
 export type { EntryPoint }
 
 /**
+ * Parses an entrypoint string in module:variable notation.
+ * Supports formats like "my_app.main:app" or "main".
+ * Returns the relative file path and optional variable name.
+ */
+export function parseEntrypointString(value: string): {
+  relativePath: string
+  variableName?: string
+} {
+  const colonIndex = value.indexOf(":")
+  const modulePath = colonIndex === -1 ? value : value.slice(0, colonIndex)
+  const variableName =
+    colonIndex === -1 ? undefined : value.slice(colonIndex + 1)
+
+  const relativePath = `${modulePath.replace(/\./g, "/")}.py`
+
+  return { relativePath, variableName }
+}
+
+/**
  * Scans for common FastAPI entry point files (main.py, __init__.py).
  * Returns URI strings sorted by depth (shallower first).
  */
@@ -64,18 +83,8 @@ async function parsePyprojectForEntryPoint(
       return null
     }
 
-    // Parse "my_app.main:app" or "api.py:app" format (variable name after : is optional)
-    const colonIndex = entrypointValue.indexOf(":")
-    const modulePath =
-      colonIndex === -1 ? entrypointValue : entrypointValue.slice(0, colonIndex)
-    const variableName =
-      colonIndex === -1 ? undefined : entrypointValue.slice(colonIndex + 1)
-
-    // Handle both module format (api.module) and file format (api.py)
-    const relativePath =
-      modulePath.endsWith(".py") && !modulePath.includes("/")
-        ? modulePath // Simple file path: api.py -> api.py
-        : `${modulePath.replace(/\./g, "/")}.py` // Module path: my_app.main -> my_app/main.py
+    const { relativePath, variableName } =
+      parseEntrypointString(entrypointValue)
     const fullUri = vscode.Uri.joinPath(folderUri, relativePath)
 
     return (await vscodeFileSystem.exists(fullUri.toString()))
@@ -117,9 +126,9 @@ export async function discoverFastAPIApps(
 
     // If user specified an entry point in settings, use that
     if (customEntryPoint) {
-      const entryUri = customEntryPoint.startsWith("/")
-        ? vscode.Uri.file(customEntryPoint)
-        : vscode.Uri.joinPath(folder.uri, customEntryPoint)
+      const { relativePath, variableName } =
+        parseEntrypointString(customEntryPoint)
+      const entryUri = vscode.Uri.joinPath(folder.uri, relativePath)
 
       if (!(await vscodeFileSystem.exists(entryUri.toString()))) {
         log(`Custom entry point not found: ${customEntryPoint}`)
@@ -130,7 +139,7 @@ export async function discoverFastAPIApps(
       }
 
       log(`Using custom entry point: ${customEntryPoint}`)
-      candidates = [{ filePath: entryUri.toString() }]
+      candidates = [{ filePath: entryUri.toString(), variableName }]
       detectionMethod = "config"
     } else {
       // Otherwise, check pyproject.toml or auto-detect

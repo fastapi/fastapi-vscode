@@ -303,7 +303,7 @@
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "Path to the main FastAPI application file (e.g., 'src/main.py'). If not set, the extension will search common locations."
+          "description": "Entrypoint for the main FastAPI application in module notation (e.g., 'my_app.main:app'). If not set, the extension will search pyproject.toml and common locations."
         },
         "fastapi.codeLens.enabled": {
           "type": "boolean",
