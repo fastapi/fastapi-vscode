@@ -37,6 +37,15 @@ streamBtn.addEventListener("click", () => {
   }
 })
 
+sinceFilter.addEventListener("change", () => {
+  if (isStreaming) {
+    vscode.postMessage({
+      type: "startStream",
+      since: sinceFilter.value,
+    })
+  }
+})
+
 filterBtn.addEventListener("click", (e) => {
   e.stopPropagation()
   filterPopup.classList.toggle("open")
@@ -116,7 +125,6 @@ function setStreamingState(streaming: boolean, appLabel?: string): void {
     label.textContent = "Stream"
     streamBtn.title = "Start streaming"
   }
-  sinceFilter.disabled = streaming
   appLabelEl.textContent =
     streaming && appLabel ? `Streaming logs for ${appLabel}...` : ""
 }

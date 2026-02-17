@@ -171,7 +171,7 @@ def test_create_item():
 
     test("creates CodeLens for routes in routers", async () => {
       // Route path in the definition is just the route path, not the full path with prefix
-      // The pathMatchesEndpoint function handles matching
+      // The pathMatchesPathOperation function handles matching
       const router = createRouter("/api", [createRoute("GET", "/users")])
       const app = createMockApp([], [router])
       provider.setApps([app])

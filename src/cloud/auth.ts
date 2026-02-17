@@ -247,6 +247,11 @@ export class CloudAuthenticationProvider
 
     const sessions = await this.getSessions()
     const session = sessions[0]
+
+    window.showInformationMessage(
+      `Signed in to FastAPI Cloud as ${session.account.label}`,
+    )
+
     this._onDidChangeSessions.fire({
       added: [session],
       removed: [],

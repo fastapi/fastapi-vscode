@@ -18,7 +18,7 @@ import { extractPathFromNode, findNodesByType } from "../core/extractors"
 import { ROUTE_METHODS } from "../core/internal"
 import type { Parser } from "../core/parser"
 import {
-  pathMatchesEndpoint,
+  pathMatchesPathOperation,
   stripLeadingDynamicSegments,
 } from "../core/pathUtils"
 import { collectRoutes } from "../core/treeUtils"
@@ -157,7 +157,7 @@ export class TestCodeLensProvider implements CodeLensProvider {
       .filter(
         (route) =>
           route.method.toLowerCase() === testMethod.toLowerCase() &&
-          pathMatchesEndpoint(testPath, route.path),
+          pathMatchesPathOperation(testPath, route.path),
       )
       .map((route) => route.location)
   }

@@ -1,5 +1,5 @@
 /**
- * Public API for FastAPI endpoint discovery.
+ * Public API for FastAPI path operation discovery.
  * This module can be used independently of VSCode.
  */
 

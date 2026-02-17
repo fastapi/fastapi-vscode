@@ -16,7 +16,7 @@ import type {
   RouterDefinition,
 } from "../core/types"
 
-export type EndpointTreeItem =
+export type PathOperationTreeItem =
   | { type: "workspace"; label: string; apps: AppDefinition[] }
   | { type: "app"; app: AppDefinition }
   | { type: "router"; router: RouterDefinition }
@@ -31,6 +31,16 @@ export function getMethodSvgIcon(extensionUri: Uri, method: RouteMethod): Uri {
     "methods",
     `${method.toLowerCase()}.svg`,
   )
+}
+const METHOD_ORDER: Record<RouteMethod, number> = {
+  GET: 0,
+  POST: 1,
+  PUT: 2,
+  PATCH: 3,
+  DELETE: 4,
+  OPTIONS: 5,
+  HEAD: 6,
+  WEBSOCKET: 7,
 }
 
 export function getAppLabel(app: AppDefinition): string {
@@ -81,7 +91,7 @@ export function getRouteLabel(route: RouteDefinition): string {
 function sortedChildren(
   routers: RouterDefinition[],
   routes: RouteDefinition[],
-): EndpointTreeItem[] {
+): PathOperationTreeItem[] {
   return [
     ...routers
       .map((router) => ({ type: "router" as const, router }))
@@ -92,23 +102,28 @@ function sortedChildren(
       ),
     ...routes
       .map((route) => ({ type: "route" as const, route }))
-      .sort((a, b) =>
-        getRouteLabel(a.route)
+      .sort((a, b) => {
+        // If negative, a comes first. If positive, b comes first. If 0, sort by label.
+        const methodOrder =
+          METHOD_ORDER[a.route.method] - METHOD_ORDER[b.route.method]
+        if (methodOrder !== 0) return methodOrder
+        return getRouteLabel(a.route)
           .toLowerCase()
-          .localeCompare(getRouteLabel(b.route).toLowerCase()),
-      ),
+          .localeCompare(getRouteLabel(b.route).toLowerCase())
+      }),
   ]
 }
 
-export class EndpointTreeProvider
-  implements TreeDataProvider<EndpointTreeItem>
+export class PathOperationTreeProvider
+  implements TreeDataProvider<PathOperationTreeItem>
 {
-  private _onDidChangeTreeData: EventEmitter<EndpointTreeItem | undefined> =
-    new EventEmitter()
+  private _onDidChangeTreeData: EventEmitter<
+    PathOperationTreeItem | undefined
+  > = new EventEmitter()
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event
 
   private apps: AppDefinition[] = []
-  private roots: EndpointTreeItem[] = []
+  private roots: PathOperationTreeItem[] = []
 
   // VS Code caches collapsible state by item id, so toggling routersExpanded
   // alone won't re-render. Bumping toggleCount changes the id, forcing a reset.
@@ -120,7 +135,7 @@ export class EndpointTreeProvider
   constructor(
     extensionUri: Uri,
     apps: AppDefinition[] = [],
-    roots?: EndpointTreeItem[],
+    roots?: PathOperationTreeItem[],
   ) {
     this.extensionUri = extensionUri
     this.apps = apps
@@ -131,7 +146,7 @@ export class EndpointTreeProvider
     return this.apps
   }
 
-  setApps(apps: AppDefinition[], roots?: EndpointTreeItem[]): void {
+  setApps(apps: AppDefinition[], roots?: PathOperationTreeItem[]): void {
     this.apps = apps
     this.roots = roots ?? apps.map((app) => ({ type: "app" as const, app }))
     this.refresh()
@@ -149,7 +164,7 @@ export class EndpointTreeProvider
     return findRouter(this.apps, (router) => router.routes.includes(target))
   }
 
-  getParent(element: EndpointTreeItem): EndpointTreeItem | undefined {
+  getParent(element: PathOperationTreeItem): PathOperationTreeItem | undefined {
     switch (element.type) {
       case "message":
       case "workspace":
@@ -182,7 +197,7 @@ export class EndpointTreeProvider
     }
   }
 
-  getChildren(element?: EndpointTreeItem): EndpointTreeItem[] {
+  getChildren(element?: PathOperationTreeItem): PathOperationTreeItem[] {
     if (!element) {
       if (this.apps.length === 0) {
         return [{ type: "message", text: "No FastAPI app found" }]
@@ -205,7 +220,7 @@ export class EndpointTreeProvider
     }
   }
 
-  getTreeItem(element: EndpointTreeItem): TreeItem {
+  getTreeItem(element: PathOperationTreeItem): TreeItem {
     switch (element.type) {
       case "message": {
         const item = new TreeItem(element.text)
@@ -266,7 +281,7 @@ export class EndpointTreeProvider
           `${element.route.method} ${element.route.path}\n\nFunction: ${element.route.functionName}\nFile: ${element.route.location.filePath}:${element.route.location.line}`,
         )
         routeItem.command = {
-          command: "fastapi-vscode.goToEndpoint",
+          command: "fastapi-vscode.goToPathOperation",
           title: "Go to Definition",
           arguments: [element],
         }

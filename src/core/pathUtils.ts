@@ -89,7 +89,7 @@ export function countSegments(path: string): number {
 }
 
 /**
- * Checks if a test path matches an endpoint path pattern.
+ * Checks if a test path matches a path operation path pattern.
  * Both paths may contain dynamic segments like {item_id} or {settings.API_V1_STR}
  * which match any segment.
  *
@@ -97,17 +97,17 @@ export function countSegments(path: string): number {
  * before comparison.
  *
  * Examples:
- *   pathMatchesEndpoint("/items/123", "/items/{item_id}") -> true
- *   pathMatchesEndpoint("/items/123/details", "/items/{item_id}") -> false
- *   pathMatchesEndpoint("/users/abc/posts/456", "/users/{user_id}/posts/{post_id}") -> true
- *   pathMatchesEndpoint("/items/", "/items/{item_id}") -> false
- *   pathMatchesEndpoint("{settings.API}/apps/{id}", "/apps/{app_id}") -> true
- *   pathMatchesEndpoint("{BASE}/users/{id}", "/users/{user_id}") -> true
- *   pathMatchesEndpoint("/teams/?owner=true", "/teams") -> true (query string stripped)
+ *   pathMatchesPathOperation("/items/123", "/items/{item_id}") -> true
+ *   pathMatchesPathOperation("/items/123/details", "/items/{item_id}") -> false
+ *   pathMatchesPathOperation("/users/abc/posts/456", "/users/{user_id}/posts/{post_id}") -> true
+ *   pathMatchesPathOperation("/items/", "/items/{item_id}") -> false
+ *   pathMatchesPathOperation("{settings.API}/apps/{id}", "/apps/{app_id}") -> true
+ *   pathMatchesPathOperation("{BASE}/users/{id}", "/users/{user_id}") -> true
+ *   pathMatchesPathOperation("/teams/?owner=true", "/teams") -> true (query string stripped)
  */
-export function pathMatchesEndpoint(
+export function pathMatchesPathOperation(
   testPath: string,
-  endpointPath: string,
+  pathOperationPath: string,
 ): boolean {
   // Strip query string from test path (e.g., "/teams/?owner=true" -> "/teams/")
   const testPathWithoutQuery = testPath.split("?")[0]
@@ -116,26 +116,26 @@ export function pathMatchesEndpoint(
   const testSegments = stripLeadingDynamicSegments(testPathWithoutQuery)
     .split("/")
     .filter(Boolean)
-  const endpointSegments = stripLeadingDynamicSegments(endpointPath)
+  const pathOperationSegments = stripLeadingDynamicSegments(pathOperationPath)
     .split("/")
     .filter(Boolean)
 
   // Segment counts must match
-  if (testSegments.length !== endpointSegments.length) {
+  if (testSegments.length !== pathOperationSegments.length) {
     return false
   }
 
   // Compare each segment positionally
   return testSegments.every((testSeg, i) => {
-    const endpointSeg = endpointSegments[i]
+    const pathOperationSeg = pathOperationSegments[i]
     // Dynamic segments (e.g., {id}, {app.id}) match any value
     const testIsDynamic = testSeg.startsWith("{") && testSeg.endsWith("}")
-    const endpointIsDynamic =
-      endpointSeg.startsWith("{") && endpointSeg.endsWith("}")
-    if (testIsDynamic || endpointIsDynamic) {
+    const pathOperationIsDynamic =
+      pathOperationSeg.startsWith("{") && pathOperationSeg.endsWith("}")
+    if (testIsDynamic || pathOperationIsDynamic) {
       return true
     }
-    return testSeg === endpointSeg
+    return testSeg === pathOperationSeg
   })
 }
 
