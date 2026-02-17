@@ -15,7 +15,7 @@
         "@types/bun": "latest",
         "@types/mocha": "^10.0.10",
         "@types/sinon": "^21.0.0",
-        "@types/vscode": "^1.85.0",
+        "@types/vscode": "^1.95.0",
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.5.2",
         "@vscode/vsce": "^3.7.1",

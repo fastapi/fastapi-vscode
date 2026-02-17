@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Clean dist to avoid stale files from previous bundled builds
+rm -rf dist
+
 # Build without bundling (required for per-file coverage)
 bun run esbuild.js --no-bundle
 
