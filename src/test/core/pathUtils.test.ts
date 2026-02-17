@@ -4,7 +4,7 @@ import {
   findProjectRoot,
   getPathSegments,
   isWithinDirectory,
-  pathMatchesEndpoint,
+  pathMatchesPathOperation,
   stripLeadingDynamicSegments,
 } from "../../core/pathUtils"
 import { fixtures, nodeFileSystem } from "../testUtils"
@@ -197,26 +197,29 @@ suite("pathUtils", () => {
     })
   })
 
-  suite("pathMatchesEndpoint", () => {
+  suite("pathMatchesPathOperation", () => {
     test("matches exact static paths", () => {
-      assert.strictEqual(pathMatchesEndpoint("/items", "/items"), true)
-      assert.strictEqual(pathMatchesEndpoint("/api/users", "/api/users"), true)
+      assert.strictEqual(pathMatchesPathOperation("/items", "/items"), true)
+      assert.strictEqual(
+        pathMatchesPathOperation("/api/users", "/api/users"),
+        true,
+      )
     })
 
     test("matches path with single parameter", () => {
       assert.strictEqual(
-        pathMatchesEndpoint("/items/123", "/items/{item_id}"),
+        pathMatchesPathOperation("/items/123", "/items/{item_id}"),
         true,
       )
       assert.strictEqual(
-        pathMatchesEndpoint("/items/abc", "/items/{item_id}"),
+        pathMatchesPathOperation("/items/abc", "/items/{item_id}"),
         true,
       )
     })
 
     test("matches path with multiple parameters", () => {
       assert.strictEqual(
-        pathMatchesEndpoint(
+        pathMatchesPathOperation(
           "/users/abc/posts/456",
           "/users/{user_id}/posts/{post_id}",
         ),
@@ -226,94 +229,103 @@ suite("pathUtils", () => {
 
     test("rejects when segment count differs", () => {
       assert.strictEqual(
-        pathMatchesEndpoint("/items/123/details", "/items/{item_id}"),
+        pathMatchesPathOperation("/items/123/details", "/items/{item_id}"),
         false,
       )
       assert.strictEqual(
-        pathMatchesEndpoint("/items", "/items/{item_id}"),
+        pathMatchesPathOperation("/items", "/items/{item_id}"),
         false,
       )
     })
 
     test("rejects when static segments differ", () => {
       assert.strictEqual(
-        pathMatchesEndpoint("/users/123", "/items/{item_id}"),
+        pathMatchesPathOperation("/users/123", "/items/{item_id}"),
         false,
       )
       assert.strictEqual(
-        pathMatchesEndpoint("/api/v1/items", "/api/v2/items"),
+        pathMatchesPathOperation("/api/v1/items", "/api/v2/items"),
         false,
       )
     })
 
     test("handles trailing slashes", () => {
-      assert.strictEqual(pathMatchesEndpoint("/items/", "/items"), true)
-      assert.strictEqual(pathMatchesEndpoint("/items", "/items/"), true)
+      assert.strictEqual(pathMatchesPathOperation("/items/", "/items"), true)
+      assert.strictEqual(pathMatchesPathOperation("/items", "/items/"), true)
       assert.strictEqual(
-        pathMatchesEndpoint("/items/123/", "/items/{id}"),
+        pathMatchesPathOperation("/items/123/", "/items/{id}"),
         true,
       )
     })
 
     test("handles root path", () => {
-      assert.strictEqual(pathMatchesEndpoint("/", "/"), true)
-      assert.strictEqual(pathMatchesEndpoint("", ""), true)
+      assert.strictEqual(pathMatchesPathOperation("/", "/"), true)
+      assert.strictEqual(pathMatchesPathOperation("", ""), true)
     })
 
     test("rejects empty path against non-empty", () => {
       assert.strictEqual(
-        pathMatchesEndpoint("/items/123", "/items/{item_id}"),
+        pathMatchesPathOperation("/items/123", "/items/{item_id}"),
         true,
       )
       assert.strictEqual(
-        pathMatchesEndpoint("/items/", "/items/{item_id}"),
+        pathMatchesPathOperation("/items/", "/items/{item_id}"),
         false,
       )
     })
 
-    test("matches paths with dynamic prefix in endpoint", () => {
+    test("matches paths with dynamic prefix in path operation", () => {
       assert.strictEqual(
-        pathMatchesEndpoint(
+        pathMatchesPathOperation(
           "/items/123",
           "{settings.API_V1_STR}/items/{item_id}",
         ),
         true,
       )
       assert.strictEqual(
-        pathMatchesEndpoint("/api/v2/users", "{BASE}/users"),
+        pathMatchesPathOperation("/api/v2/users", "{BASE}/users"),
         false,
       )
-      assert.strictEqual(pathMatchesEndpoint("/users", "{BASE}/users"), true)
-      assert.strictEqual(pathMatchesEndpoint("/items", "{BASE}/users"), false)
+      assert.strictEqual(
+        pathMatchesPathOperation("/users", "{BASE}/users"),
+        true,
+      )
+      assert.strictEqual(
+        pathMatchesPathOperation("/items", "{BASE}/users"),
+        false,
+      )
     })
 
     test("matches paths with dynamic prefix in test path (f-strings)", () => {
       assert.strictEqual(
-        pathMatchesEndpoint(
+        pathMatchesPathOperation(
           "{settings.API_V1_STR}/apps/{app.id}/environment-variables",
           "/apps/{app_id}/environment-variables",
         ),
         true,
       )
       assert.strictEqual(
-        pathMatchesEndpoint(
+        pathMatchesPathOperation(
           "{settings.API}/items/{item_id}",
           "{BASE}/items/{id}",
         ),
         true,
       )
       assert.strictEqual(
-        pathMatchesEndpoint("{BASE}/users/{id}", "/items/{item_id}"),
+        pathMatchesPathOperation("{BASE}/users/{id}", "/items/{item_id}"),
         false,
       )
     })
 
     test("strips query strings from test path", () => {
       assert.strictEqual(
-        pathMatchesEndpoint("/teams/?owner=true&order_by=created_at", "/teams"),
+        pathMatchesPathOperation(
+          "/teams/?owner=true&order_by=created_at",
+          "/teams",
+        ),
         true,
       )
-      assert.strictEqual(pathMatchesEndpoint("/?page=1", "/"), true)
+      assert.strictEqual(pathMatchesPathOperation("/?page=1", "/"), true)
     })
   })
 })

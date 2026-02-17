@@ -1,5 +1,5 @@
 /**
- * Public API types for FastAPI endpoint discovery.
+ * Public API types for FastAPI path operation discovery.
  */
 
 export type HTTPMethod =

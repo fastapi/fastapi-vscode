@@ -5,12 +5,15 @@ import type {
   RouterDefinition,
 } from "../../core/types"
 import {
-  EndpointTreeProvider,
   getAppLabel,
   getRouteLabel,
   getRouterLabel,
-} from "../../vscode/endpointTreeProvider"
-import { groupAppsByWorkspace, mockApps } from "../fixtures/mockEndpointData"
+  PathOperationTreeProvider,
+} from "../../vscode/pathOperationTreeProvider"
+import {
+  groupAppsByWorkspace,
+  mockApps,
+} from "../fixtures/mockPathOperationData"
 
 function makeRoute(method: string, path: string): RouteDefinition {
   return {
@@ -130,11 +133,11 @@ suite("getRouteLabel", () => {
   })
 })
 
-suite("EndpointTreeProvider", () => {
-  let provider: EndpointTreeProvider
+suite("PathOperationTreeProvider", () => {
+  let provider: PathOperationTreeProvider
 
   setup(() => {
-    provider = new EndpointTreeProvider(mockApps)
+    provider = new PathOperationTreeProvider(mockApps)
   })
 
   test("getChildren returns apps at root level", () => {
@@ -273,7 +276,7 @@ suite("EndpointTreeProvider", () => {
       assert.ok(treeItem.command, "Route should have a command")
       assert.strictEqual(
         treeItem.command?.command,
-        "fastapi-vscode.goToEndpoint",
+        "fastapi-vscode.goToPathOperation",
       )
     }
   })
@@ -305,7 +308,7 @@ suite("EndpointTreeProvider", () => {
   })
 
   test("getChildren returns message when no apps", () => {
-    const emptyProvider = new EndpointTreeProvider([])
+    const emptyProvider = new PathOperationTreeProvider([])
     const roots = emptyProvider.getChildren()
     assert.strictEqual(roots.length, 1, "Should return one message item")
     assert.strictEqual(roots[0].type, "message")
@@ -322,7 +325,7 @@ suite("EndpointTreeProvider", () => {
   })
 
   test("getTreeItem for message type", () => {
-    const emptyProvider = new EndpointTreeProvider([])
+    const emptyProvider = new PathOperationTreeProvider([])
     const msg = emptyProvider.getChildren()[0]
     assert.strictEqual(
       emptyProvider.getTreeItem(msg).label,
@@ -332,7 +335,7 @@ suite("EndpointTreeProvider", () => {
 
   test("getTreeItem for workspace type", () => {
     const wsRoots = groupAppsByWorkspace(mockApps)
-    const wsProvider = new EndpointTreeProvider(mockApps, wsRoots)
+    const wsProvider = new PathOperationTreeProvider(mockApps, wsRoots)
     const workspace = wsProvider
       .getChildren()
       .find((r) => r.type === "workspace")
@@ -362,7 +365,7 @@ suite("EndpointTreeProvider", () => {
     }
     const app = makeApp("app", "main.py")
     app.routers = [parentRouter]
-    const p = new EndpointTreeProvider([app])
+    const p = new PathOperationTreeProvider([app])
     assert.strictEqual(
       p.getTreeItem({ type: "router", router: childRouter }).label,
       "/settings",
@@ -380,11 +383,11 @@ suite("EndpointTreeProvider", () => {
   })
 
   test("dispose cleans up", () => {
-    new EndpointTreeProvider([]).dispose()
+    new PathOperationTreeProvider([]).dispose()
   })
 
   test("setApps updates apps and refreshes tree", () => {
-    const p = new EndpointTreeProvider([])
+    const p = new PathOperationTreeProvider([])
     assert.strictEqual(p.getChildren()[0].type, "message")
     p.setApps(mockApps)
     assert.strictEqual(p.getChildren()[0].type, "app")
@@ -415,7 +418,7 @@ suite("EndpointTreeProvider", () => {
 
   test("getParent returns workspace for app in multi-root", () => {
     const wsRoots = groupAppsByWorkspace(mockApps)
-    const wsProvider = new EndpointTreeProvider(mockApps, wsRoots)
+    const wsProvider = new PathOperationTreeProvider(mockApps, wsRoots)
     const workspace = wsProvider
       .getChildren()
       .find((r) => r.type === "workspace")!
@@ -442,7 +445,7 @@ suite("EndpointTreeProvider", () => {
     }
     const app = makeApp("app", "main.py")
     app.routers = [parentRouter]
-    const p = new EndpointTreeProvider([app])
+    const p = new PathOperationTreeProvider([app])
     const parent = p.getParent({ type: "router", router: childRouter })
     assert.strictEqual(parent?.type, "router")
   })

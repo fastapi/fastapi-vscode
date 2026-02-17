@@ -6,11 +6,11 @@ A Visual Studio Code extension for FastAPI application development. Available on
 
 This extension enhances the FastAPI development experience in Visual Studio Code by providing:
 
-### Endpoint Explorer
+### Path Operation Explorer
 
-The Endpoint Explorer provides a hierarchical tree view of all FastAPI routes in your application. You can expand routers to see their associated endpoints, and click on any route to jump directly to its definition in the code. You can also jump to router definitions by right-clicking on a router node.
+The Path Operation Explorer provides a hierarchical tree view of all FastAPI routes in your application. You can expand routers to see their associated path operations, and click on any route to jump directly to its definition in the code. You can also jump to router definitions by right-clicking on a router node.
 
-![Endpoint Explorer GIF](media/walkthrough/endpoints.gif)
+![Path Operation Explorer GIF](media/walkthrough/path-operations.gif)
 
 ### Search for routes
 

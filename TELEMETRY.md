@@ -28,7 +28,7 @@ This disables only the FastAPI extension's telemetry while leaving other telemet
 
 We collect anonymous usage metrics to improve the extension. We do **not** collect:
 - File paths or file contents
-- Route paths or endpoint names
+- Route paths or path operation names
 - Any code from your project
 - IP addresses (geo-IP is disabled)
 
@@ -42,7 +42,7 @@ We collect anonymous usage metrics to improve the extension. We do **not** colle
 | Extension deactivated | Session duration (time from activation to deactivation) | Helps us understand how long users keep VS Code open with the extension active |
 | Activation failed | Error category (e.g., "parse_error", "wasm_load_error"), failure stage | Helps us debug issues users encounter |
 | Entrypoint detected | Detection duration, method used (config/pyproject/heuristic), success/failure, routes and routers count | Helps us understand which detection methods work best |
-| Tree view visible | _(none)_ | Know if users see the endpoint explorer |
+| Tree view visible | _(none)_ | Know if users see the path operation explorer |
 | Search executed | Number of results, whether user selected a result | Helps us understand search usage |
 | CodeLens provided | Number of test calls found, number matched to routes | Helps us understand CodeLens effectiveness |
 | Routes navigated | Count of navigations (cumulative) | Helps us understand feature usage depth |

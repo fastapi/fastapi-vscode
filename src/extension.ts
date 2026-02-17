@@ -1,5 +1,5 @@
 /**
- * VSCode extension entry point for FastAPI endpoint discovery.
+ * VSCode extension entry point for FastAPI path operation discovery.
  */
 
 import * as vscode from "vscode"
@@ -32,10 +32,10 @@ import {
   trackTreeViewVisible,
 } from "./utils/telemetry"
 import {
-  type EndpointTreeItem,
-  EndpointTreeProvider,
   METHOD_ICONS,
-} from "./vscode/endpointTreeProvider"
+  type PathOperationTreeItem,
+  PathOperationTreeProvider,
+} from "./vscode/pathOperationTreeProvider"
 import { TestCodeLensProvider } from "./vscode/testCodeLensProvider"
 
 export const EXTENSION_ID = "FastAPILabs.fastapi-vscode"
@@ -150,7 +150,10 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   }
 
-  const endpointProvider = new EndpointTreeProvider(apps, groupApps(apps))
+  const pathOperationProvider = new PathOperationTreeProvider(
+    apps,
+    groupApps(apps),
+  )
   const codeLensProvider = new TestCodeLensProvider(parserService, apps)
 
   // File watcher for auto-refresh
@@ -160,7 +163,7 @@ export async function activate(context: vscode.ExtensionContext) {
     refreshTimeout = setTimeout(async () => {
       if (!parserService) return
       const newApps = await discoverFastAPIApps(parserService)
-      endpointProvider.setApps(newApps, groupApps(newApps))
+      pathOperationProvider.setApps(newApps, groupApps(newApps))
       codeLensProvider.setApps(newApps)
     }, 300)
   }
@@ -176,8 +179,8 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   // Tree view
-  const treeView = vscode.window.createTreeView("endpoint-explorer", {
-    treeDataProvider: endpointProvider,
+  const treeView = vscode.window.createTreeView("path-operation-explorer", {
+    treeDataProvider: pathOperationProvider,
   })
 
   treeView.onDidChangeVisibility((e) => {
@@ -294,7 +297,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     watcher,
     treeView,
-    registerCommands(endpointProvider, codeLensProvider, groupApps),
+    registerCommands(pathOperationProvider, codeLensProvider, groupApps),
     { dispose: () => clearInterval(telemetryFlushInterval) },
   )
 }
@@ -371,7 +374,7 @@ function registerCloudCommands(
 }
 
 function registerCommands(
-  endpointProvider: EndpointTreeProvider,
+  pathOperationProvider: PathOperationTreeProvider,
   codeLensProvider: TestCodeLensProvider,
   groupApps: (
     apps: AppDefinition[],
@@ -382,19 +385,19 @@ function registerCommands(
 ): vscode.Disposable {
   return vscode.Disposable.from(
     vscode.commands.registerCommand(
-      "fastapi-vscode.refreshEndpoints",
+      "fastapi-vscode.refreshPathOperations",
       async () => {
         if (!parserService) return
         clearImportCache()
         const newApps = await discoverFastAPIApps(parserService)
-        endpointProvider.setApps(newApps, groupApps(newApps))
+        pathOperationProvider.setApps(newApps, groupApps(newApps))
         codeLensProvider.setApps(newApps)
       },
     ),
 
     vscode.commands.registerCommand(
-      "fastapi-vscode.goToEndpoint",
-      (item: EndpointTreeItem) => {
+      "fastapi-vscode.goToPathOperation",
+      (item: PathOperationTreeItem) => {
         if (item.type === "route") {
           incrementRouteNavigated()
           navigateToLocation(item.route.location)
@@ -403,11 +406,11 @@ function registerCommands(
     ),
 
     vscode.commands.registerCommand(
-      "fastapi-vscode.searchEndpoints",
+      "fastapi-vscode.searchPathOperations",
       async () => {
         const workspacePrefix =
           vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
-        const items = collectRoutes(endpointProvider.getApps())
+        const items = collectRoutes(pathOperationProvider.getApps())
           .map((route) => {
             const path = stripLeadingDynamicSegments(route.path)
             return {
@@ -425,13 +428,13 @@ function registerCommands(
         if (items.length === 0) {
           trackSearchExecuted(0, false)
           vscode.window.showInformationMessage(
-            "No FastAPI endpoints found in the workspace.",
+            "No FastAPI path operations found in the workspace.",
           )
           return
         }
 
         const selected = await vscode.window.showQuickPick(items, {
-          placeHolder: "Search FastAPI endpoints...",
+          placeHolder: "Search FastAPI path operations...",
         })
         trackSearchExecuted(items.length, selected !== undefined)
         if (selected) {
@@ -441,8 +444,8 @@ function registerCommands(
     ),
 
     vscode.commands.registerCommand(
-      "fastapi-vscode.copyEndpointPath",
-      (item: EndpointTreeItem) => {
+      "fastapi-vscode.copyPathOperationPath",
+      (item: PathOperationTreeItem) => {
         if (item.type === "route") {
           incrementRouteCopied()
           vscode.env.clipboard.writeText(
@@ -454,7 +457,7 @@ function registerCommands(
 
     vscode.commands.registerCommand(
       "fastapi-vscode.goToRouter",
-      (item: EndpointTreeItem) => {
+      (item: PathOperationTreeItem) => {
         if (item.type === "router") {
           navigateToLocation(item.router.location)
         }
@@ -470,7 +473,7 @@ function registerCommands(
     }),
 
     vscode.commands.registerCommand("fastapi-vscode.toggleRouters", () => {
-      endpointProvider.toggleRouters()
+      pathOperationProvider.toggleRouters()
     }),
 
     vscode.commands.registerCommand(

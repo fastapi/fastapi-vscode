@@ -1,5 +1,5 @@
 import type { AppDefinition } from "../../core/types"
-import type { EndpointTreeItem } from "../../vscode/endpointTreeProvider"
+import type { PathOperationTreeItem } from "../../vscode/pathOperationTreeProvider"
 
 export const mockApps: AppDefinition[] = [
   {
@@ -268,7 +268,7 @@ export const mockApps: AppDefinition[] = [
  */
 export function groupAppsByWorkspace(
   apps: AppDefinition[],
-): EndpointTreeItem[] {
+): PathOperationTreeItem[] {
   const workspaceMap = new Map<string, AppDefinition[]>()
 
   for (const app of apps) {

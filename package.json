@@ -40,8 +40,8 @@
     ],
     "commands": [
       {
-        "command": "fastapi-vscode.refreshEndpoints",
-        "title": "Refresh Endpoints",
+        "command": "fastapi-vscode.refreshPathOperations",
+        "title": "Refresh Path Operations",
         "category": "FastAPI",
         "icon": "$(refresh)"
       },
@@ -52,8 +52,8 @@
         "icon": "$(fold)"
       },
       {
-        "command": "fastapi-vscode.copyEndpointPath",
-        "title": "Copy Endpoint Path",
+        "command": "fastapi-vscode.copyPathOperationPath",
+        "title": "Copy Path to Path Operation",
         "category": "FastAPI"
       },
       {
@@ -67,8 +67,8 @@
         "category": "FastAPI"
       },
       {
-        "command": "fastapi-vscode.searchEndpoints",
-        "title": "Search Endpoints...",
+        "command": "fastapi-vscode.searchPathOperations",
+        "title": "Search Path Operations...",
         "category": "FastAPI",
         "icon": "$(search)"
       },
@@ -105,7 +105,7 @@
     ],
     "keybindings": [
       {
-        "command": "fastapi-vscode.searchEndpoints",
+        "command": "fastapi-vscode.searchPathOperations",
         "key": "ctrl+shift+e",
         "mac": "cmd+shift+e"
       }
@@ -113,7 +113,7 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "fastapi-vscode.copyEndpointPath",
+          "command": "fastapi-vscode.copyPathOperationPath",
           "when": "false"
         },
         {
@@ -147,25 +147,25 @@
       ],
       "view/title": [
         {
-          "command": "fastapi-vscode.refreshEndpoints",
-          "when": "view == endpoint-explorer",
+          "command": "fastapi-vscode.refreshPathOperations",
+          "when": "view == path-operation-explorer",
           "group": "navigation@1"
         },
         {
           "command": "fastapi-vscode.toggleRouters",
-          "when": "view == endpoint-explorer",
+          "when": "view == path-operation-explorer",
           "group": "navigation@2"
         }
       ],
       "view/item/context": [
         {
-          "command": "fastapi-vscode.copyEndpointPath",
-          "when": "view == endpoint-explorer && viewItem == route",
+          "command": "fastapi-vscode.copyPathOperationPath",
+          "when": "view == path-operation-explorer && viewItem == route",
           "group": "navigation"
         },
         {
           "command": "fastapi-vscode.goToRouter",
-          "when": "view == endpoint-explorer && viewItem == router",
+          "when": "view == path-operation-explorer && viewItem == router",
           "group": "navigation"
         }
       ]
@@ -189,8 +189,8 @@
     "views": {
       "fastapi": [
         {
-          "id": "endpoint-explorer",
-          "name": "Endpoint Explorer",
+          "id": "path-operation-explorer",
+          "name": "Path Operation Explorer",
           "icon": "media/icons/logo-outline.svg"
         }
       ],
@@ -205,7 +205,7 @@
     },
     "viewsWelcome": [
       {
-        "view": "endpoint-explorer",
+        "view": "path-operation-explorer",
         "contents": "No FastAPI apps found in this workspace.\n\n[Configure Entry Point](command:workbench.action.openSettings?[\"fastapi.entryPoint\"])\n\n[Open Getting Started](command:workbench.action.openWalkthrough?{\"category\":\"FastAPILabs.fastapi-vscode#fastapi-getting-started\"})"
       }
     ],
@@ -217,27 +217,27 @@
         "icon": "media/icons/logo-teal.svg",
         "steps": [
           {
-            "id": "view-endpoints",
-            "title": "View Your API Endpoints",
-            "description": "Open the Endpoint Explorer in the Activity Bar (⚡) to see all routes in your FastAPI application.\n[Open Endpoint Explorer](command:endpoint-explorer.focus)",
+            "id": "view-path-operations",
+            "title": "View Your Path Operations",
+            "description": "Open the Path Operation Explorer in the Activity Bar (⚡) to see all routes in your FastAPI application.\n[Open Path Operation Explorer](command:path-operation-explorer.focus)",
             "media": {
-              "image": "media/walkthrough/endpoints.gif",
-              "altText": "Endpoint Explorer showing FastAPI routes organized by router"
+              "image": "media/walkthrough/path-operations.gif",
+              "altText": "Path Operation Explorer showing FastAPI routes organized by router"
             },
             "completionEvents": [
-              "onView:endpoint-explorer"
+              "onView:path-operation-explorer"
             ]
           },
           {
-            "id": "search-endpoints",
-            "title": "Quickly Find Endpoints",
-            "description": "Instantly filter and navigate to any endpoint in your application.\n[Search Endpoints](command:fastapi-vscode.searchEndpoints)",
+            "id": "search-path-operations",
+            "title": "Quickly Find Path Operations",
+            "description": "Instantly filter and navigate to any path operation in your application.\n[Search Path Operations](command:fastapi-vscode.searchPathOperations)",
             "media": {
               "image": "media/walkthrough/search.gif",
-              "altText": "Search endpoints quick pick showing filtered results"
+              "altText": "Search path operations quick pick showing filtered results"
             },
             "completionEvents": [
-              "onCommand:fastapi-vscode.searchEndpoints"
+              "onCommand:fastapi-vscode.searchPathOperations"
             ]
           },
           {
