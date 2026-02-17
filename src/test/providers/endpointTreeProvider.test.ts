@@ -162,6 +162,33 @@ suite("PathOperationTreeProvider", () => {
     )
   })
 
+  test("routes are sorted by method priority then path", () => {
+    const app = makeApp("app", "main.py")
+    app.routes = [
+      makeRoute("DELETE", "/users"),
+      makeRoute("GET", "/users"),
+      makeRoute("POST", "/items"),
+      makeRoute("PATCH", "/users"),
+      makeRoute("GET", "/items"),
+      makeRoute("POST", "/users"),
+      makeRoute("PUT", "/users"),
+    ]
+    const p = new EndpointTreeProvider([app])
+    const children = p.getChildren(p.getChildren()[0])
+    const labels = children.map((c) =>
+      c.type === "route" ? getRouteLabel(c.route) : "",
+    )
+    assert.deepStrictEqual(labels, [
+      "GET /items",
+      "GET /users",
+      "POST /items",
+      "POST /users",
+      "PUT /users",
+      "PATCH /users",
+      "DELETE /users",
+    ])
+  })
+
   test("getChildren returns routes for router", () => {
     const roots = provider.getChildren()
     const app = roots[0]
