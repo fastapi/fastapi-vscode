@@ -34,13 +34,16 @@ function stripDocstring(raw: string): string {
 
   // Dedent: strip common leading whitespace (like Python's textwrap.dedent)
   const lines = content.split("\n")
-  // Skip the first line for indent calculation (it's often on the same line as the quotes)
+  // First line is either empty or unindented (follows opening quotes), so skip it
   const indentedLines = lines.slice(1).filter((l) => l.trim().length > 0)
   if (indentedLines.length === 0) {
     return content.trim()
   }
+
+  // Find minimum indentation of all non-empty lines (except first) so we can
+  // remove it from all lines, preserving relative indentation
   const minIndent = Math.min(
-    ...indentedLines.map((l) => l.match(/^(\s*)/)![1].length),
+    ...indentedLines.map((l) => l.length - l.trimStart().length),
   )
   const dedented = lines.map((l, i) => (i === 0 ? l : l.slice(minIndent)))
   return dedented.join("\n").trim()
