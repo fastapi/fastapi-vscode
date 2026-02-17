@@ -38,24 +38,39 @@ export function parseEntrypointString(value: string): {
 }
 
 /**
- * Scans for common FastAPI entry point files (main.py, __init__.py).
+ * Finds all Python files containing a FastAPI() instantiation.
+ * Uses a cheap text pre-filter to avoid tree-sitter parsing non-app files.
  * Returns URI strings sorted by depth (shallower first).
  */
-async function automaticDetectEntryPoints(
+async function findAllFastAPIFiles(
   folder: vscode.WorkspaceFolder,
 ): Promise<string[]> {
-  const [mainFiles, initFiles] = await Promise.all([
-    vscode.workspace.findFiles(
-      new vscode.RelativePattern(folder, "**/main.py"),
+  const pyFiles = await vscode.workspace.findFiles(
+    new vscode.RelativePattern(folder, "**/*.py"),
+    new vscode.RelativePattern(
+      folder,
+      "**/{.venv,venv,__pycache__,node_modules,.git,tests,test}/**",
     ),
-    vscode.workspace.findFiles(
-      new vscode.RelativePattern(folder, "**/__init__.py"),
-    ),
-  ])
+  )
 
-  return [...mainFiles, ...initFiles]
-    .map((uri) => uri.toString())
-    .sort((a, b) => uriPath(a).split("/").length - uriPath(b).split("/").length)
+  const results: string[] = []
+  for (const uri of pyFiles) {
+    const fileName = uri.path.split("/").pop() ?? ""
+    if (
+      fileName.startsWith("test_") ||
+      fileName.endsWith("_test.py") ||
+      fileName === "conftest.py"
+    )
+      continue
+    const content = await vscode.workspace.fs.readFile(uri)
+    if (new TextDecoder().decode(content).includes("FastAPI(")) {
+      results.push(uri.toString())
+    }
+  }
+
+  return results.sort(
+    (a, b) => uriPath(a).split("/").length - uriPath(b).split("/").length,
+  )
 }
 
 /**
@@ -148,11 +163,11 @@ export async function discoverFastAPIApps(
         candidates = [pyprojectEntry]
         detectionMethod = "pyproject"
       } else {
-        const detected = await automaticDetectEntryPoints(folder)
+        const detected = await findAllFastAPIFiles(folder)
         candidates = detected.map((filePath) => ({ filePath }))
         detectionMethod = "heuristic"
         log(
-          `Found ${candidates.length} candidate entry file(s) in ${folder.name}`,
+          `Found ${candidates.length} candidate FastAPI file(s) in ${folder.name}`,
         )
       }
 
@@ -183,16 +198,14 @@ export async function discoverFastAPIApps(
         const app = routerNodeToAppDefinition(routerNode, folder.uri.fsPath)
         folderApps.push(app)
         apps.push(app)
-        break // TODO: Only use first successful app per workspace folder, for now
       }
     }
 
     const folderRoutes = collectRoutes(folderApps)
 
     if (folderApps.length > 0) {
-      const app = folderApps[0]
       log(
-        `Found FastAPI app "${app.name}" with ${folderRoutes.length} route(s) in ${app.routers.length} router(s)`,
+        `Found ${folderApps.length} FastAPI app(s) with ${folderRoutes.length} route(s) in ${folder.name}`,
       )
     }
 
