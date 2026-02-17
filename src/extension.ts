@@ -34,7 +34,7 @@ import {
 import {
   type EndpointTreeItem,
   EndpointTreeProvider,
-  METHOD_ICONS,
+  getMethodSvgIcon,
 } from "./vscode/endpointTreeProvider"
 import { TestCodeLensProvider } from "./vscode/testCodeLensProvider"
 
@@ -150,7 +150,11 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   }
 
-  const endpointProvider = new EndpointTreeProvider(apps, groupApps(apps))
+  const endpointProvider = new EndpointTreeProvider(
+    context.extensionUri,
+    apps,
+    groupApps(apps),
+  )
   const codeLensProvider = new TestCodeLensProvider(parserService, apps)
 
   // File watcher for auto-refresh
@@ -294,7 +298,12 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     watcher,
     treeView,
-    registerCommands(endpointProvider, codeLensProvider, groupApps),
+    registerCommands(
+      context.extensionUri,
+      endpointProvider,
+      codeLensProvider,
+      groupApps,
+    ),
     { dispose: () => clearInterval(telemetryFlushInterval) },
   )
 }
@@ -371,6 +380,7 @@ function registerCloudCommands(
 }
 
 function registerCommands(
+  extensionUri: vscode.Uri,
   endpointProvider: EndpointTreeProvider,
   codeLensProvider: TestCodeLensProvider,
   groupApps: (
@@ -411,7 +421,8 @@ function registerCommands(
           .map((route) => {
             const path = stripLeadingDynamicSegments(route.path)
             return {
-              label: `$(${METHOD_ICONS[route.method]}) ${route.method.toUpperCase()} ${path}`,
+              label: `${route.method.toUpperCase()} ${path}`,
+              iconPath: getMethodSvgIcon(extensionUri, route.method),
               description: route.functionName,
               detail: vscode.Uri.parse(route.location.filePath)
                 .fsPath.replace(workspacePrefix, "")

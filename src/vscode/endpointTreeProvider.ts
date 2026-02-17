@@ -5,6 +5,7 @@ import {
   type TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
+  Uri,
 } from "vscode"
 import { stripLeadingDynamicSegments } from "../core/pathUtils"
 import { countRoutesInRouter, findRouter } from "../core/treeUtils"
@@ -22,15 +23,14 @@ export type EndpointTreeItem =
   | { type: "route"; route: RouteDefinition }
   | { type: "message"; text: string }
 
-export const METHOD_ICONS: Record<RouteMethod, string> = {
-  GET: "arrow-right",
-  POST: "plus",
-  PUT: "edit",
-  DELETE: "trash",
-  PATCH: "pencil",
-  OPTIONS: "settings-gear",
-  HEAD: "eye",
-  WEBSOCKET: "broadcast",
+export function getMethodSvgIcon(extensionUri: Uri, method: RouteMethod): Uri {
+  return Uri.joinPath(
+    extensionUri,
+    "media",
+    "icons",
+    "methods",
+    `${method.toLowerCase()}.svg`,
+  )
 }
 
 export function getAppLabel(app: AppDefinition): string {
@@ -115,7 +115,14 @@ export class EndpointTreeProvider
   private routersExpanded = false
   private toggleCount = 0
 
-  constructor(apps: AppDefinition[] = [], roots?: EndpointTreeItem[]) {
+  private extensionUri: Uri
+
+  constructor(
+    extensionUri: Uri,
+    apps: AppDefinition[] = [],
+    roots?: EndpointTreeItem[],
+  ) {
+    this.extensionUri = extensionUri
     this.apps = apps
     this.roots = roots ?? apps.map((app) => ({ type: "app" as const, app }))
   }
@@ -250,7 +257,10 @@ export class EndpointTreeProvider
       case "route": {
         const routeItem = new TreeItem(getRouteLabel(element.route))
         routeItem.description = element.route.functionName
-        routeItem.iconPath = new ThemeIcon(METHOD_ICONS[element.route.method])
+        routeItem.iconPath = getMethodSvgIcon(
+          this.extensionUri,
+          element.route.method,
+        )
         routeItem.contextValue = "route"
         routeItem.tooltip = new MarkdownString(
           `${element.route.method} ${element.route.path}\n\nFunction: ${element.route.functionName}\nFile: ${element.route.location.filePath}:${element.route.location.line}`,
