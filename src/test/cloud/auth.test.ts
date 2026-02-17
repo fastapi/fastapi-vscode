@@ -387,6 +387,57 @@ suite("cloud/auth", () => {
         await provider.dispose()
       })
 
+      test("shows notification after device code sign-in", async () => {
+        fsStub.fake.readFile.rejects(new Error("File not found"))
+
+        const token = validToken()
+        const fetchStub = sinon.stub(globalThis, "fetch")
+        fetchStub.onFirstCall().resolves(
+          mockResponse({
+            device_code: "dev123",
+            user_code: "USER-CODE",
+            verification_uri: "https://auth.example.com/device",
+            verification_uri_complete:
+              "https://auth.example.com/device?code=USER-CODE",
+            interval: 1,
+          }),
+        )
+        fetchStub.onSecondCall().resolves(mockResponse({ access_token: token }))
+        fetchStub
+          .onThirdCall()
+          .resolves(
+            mockResponse({ email: "new@example.com", full_name: "New" }),
+          )
+
+        sinon.stub(vscode.env, "openExternal")
+        sinon
+          .stub(vscode.window, "withProgress")
+          .callsFake(async (_opts, task) => {
+            const cancellationToken = {
+              isCancellationRequested: false,
+              onCancellationRequested: sinon.stub(),
+            }
+            return task({ report: sinon.stub() }, cancellationToken as any)
+          })
+        const infoStub = sinon.stub(vscode.window, "showInformationMessage")
+
+        fsStub.fake.createDirectory.resolves()
+        fsStub.fake.writeFile.callsFake(async () => {
+          fsStub.fake.readFile.resolves(
+            Buffer.from(JSON.stringify({ access_token: token })),
+          )
+        })
+
+        const { provider } = createProvider()
+        await provider.createSession()
+
+        assert.ok(
+          infoStub.calledWith("Signed in to FastAPI Cloud as new@example.com"),
+        )
+
+        await provider.dispose()
+      })
+
       test("wraps network error with friendly message", async () => {
         fsStub.fake.readFile.rejects(new Error("File not found"))
 
