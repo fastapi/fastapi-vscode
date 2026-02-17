@@ -34,6 +34,39 @@ function collectNodesByType(node: Node, type: string, results: Node[]): void {
 }
 
 /**
+ * Collects string variable assignments from the AST for path resolution.
+ * Only resolves simple assignments (e.g. `WEBHOOK_PATH = "/webhook"`).
+ *
+ * Examples:
+ *   WEBHOOK_PATH = "/webhook"  -> Map { "WEBHOOK_PATH" => "/webhook" }
+ *   BASE = "/api"              -> Map { "BASE" => "/api" }
+ *   settings.PREFIX = "/api"   -> (skipped, not a simple identifier)
+ */
+export function collectStringVariables(rootNode: Node): Map<string, string> {
+  const variables = new Map<string, string>()
+  const assignmentNodes = findNodesByType(rootNode, "assignment")
+
+  for (const assign of assignmentNodes) {
+    const left = assign.childForFieldName("left")
+    const right = assign.childForFieldName("right")
+    if (
+      left &&
+      right &&
+      left.type === "identifier" &&
+      right.type === "string"
+    ) {
+      const varName = left.text
+      const value = extractStringValue(right)
+      if (value !== null) {
+        variables.set(varName, value)
+      }
+    }
+  }
+
+  return variables
+}
+
+/**
  * Extracts the string value from a string AST node, handling quotes and f-string prefix.
  * Returns null if the node is not a string.
  *

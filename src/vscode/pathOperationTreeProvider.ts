@@ -268,8 +268,9 @@ export class PathOperationTreeProvider
         routeItem.description = element.route.functionName
         routeItem.iconPath = new ThemeIcon(METHOD_ICONS[element.route.method])
         routeItem.contextValue = "route"
+        const tooltipPath = stripLeadingDynamicSegments(element.route.path)
         routeItem.tooltip = new MarkdownString(
-          `${element.route.method} ${element.route.path}\n\nFunction: ${element.route.functionName}\nFile: ${element.route.location.filePath}:${element.route.location.line}`,
+          `${element.route.method} ${tooltipPath}\n\nFunction: ${element.route.functionName}\nFile: ${element.route.location.filePath}:${element.route.location.line}`,
         )
         routeItem.command = {
           command: "fastapi-vscode.goToPathOperation",
