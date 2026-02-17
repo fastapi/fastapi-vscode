@@ -437,6 +437,7 @@ function registerCommands(
 
         const selected = await vscode.window.showQuickPick(items, {
           placeHolder: "Search FastAPI endpoints...",
+          matchOnDescription: true,
         })
         trackSearchExecuted(items.length, selected !== undefined)
         if (selected) {
