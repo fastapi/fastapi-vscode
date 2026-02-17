@@ -173,7 +173,7 @@ suite("PathOperationTreeProvider", () => {
       makeRoute("POST", "/users"),
       makeRoute("PUT", "/users"),
     ]
-    const p = new EndpointTreeProvider([app])
+    const p = new PathOperationTreeProvider([app])
     const children = p.getChildren(p.getChildren()[0])
     const labels = children.map((c) =>
       c.type === "route" ? getRouteLabel(c.route) : "",
