@@ -6,6 +6,10 @@
 
 ## Features
 
+* ✨ Add using currently open file as a last resort for app discovery. PR [#15](https://github.com/fastapi/fastapi-vscode/pull/15) by [@savannahostrowski](https://github.com/savannahostrowski).
+
+## Features
+
 * ✨ Add support for `pyproject.toml` parsing to find app entrypoint. PR [#14](https://github.com/fastapi/fastapi-vscode/pull/14) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ## Internal
