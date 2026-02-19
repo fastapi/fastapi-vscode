@@ -250,15 +250,6 @@
             }
           },
           {
-            "id": "configure",
-            "title": "Configure Your Project",
-            "description": "If the extension doesn't find your FastAPI app automatically, you can specify the entry point in settings.\n[Open Settings](command:workbench.action.openSettings?[\"fastapi.entryPoint\"])",
-            "media": {
-              "image": "media/walkthrough/configure.gif",
-              "altText": "FastAPI entry point configuration in VS Code settings"
-            }
-          },
-          {
             "id": "cloud-deploy",
             "title": "Deploy to FastAPI Cloud",
             "description": "Deploy your FastAPI app with one click. You'll be prompted to sign in and link your project if needed.\n\n[Deploy](command:fastapi-vscode.deploy)",
