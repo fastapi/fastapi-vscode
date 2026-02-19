@@ -4,6 +4,8 @@ on:
   pull_request_target:
     branches:
       - main
+      # TODO: fix this
+      - debug-latest-changes
     types:
       - closed
   workflow_dispatch:
@@ -24,11 +26,22 @@ jobs:
         with:
           # To allow latest-changes to commit to the main branch
           token: ${{ secrets.FASTAPI_VSCODE_LATEST_CHANGES }}
-      - uses: tiangolo/latest-changes@0.4.1
+      # TODO: remove this
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      # TODO: remove this
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          latest_changes_file: release-notes.md
-          latest_changes_header: '# Latest Changes'
-          end_regex: '^## '
-          debug_logs: true
-          label_header_prefix: '## '
+          limit-access-to-actor: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # TODO: uncomment this
+      # - uses: tiangolo/latest-changes@0.4.1
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     latest_changes_file: release-notes.md
+      #     latest_changes_header: '# Latest Changes'
+      #     end_regex: '^## '
+      #     debug_logs: true
+      #     label_header_prefix: '## '
