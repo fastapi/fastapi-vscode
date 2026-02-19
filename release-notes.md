@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Features
+
+* ✨ Add route search to command palette. PR [#21](https://github.com/fastapi/fastapi-vscode/pull/21) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Fixes
 
 * 🐛 Fix CodeLens route matching and nested router discovery . PR [#20](https://github.com/fastapi/fastapi-vscode/pull/20) by [@savannahostrowski](https://github.com/savannahostrowski).
