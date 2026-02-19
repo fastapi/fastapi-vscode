@@ -4,12 +4,12 @@ on:
   pull_request_target:
     branches:
       - main
-      # TODO: fix this
-      - debug-latest-changes
     types:
       - closed
-      # TODO: remove this
-      - synchronize
+  # TODO: remove this
+  push:
+    branches:
+      - debug-latest-changes
   workflow_dispatch:
     inputs:
       number:
