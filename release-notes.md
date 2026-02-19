@@ -9,6 +9,7 @@
 
 ### Internal
 
+* 🔖  Bump extension version. PR [#75](https://github.com/fastapi/fastapi-vscode/pull/75) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔧 Fix latest-changes sub-header config and current release notes with it. PR [#72](https://github.com/fastapi/fastapi-vscode/pull/72) by [@tiangolo](https://github.com/tiangolo).
 
 ## Features
