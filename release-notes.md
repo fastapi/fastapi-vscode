@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+## Fixes
+
+* 🐛  Fix incorrect selection of root when app and router defined in same file. PR [#9](https://github.com/fastapi/fastapi-vscode/pull/9) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Features
 
 * ✨ Add Test CodeLens navigation. PR [#8](https://github.com/fastapi/fastapi-vscode/pull/8) by [@savannahostrowski](https://github.com/savannahostrowski).
