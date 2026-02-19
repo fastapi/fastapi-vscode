@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Docs
+
+* 📝 Update feature list in docs. PR [#24](https://github.com/fastapi/fastapi-vscode/pull/24) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Features
 
 * ✨ Add support for vscode.dev. PR [#18](https://github.com/fastapi/fastapi-vscode/pull/18) by [@savannahostrowski](https://github.com/savannahostrowski).
