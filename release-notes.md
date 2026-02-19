@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Features
+
+* ♻️ Refactor deployment workflow . PR [#36](https://github.com/fastapi/fastapi-vscode/pull/36) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Docs
 
 * 📝  Add cloud deploy to walkthrough. PR [#35](https://github.com/fastapi/fastapi-vscode/pull/35) by [@savannahostrowski](https://github.com/savannahostrowski).
