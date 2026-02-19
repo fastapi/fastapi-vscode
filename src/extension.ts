@@ -32,7 +32,7 @@ import {
   trackTreeViewVisible,
 } from "./utils/telemetry"
 import {
-  METHOD_ICONS,
+  getMethodSvgIcon,
   type PathOperationTreeItem,
   PathOperationTreeProvider,
 } from "./vscode/pathOperationTreeProvider"
@@ -151,6 +151,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   const pathOperationProvider = new PathOperationTreeProvider(
+    context.extensionUri,
     apps,
     groupApps(apps),
   )
@@ -302,7 +303,12 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     watcher,
     treeView,
-    registerCommands(pathOperationProvider, codeLensProvider, groupApps),
+    registerCommands(
+      context.extensionUri,
+      pathOperationProvider,
+      codeLensProvider,
+      groupApps,
+    ),
     { dispose: () => clearInterval(telemetryFlushInterval) },
   )
 }
@@ -379,6 +385,7 @@ function registerCloudCommands(
 }
 
 function registerCommands(
+  extensionUri: vscode.Uri,
   pathOperationProvider: PathOperationTreeProvider,
   codeLensProvider: TestCodeLensProvider,
   groupApps: (
@@ -419,7 +426,8 @@ function registerCommands(
           .map((route) => {
             const path = stripLeadingDynamicSegments(route.path)
             return {
-              label: `$(${METHOD_ICONS[route.method]}) ${route.method.toUpperCase()} ${path}`,
+              label: `${route.method.toUpperCase()} ${path}`,
+              iconPath: getMethodSvgIcon(extensionUri, route.method),
               description: route.functionName,
               detail: vscode.Uri.parse(route.location.filePath)
                 .fsPath.replace(workspacePrefix, "")

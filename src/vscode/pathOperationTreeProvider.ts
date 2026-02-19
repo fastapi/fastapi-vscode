@@ -23,6 +23,15 @@ export type PathOperationTreeItem =
   | { type: "route"; route: RouteDefinition }
   | { type: "message"; text: string }
 
+export function getMethodSvgIcon(extensionUri: Uri, method: RouteMethod): Uri {
+  return Uri.joinPath(
+    extensionUri,
+    "media",
+    "icons",
+    "methods",
+    `${method.toLowerCase()}.svg`,
+  )
+}
 const METHOD_ORDER: Record<RouteMethod, number> = {
   GET: 0,
   POST: 1,
@@ -32,17 +41,6 @@ const METHOD_ORDER: Record<RouteMethod, number> = {
   OPTIONS: 5,
   HEAD: 6,
   WEBSOCKET: 7,
-}
-
-export const METHOD_ICONS: Record<RouteMethod, string> = {
-  GET: "arrow-right",
-  POST: "plus",
-  PUT: "edit",
-  DELETE: "trash",
-  PATCH: "pencil",
-  OPTIONS: "settings-gear",
-  HEAD: "eye",
-  WEBSOCKET: "broadcast",
 }
 
 export function getAppLabel(app: AppDefinition): string {
@@ -132,7 +130,14 @@ export class PathOperationTreeProvider
   private routersExpanded = false
   private toggleCount = 0
 
-  constructor(apps: AppDefinition[] = [], roots?: PathOperationTreeItem[]) {
+  private extensionUri: Uri
+
+  constructor(
+    extensionUri: Uri,
+    apps: AppDefinition[] = [],
+    roots?: PathOperationTreeItem[],
+  ) {
+    this.extensionUri = extensionUri
     this.apps = apps
     this.roots = roots ?? apps.map((app) => ({ type: "app" as const, app }))
   }
@@ -267,7 +272,10 @@ export class PathOperationTreeProvider
       case "route": {
         const routeItem = new TreeItem(getRouteLabel(element.route))
         routeItem.description = element.route.functionName
-        routeItem.iconPath = new ThemeIcon(METHOD_ICONS[element.route.method])
+        routeItem.iconPath = getMethodSvgIcon(
+          this.extensionUri,
+          element.route.method,
+        )
         routeItem.contextValue = "route"
         const tooltipPath = stripLeadingDynamicSegments(element.route.path)
         const docstringSection = element.route.docstring

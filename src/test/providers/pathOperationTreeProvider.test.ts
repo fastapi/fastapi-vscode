@@ -1,4 +1,5 @@
 import * as assert from "node:assert"
+import { Uri } from "vscode"
 import type {
   AppDefinition,
   RouteDefinition,
@@ -133,11 +134,13 @@ suite("getRouteLabel", () => {
   })
 })
 
+const testExtUri = Uri.file("/test-extension")
+
 suite("PathOperationTreeProvider", () => {
   let provider: PathOperationTreeProvider
 
   setup(() => {
-    provider = new PathOperationTreeProvider(mockApps)
+    provider = new PathOperationTreeProvider(testExtUri, mockApps)
   })
 
   test("getChildren returns apps at root level", () => {
@@ -173,7 +176,7 @@ suite("PathOperationTreeProvider", () => {
       makeRoute("POST", "/users"),
       makeRoute("PUT", "/users"),
     ]
-    const p = new PathOperationTreeProvider([app])
+    const p = new PathOperationTreeProvider(testExtUri, [app])
     const children = p.getChildren(p.getChildren()[0])
     const labels = children.map((c) =>
       c.type === "route" ? getRouteLabel(c.route) : "",
@@ -344,7 +347,7 @@ suite("PathOperationTreeProvider", () => {
         location: { filePath: "users.py", line: 10, column: 0 },
       },
     ]
-    const p = new PathOperationTreeProvider([app])
+    const p = new PathOperationTreeProvider(testExtUri, [app])
     const appItem = p.getChildren()[0]
     const route = p.getChildren(appItem).find((c) => c.type === "route")!
     const treeItem = p.getTreeItem(route)
@@ -363,7 +366,7 @@ suite("PathOperationTreeProvider", () => {
   })
 
   test("getChildren returns message when no apps", () => {
-    const emptyProvider = new PathOperationTreeProvider([])
+    const emptyProvider = new PathOperationTreeProvider(testExtUri, [])
     const roots = emptyProvider.getChildren()
     assert.strictEqual(roots.length, 1, "Should return one message item")
     assert.strictEqual(roots[0].type, "message")
@@ -380,7 +383,7 @@ suite("PathOperationTreeProvider", () => {
   })
 
   test("getTreeItem for message type", () => {
-    const emptyProvider = new PathOperationTreeProvider([])
+    const emptyProvider = new PathOperationTreeProvider(testExtUri, [])
     const msg = emptyProvider.getChildren()[0]
     assert.strictEqual(
       emptyProvider.getTreeItem(msg).label,
@@ -390,7 +393,12 @@ suite("PathOperationTreeProvider", () => {
 
   test("getTreeItem for workspace type", () => {
     const wsRoots = groupAppsByWorkspace(mockApps)
-    const wsProvider = new PathOperationTreeProvider(mockApps, wsRoots)
+
+    const wsProvider = new PathOperationTreeProvider(
+      testExtUri,
+      mockApps,
+      wsRoots,
+    )
     const workspace = wsProvider
       .getChildren()
       .find((r) => r.type === "workspace")
@@ -420,7 +428,8 @@ suite("PathOperationTreeProvider", () => {
     }
     const app = makeApp("app", "main.py")
     app.routers = [parentRouter]
-    const p = new PathOperationTreeProvider([app])
+
+    const p = new PathOperationTreeProvider(testExtUri, [app])
     assert.strictEqual(
       p.getTreeItem({ type: "router", router: childRouter }).label,
       "/settings",
@@ -438,11 +447,11 @@ suite("PathOperationTreeProvider", () => {
   })
 
   test("dispose cleans up", () => {
-    new PathOperationTreeProvider([]).dispose()
+    new PathOperationTreeProvider(testExtUri, []).dispose()
   })
 
   test("setApps updates apps and refreshes tree", () => {
-    const p = new PathOperationTreeProvider([])
+    const p = new PathOperationTreeProvider(testExtUri, [])
     assert.strictEqual(p.getChildren()[0].type, "message")
     p.setApps(mockApps)
     assert.strictEqual(p.getChildren()[0].type, "app")
@@ -473,7 +482,11 @@ suite("PathOperationTreeProvider", () => {
 
   test("getParent returns workspace for app in multi-root", () => {
     const wsRoots = groupAppsByWorkspace(mockApps)
-    const wsProvider = new PathOperationTreeProvider(mockApps, wsRoots)
+    const wsProvider = new PathOperationTreeProvider(
+      testExtUri,
+      mockApps,
+      wsRoots,
+    )
     const workspace = wsProvider
       .getChildren()
       .find((r) => r.type === "workspace")!
@@ -500,7 +513,7 @@ suite("PathOperationTreeProvider", () => {
     }
     const app = makeApp("app", "main.py")
     app.routers = [parentRouter]
-    const p = new PathOperationTreeProvider([app])
+    const p = new PathOperationTreeProvider(testExtUri, [app])
     const parent = p.getParent({ type: "router", router: childRouter })
     assert.strictEqual(parent?.type, "router")
   })
