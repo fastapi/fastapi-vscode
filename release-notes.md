@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Fixes
+
+* 🐛 Resolve string variables in route paths. PR [#66](https://github.com/fastapi/fastapi-vscode/pull/66) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Refactors
 
 * ♻️ Refactor `fastapi.entryPoint` accept module notation only. PR [#65](https://github.com/fastapi/fastapi-vscode/pull/65) by [@savannahostrowski](https://github.com/savannahostrowski).
