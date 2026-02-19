@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Docs
+
+* 📝 Update GIFs and simplify walkthrough. PR [#73](https://github.com/fastapi/fastapi-vscode/pull/73) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Internal
 
 * 🔧 Fix latest-changes sub-header config and current release notes with it. PR [#72](https://github.com/fastapi/fastapi-vscode/pull/72) by [@tiangolo](https://github.com/tiangolo).
