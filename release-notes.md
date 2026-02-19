@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Fixes
+
+* 🐛  Add `matchOnDescription` to allow function name searching. PR [#60](https://github.com/fastapi/fastapi-vscode/pull/60) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Internal
 
 * ⚙️ Bump `@types/vscode` and `engine.vscode`. PR [#62](https://github.com/fastapi/fastapi-vscode/pull/62) by [@savannahostrowski](https://github.com/savannahostrowski).
