@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Features
+
+* ✨ Cloud authentication, basic status bar and project linking/unlinking. PR [#32](https://github.com/fastapi/fastapi-vscode/pull/32) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Fixes
 
 * 🐛 Fix posthog import crashing in vscode.dev. PR [#31](https://github.com/fastapi/fastapi-vscode/pull/31) by [@savannahostrowski](https://github.com/savannahostrowski).
