@@ -320,7 +320,7 @@
         "fastapi.telemetry.enabled": {
           "type": "boolean",
           "default": true,
-          "scope": "machine",
+          "scope": "window",
           "description": "Enable telemetry to help improve the extension. No personal data is collected."
         }
       }

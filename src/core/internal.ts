@@ -35,6 +35,7 @@ export interface RouteInfo {
   function: string
   line: number
   column: number
+  docstring?: string
 }
 
 export type RouterType = "APIRouter" | "FastAPI" | "Unknown"
@@ -99,6 +100,7 @@ export interface RouterNode {
     function: string
     line: number
     column: number
+    docstring?: string
   }[]
   children: { router: RouterNode; prefix: string; tags: string[] }[]
 }

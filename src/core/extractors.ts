@@ -21,6 +21,34 @@ export function findNodesByType(node: Node, type: string): Node[] {
   return results
 }
 
+function stripDocstring(raw: string): string {
+  let content: string
+  if (
+    (raw.startsWith('"""') && raw.endsWith('"""')) ||
+    (raw.startsWith("'''") && raw.endsWith("'''"))
+  ) {
+    content = raw.slice(3, -3)
+  } else {
+    content = raw.slice(1, -1)
+  }
+
+  // Dedent: strip common leading whitespace (like Python's textwrap.dedent)
+  const lines = content.split("\n")
+  // First line is either empty or unindented (follows opening quotes), so skip it
+  const indentedLines = lines.slice(1).filter((l) => l.trim().length > 0)
+  if (indentedLines.length === 0) {
+    return content.trim()
+  }
+
+  // Find minimum indentation of all non-empty lines (except first) so we can
+  // remove it from all lines, preserving relative indentation
+  const minIndent = Math.min(
+    ...indentedLines.map((l) => l.length - l.trimStart().length),
+  )
+  const dedented = lines.map((l, i) => (i === 0 ? l : l.slice(minIndent)))
+  return dedented.join("\n").trim()
+}
+
 function collectNodesByType(node: Node, type: string, results: Node[]): void {
   if (node.type === type) {
     results.push(node)
@@ -31,6 +59,39 @@ function collectNodesByType(node: Node, type: string, results: Node[]): void {
       collectNodesByType(child, type, results)
     }
   }
+}
+
+/**
+ * Collects string variable assignments from the AST for path resolution.
+ * Only resolves simple assignments (e.g. `WEBHOOK_PATH = "/webhook"`).
+ *
+ * Examples:
+ *   WEBHOOK_PATH = "/webhook"  -> Map { "WEBHOOK_PATH" => "/webhook" }
+ *   BASE = "/api"              -> Map { "BASE" => "/api" }
+ *   settings.PREFIX = "/api"   -> (skipped, not a simple identifier)
+ */
+export function collectStringVariables(rootNode: Node): Map<string, string> {
+  const variables = new Map<string, string>()
+  const assignmentNodes = findNodesByType(rootNode, "assignment")
+
+  for (const assign of assignmentNodes) {
+    const left = assign.childForFieldName("left")
+    const right = assign.childForFieldName("right")
+    if (
+      left &&
+      right &&
+      left.type === "identifier" &&
+      right.type === "string"
+    ) {
+      const varName = left.text
+      const value = extractStringValue(right)
+      if (value !== null) {
+        variables.set(varName, value)
+      }
+    }
+  }
+
+  return variables
 }
 
 /**
@@ -146,7 +207,15 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
   // Grammar guarantees: decorated_definition always has a definition field with a name
   const functionDefNode = node.childForFieldName("definition")!
   const functionName = functionDefNode.childForFieldName("name")?.text ?? ""
-
+  const functionBody = functionDefNode.childForFieldName("body")
+  const firstStatement = functionBody?.namedChildren[0]
+  let docstring: string | undefined
+  if (firstStatement?.type === "expression_statement") {
+    const expr = firstStatement.firstNamedChild
+    if (expr?.type === "string") {
+      docstring = stripDocstring(expr.text)
+    }
+  }
   return {
     owner: objectNode.text,
     method: resolvedMethod,
@@ -154,6 +223,7 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
     function: functionName,
     line: node.startPosition.row + 1,
     column: node.startPosition.column,
+    docstring,
   }
 }
 

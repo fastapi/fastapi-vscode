@@ -100,6 +100,88 @@ import os
       assert.strictEqual(routesImport.isRelative, true)
     })
 
+    test("resolves same-file string variables in route paths", () => {
+      const code = `
+from fastapi import FastAPI
+
+app = FastAPI()
+
+WEBHOOK_PATH = "/webhook"
+
+@app.post(WEBHOOK_PATH)
+def some_webhook():
+    pass
+`
+      const tree = parse(code)
+      const result = analyzeTree(tree, "/test/file.py")
+
+      assert.strictEqual(result.routes.length, 1)
+      assert.strictEqual(result.routes[0].path, "/webhook")
+    })
+
+    test("resolves variable used in path concatenation", () => {
+      const code = `
+from fastapi import FastAPI
+
+app = FastAPI()
+
+BASE = "/api"
+
+@app.get(BASE + "/users")
+def list_users():
+    pass
+`
+      const tree = parse(code)
+      const result = analyzeTree(tree, "/test/file.py")
+
+      assert.strictEqual(result.routes.length, 1)
+      assert.strictEqual(result.routes[0].path, "/api/users")
+    })
+
+    test("leaves unresolvable variables wrapped", () => {
+      const code = `
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get(settings.API_PREFIX)
+def handler():
+    pass
+`
+      const tree = parse(code)
+      const result = analyzeTree(tree, "/test/file.py")
+
+      assert.strictEqual(result.routes.length, 1)
+      assert.strictEqual(result.routes[0].path, "{settings.API_PREFIX}")
+    })
+
+    test("resolves variable in router prefix", () => {
+      const code = `
+from fastapi import APIRouter
+
+PREFIX = "/users"
+router = APIRouter(prefix=PREFIX)
+`
+      const tree = parse(code)
+      const result = analyzeTree(tree, "/test/file.py")
+
+      const apiRouter = result.routers.find((r) => r.type === "APIRouter")
+      assert.ok(apiRouter)
+      assert.strictEqual(apiRouter.prefix, "/users")
+    })
+
+    test("resolves variable in include_router prefix", () => {
+      const code = `
+USERS_PREFIX = "/users"
+app.include_router(users.router, prefix=USERS_PREFIX)
+`
+      const tree = parse(code)
+      const result = analyzeTree(tree, "/test/file.py")
+
+      assert.strictEqual(result.includeRouters.length, 1)
+      assert.strictEqual(result.includeRouters[0].prefix, "/users")
+    })
+
     test("sets filePath correctly", () => {
       const code = "x = 1"
       const tree = parse(code)

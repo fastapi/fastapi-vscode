@@ -252,6 +252,84 @@ def handler():
       assert.strictEqual(result.line, 2) // 1-indexed
       assert.strictEqual(result.column, 0)
     })
+
+    test("extracts single-line docstring", () => {
+      const code = `
+@router.get("/users")
+def list_users():
+    """List all users."""
+    pass
+`
+      const tree = parse(code)
+      const decoratedDefs = findNodesByType(
+        tree.rootNode,
+        "decorated_definition",
+      )
+      const result = decoratorExtractor(decoratedDefs[0])
+
+      assert.ok(result)
+      assert.strictEqual(result.docstring, "List all users.")
+    })
+
+    test("extracts multi-line docstring and dedents", () => {
+      const code = `
+@router.get("/users")
+def list_users():
+    """
+    List all users.
+
+    Returns a list of user objects.
+    """
+    pass
+`
+      const tree = parse(code)
+      const decoratedDefs = findNodesByType(
+        tree.rootNode,
+        "decorated_definition",
+      )
+      const result = decoratorExtractor(decoratedDefs[0])
+
+      assert.ok(result)
+      assert.strictEqual(
+        result.docstring,
+        "List all users.\n\nReturns a list of user objects.",
+      )
+    })
+
+    test("extracts single-quote docstring", () => {
+      const code = `
+@router.get("/users")
+def list_users():
+    '''List all users.'''
+    pass
+`
+      const tree = parse(code)
+      const decoratedDefs = findNodesByType(
+        tree.rootNode,
+        "decorated_definition",
+      )
+      const result = decoratorExtractor(decoratedDefs[0])
+
+      assert.ok(result)
+      assert.strictEqual(result.docstring, "List all users.")
+    })
+
+    test("returns undefined docstring when none present", () => {
+      const code = `
+@router.get("/users")
+def list_users():
+    pass
+`
+      const tree = parse(code)
+      const decoratedDefs = findNodesByType(
+        tree.rootNode,
+        "decorated_definition",
+      )
+      const result = decoratorExtractor(decoratedDefs[0])
+
+      assert.ok(result)
+      assert.strictEqual(result.docstring, undefined)
+    })
   })
 
   suite("routerExtractor", () => {

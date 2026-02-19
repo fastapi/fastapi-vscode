@@ -24,6 +24,7 @@ export interface RouteDefinition {
   path: string
   functionName: string
   location: SourceLocation
+  docstring?: string
 }
 
 export interface RouterDefinition {

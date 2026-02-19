@@ -20,6 +20,7 @@ function toRouteDefinition(
     method: normalizeMethod(route.method),
     path: prefix + route.path,
     functionName: route.function,
+    docstring: route.docstring,
     location: {
       filePath,
       line: route.line,

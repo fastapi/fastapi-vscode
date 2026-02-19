@@ -5,6 +5,7 @@
 import type { Tree } from "web-tree-sitter"
 import { logError } from "../utils/logger"
 import {
+  collectStringVariables,
   decoratorExtractor,
   findNodesByType,
   importExtractor,
@@ -18,6 +19,16 @@ import type { Parser } from "./parser.js"
 
 function notNull<T>(value: T | null): value is T {
   return value !== null
+}
+
+function resolveVariables(
+  path: string,
+  variables: Map<string, string>,
+): string {
+  return path.replace(
+    /\{([^}]+)\}/g,
+    (match, name) => variables.get(name) ?? match,
+  )
 }
 
 /** Analyze a syntax tree and extract FastAPI-related information */
@@ -44,7 +55,29 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
     .map(importExtractor)
     .filter(notNull)
 
-  return { filePath, routes, routers, includeRouters, mounts, imports }
+  const stringVariables = collectStringVariables(rootNode)
+
+  for (const route of routes) {
+    route.path = resolveVariables(route.path, stringVariables)
+  }
+  for (const router of routers) {
+    router.prefix = resolveVariables(router.prefix, stringVariables)
+  }
+  for (const ir of includeRouters) {
+    ir.prefix = resolveVariables(ir.prefix, stringVariables)
+  }
+  for (const mount of mounts) {
+    mount.path = resolveVariables(mount.path, stringVariables)
+  }
+
+  return {
+    filePath,
+    routes,
+    routers,
+    includeRouters,
+    mounts,
+    imports,
+  }
 }
 
 /** Analyze a file given its URI string and a parser instance */

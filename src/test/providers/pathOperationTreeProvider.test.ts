@@ -337,6 +337,34 @@ suite("PathOperationTreeProvider", () => {
     }
   })
 
+  test("route tooltip strips dynamic prefix", () => {
+    const app = makeApp("app", "main.py")
+    app.routes = [
+      {
+        method: "GET",
+        path: "{settings.API_V1_STR}/users/{user_id}",
+        functionName: "get_user",
+        location: { filePath: "users.py", line: 10, column: 0 },
+      },
+    ]
+    const p = new PathOperationTreeProvider([app])
+    const appItem = p.getChildren()[0]
+    const route = p.getChildren(appItem).find((c) => c.type === "route")!
+    const treeItem = p.getTreeItem(route)
+    const tooltipValue =
+      typeof treeItem.tooltip === "string"
+        ? treeItem.tooltip
+        : (treeItem.tooltip as { value: string }).value
+    assert.ok(
+      tooltipValue.includes("/users/{user_id}"),
+      "Tooltip should show stripped path",
+    )
+    assert.ok(
+      !tooltipValue.includes("settings.API_V1_STR"),
+      "Tooltip should not include dynamic prefix",
+    )
+  })
+
   test("getChildren returns message when no apps", () => {
     const emptyProvider = new PathOperationTreeProvider(testExtUri, [])
     const roots = emptyProvider.getChildren()
