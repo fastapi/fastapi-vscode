@@ -347,7 +347,7 @@ suite("PathOperationTreeProvider", () => {
         location: { filePath: "users.py", line: 10, column: 0 },
       },
     ]
-    const p = new PathOperationTreeProvider([app])
+    const p = new PathOperationTreeProvider(testExtUri, [app])
     const appItem = p.getChildren()[0]
     const route = p.getChildren(appItem).find((c) => c.type === "route")!
     const treeItem = p.getTreeItem(route)
