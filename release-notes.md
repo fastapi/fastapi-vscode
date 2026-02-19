@@ -6,6 +6,10 @@
 
 ## Fixes
 
+* 🚸  Update HTTP operation sort order. PR [#59](https://github.com/fastapi/fastapi-vscode/pull/59) by [@savannahostrowski](https://github.com/savannahostrowski).
+
+## Fixes
+
 * 🚸 Update log button text to use "start" instead of "stream". PR [#58](https://github.com/fastapi/fastapi-vscode/pull/58) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ## Fixes
