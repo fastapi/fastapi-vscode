@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Features
+
+* ✨ Add support for `pyproject.toml` parsing to find app entrypoint. PR [#14](https://github.com/fastapi/fastapi-vscode/pull/14) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Internal
 
 * 👷 Add latest-changes GitHub action and labeler. PR [#11](https://github.com/fastapi/fastapi-vscode/pull/11) by [@tiangolo](https://github.com/tiangolo).
