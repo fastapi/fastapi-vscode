@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Docs
+
+* 📝 Add documentation for `fastapi.showTestCodeLenses`. PR [#16](https://github.com/fastapi/fastapi-vscode/pull/16) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Features
 
 * ✨ Add using currently open file as a last resort for app discovery. PR [#15](https://github.com/fastapi/fastapi-vscode/pull/15) by [@savannahostrowski](https://github.com/savannahostrowski).
