@@ -4,6 +4,10 @@
 
 ## Internal
 
+* 👷 Add latest-changes GitHub action and labeler. PR [#11](https://github.com/fastapi/fastapi-vscode/pull/11) by [@tiangolo](https://github.com/tiangolo).
+
+## Internal
+
 * ♻️  Rename `object` to `owner` in `RouteInfo`, `IncludeRouterInfo` and `MountInfo` . PR [#10](https://github.com/fastapi/fastapi-vscode/pull/10) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ## Fixes
