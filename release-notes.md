@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Features
+
+* ✨ Add support for FastAPI Cloud log streaming. PR [#39](https://github.com/fastapi/fastapi-vscode/pull/39) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Internal
 
 * 👷 Add typecheck to CI and pre-commit. PR [#33](https://github.com/fastapi/fastapi-vscode/pull/33) by [@savannahostrowski](https://github.com/savannahostrowski).
