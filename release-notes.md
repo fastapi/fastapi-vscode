@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Fixes
+
+* 🚸 Add toast to show that authentication succeeded. PR [#64](https://github.com/fastapi/fastapi-vscode/pull/64) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Features
 
 * 🚸  Allow users to change `since` when actively streaming logs. PR [#63](https://github.com/fastapi/fastapi-vscode/pull/63) by [@savannahostrowski](https://github.com/savannahostrowski).
