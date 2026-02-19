@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Internal
+
+* ⚙️   Allow per-project telemetry configuration. PR [#68](https://github.com/fastapi/fastapi-vscode/pull/68) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Features
 
 * ✨ Display docstrings on hover in path operations panel. PR [#67](https://github.com/fastapi/fastapi-vscode/pull/67) by [@savannahostrowski](https://github.com/savannahostrowski).
