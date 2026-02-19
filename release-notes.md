@@ -6,6 +6,10 @@
 
 ## Features
 
+* ✨ Support multiroot workspaces. PR [#23](https://github.com/fastapi/fastapi-vscode/pull/23) by [@savannahostrowski](https://github.com/savannahostrowski).
+
+## Features
+
 * ✨ Add route search to command palette. PR [#21](https://github.com/fastapi/fastapi-vscode/pull/21) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ## Fixes
