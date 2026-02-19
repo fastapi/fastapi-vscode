@@ -8,6 +8,8 @@ on:
       - debug-latest-changes
     types:
       - closed
+      # TODO: remove this
+      - synchronize
   workflow_dispatch:
     inputs:
       number:
