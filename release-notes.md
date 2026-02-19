@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Docs
+
+* 📝  Cleanup README to highlight features and usage. PR [#26](https://github.com/fastapi/fastapi-vscode/pull/26) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Features
 
 * ✨ Add Welcome Page and Update Icons. PR [#25](https://github.com/fastapi/fastapi-vscode/pull/25) by [@savannahostrowski](https://github.com/savannahostrowski).
