@@ -4,6 +4,10 @@
 
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+## Features
+
+* 🚸  Allow users to change `since` when actively streaming logs. PR [#63](https://github.com/fastapi/fastapi-vscode/pull/63) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## Fixes
 
 * 🚸  Update HTTP operation sort order. PR [#59](https://github.com/fastapi/fastapi-vscode/pull/59) by [@savannahostrowski](https://github.com/savannahostrowski).
