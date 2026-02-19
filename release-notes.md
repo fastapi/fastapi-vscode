@@ -6,6 +6,10 @@
 
 ## Fixes
 
+* 🚸 Update log button text to use "start" instead of "stream". PR [#58](https://github.com/fastapi/fastapi-vscode/pull/58) by [@savannahostrowski](https://github.com/savannahostrowski).
+
+## Fixes
+
 * 🚸 Watch all settings changes so we prompt to reload when changed. PR [#57](https://github.com/fastapi/fastapi-vscode/pull/57) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ## Internal
