@@ -40,7 +40,7 @@ View real-time logs from your FastAPI Cloud deployed applications directly withi
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `fastapi.entryPoint` | Path to the main FastAPI application file (e.g., `src/main.py`). If not set, the extension searches common locations: `main.py`, `app/main.py`, `api/main.py`, `src/main.py`, `backend/app/main.py`. | `""` (auto-detect) |
+| `fastapi.entryPoint` | Entry point for the main FastAPI application in module notation (e.g., `my_app.main:app`). If not set, the extension searches `pyproject.toml` and common locations. | `""` (auto-detect) |
 | `fastapi.codeLens.enabled` | Show CodeLens links above test client calls (e.g., `client.get('/items')`) to navigate to the corresponding route definition. | `true` |
 | `fastapi.cloud.enabled` | Enable FastAPI Cloud integration (status bar, deploy commands). | `true` |
 | `fastapi.telemetry.enabled` | Send anonymous usage data to help improve the extension. See [TELEMETRY.md](TELEMETRY.md) for details on what is collected. | `true` |
