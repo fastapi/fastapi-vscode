@@ -5,6 +5,7 @@
     "": {
       "name": "fastapi-vscode",
       "dependencies": {
+        "fast-glob": "^3.3.3",
         "posthog-node": "^5.24.1",
         "tinytar": "^0.1.0",
         "toml": "^3.0.0",
