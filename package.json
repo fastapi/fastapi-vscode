@@ -2,6 +2,15 @@
   "name": "fastapi-vscode",
   "displayName": "FastAPI Extension",
   "description": "VS Code extension for FastAPI development",
+  "icon": "media/icons/logo-marketplace.png",
+  "keywords": [
+    "fastapi",
+    "python",
+    "web framework",
+    "api",
+    "rest",
+    "openapi"
+  ],
   "version": "0.0.8",
   "publisher": "FastAPILabs",
   "license": "MIT",
@@ -23,8 +32,10 @@
     "workspaceContains:.fastapicloud/cloud.json"
   ],
   "categories": [
+    "Programming Languages",
     "Other"
   ],
+  "qna": false,
   "capabilities": {
     "virtualWorkspaces": true,
     "untrustedWorkspaces": {
