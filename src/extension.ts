@@ -321,6 +321,26 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     { dispose: () => clearInterval(telemetryFlushInterval) },
   )
+
+  // Register MCP server provider so agents can query FastAPI routes
+  context.subscriptions.push(
+    vscode.lm.registerMcpServerDefinitionProvider("fastapi", {
+      provideMcpServerDefinitions(_token) {
+        return (vscode.workspace.workspaceFolders ?? []).map(
+          (folder) =>
+            new vscode.McpStdioServerDefinition(
+              `FastAPI (${folder.name})`,
+              "node",
+              [
+                context.asAbsolutePath("dist/mcp/server.js"),
+                folder.uri.fsPath,
+                context.extensionPath,
+              ],
+            ),
+        )
+      },
+    }),
+  )
 }
 
 function registerCloudCommands(
