@@ -9,6 +9,7 @@
 
 ### Internal
 
+* ⚙️ Rename to `release-notes.md` to `CHANGELOG.md`. PR [#78](https://github.com/fastapi/fastapi-vscode/pull/78) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔍️ Update marketplace metadata. PR [#77](https://github.com/fastapi/fastapi-vscode/pull/77) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 📌 Add dependabot.yml and pin SHAs for GHAs. PR [#76](https://github.com/fastapi/fastapi-vscode/pull/76) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔖  Bump extension version. PR [#75](https://github.com/fastapi/fastapi-vscode/pull/75) by [@savannahostrowski](https://github.com/savannahostrowski).
