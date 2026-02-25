@@ -166,11 +166,13 @@ export function extractPathFromNode(node: Node): string {
         return extractPathFromNode(left) + extractPathFromNode(right)
       }
       // For other operators, just return the raw text
-      return `{${node.text}}`
+      return `\uE000${node.text}\uE000`
     }
     default:
-      // Dynamic values: variable, attribute access, or function call
-      return `{${node.text}}`
+      // Dynamic values: variable, attribute access, or function call.
+      // Use \uE000 (Unicode private use) as sentinel so resolveVariables can
+      // distinguish these from FastAPI path parameters like {id}.
+      return `\uE000${node.text}\uE000`
   }
 }
 

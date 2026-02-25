@@ -25,9 +25,12 @@ function resolveVariables(
   path: string,
   variables: Map<string, string>,
 ): string {
+  // Match sentinel-wrapped names produced by extractPathFromNode for identifiers.
+  // Using \uE000 (Unicode private use) as sentinel ensures FastAPI path parameters
+  // like {id} are never substituted — only actual identifier references are resolved.
   return path.replace(
-    /\{([^}]+)\}/g,
-    (match, name) => variables.get(name) ?? match,
+    /\uE000([^\uE000]+)\uE000/g,
+    (_, name) => variables.get(name) ?? `{${name}}`,
   )
 }
 
