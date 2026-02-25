@@ -13,9 +13,18 @@ import { routerNodeToAppDefinition } from "./core/transformer"
 import { collectRoutes, countRouters } from "./core/treeUtils"
 import type { AppDefinition } from "./core/types"
 import type { Workspace, WorkspaceFolder } from "./core/workspace"
-import { log } from "./utils/logger"
-import { createTimer, trackEntrypointDetected } from "./utils/telemetry"
 export type { EntryPoint }
+
+type DiscoveryOptions = {
+  log?: (msg: string) => void
+  trackEntrypointDetected?: (props: {
+    duration_ms: number
+    method: "config" | "pyproject" | "heuristic"
+    success: boolean
+    routes_count: number
+    routers_count: number
+  }) => void
+}
 
 /**
  * Parses an entrypoint string in module:variable notation.
@@ -133,6 +142,7 @@ export async function discoverFastAPIApps(
   parser: Parser,
   workspace: Workspace,
   filesystem: FileSystem,
+  { log = () => {}, trackEntrypointDetected = () => {} }: DiscoveryOptions = {},
 ): Promise<AppDefinition[]> {
   const workspaceFolders = workspace.workspaceFolders
   if (!workspaceFolders) {
@@ -147,7 +157,7 @@ export async function discoverFastAPIApps(
   const apps: AppDefinition[] = []
 
   for (const folder of workspaceFolders) {
-    const folderTimer = createTimer()
+    const folderStart = performance.now()
     let detectionMethod: "config" | "pyproject" | "heuristic" = "heuristic"
     const folderApps: AppDefinition[] = []
     const customEntryPoint = workspace.getFastAPIEntrypoint(folder.uri)
@@ -232,9 +242,8 @@ export async function discoverFastAPIApps(
       )
     }
 
-    // Track entrypoint detection per workspace folder
     trackEntrypointDetected({
-      duration_ms: folderTimer(),
+      duration_ms: Math.round(performance.now() - folderStart),
       method: detectionMethod,
       success: folderApps.length > 0,
       routes_count: folderRoutes.length,

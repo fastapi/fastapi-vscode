@@ -28,6 +28,7 @@ import {
   trackActivation,
   trackActivationFailed,
   trackDeactivation,
+  trackEntrypointDetected,
   trackSearchExecuted,
   trackTreeViewVisible,
 } from "./utils/telemetry"
@@ -111,6 +112,7 @@ export async function activate(context: vscode.ExtensionContext) {
       parserService,
       vscodeWorkspace,
       vscodeFileSystem,
+      { log, trackEntrypointDetected },
     )
   } catch (error) {
     success = false
@@ -173,6 +175,7 @@ export async function activate(context: vscode.ExtensionContext) {
         parserService,
         vscodeWorkspace,
         vscodeFileSystem,
+        { log, trackEntrypointDetected },
       )
       pathOperationProvider.setApps(newApps, groupApps(newApps))
       codeLensProvider.setApps(newApps)
@@ -435,6 +438,7 @@ function registerCommands(
           parserService,
           vscodeWorkspace,
           vscodeFileSystem,
+          { log, trackEntrypointDetected },
         )
         pathOperationProvider.setApps(newApps, groupApps(newApps))
         codeLensProvider.setApps(newApps)

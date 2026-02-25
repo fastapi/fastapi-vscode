@@ -98,15 +98,20 @@ async function main() {
         logLevel: "info",
       })
 
-  const mcpCtx = await esbuild.context({
-    ...sharedOptions,
-    entryPoints: ["src/mcp/server.ts"],
-    format: "cjs",
-    platform: "node",
-    target: "node20",
-    outfile: "dist/mcp/server.js",
-    external: ["vscode", "web-tree-sitter"],
-  })
+  const mcpCtx = noBundleForCoverage
+    ? null
+    : await esbuild.context({
+        ...sharedOptions,
+        entryPoints: ["src/mcp/server.ts"],
+        format: "cjs",
+        platform: "node",
+        target: "node20",
+        outfile: "dist/mcp/server.js",
+        external: ["web-tree-sitter"],
+        alias: {
+          vscode: path.join(import.meta.dirname, "src/mcp/vscodeStub.ts"),
+        },
+      })
 
   // Browser build (vscode.dev) - skip for unbundled builds
   const browserCtx = noBundleForCoverage
