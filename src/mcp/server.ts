@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import * as fs from "fs/promises"
 import * as path from "path"
+import { fileURLToPath } from "url"
 import { z } from "zod"
 import { discoverFastAPIApps } from "../appDiscovery"
 import { Parser } from "../core/parser"
@@ -57,11 +58,21 @@ async function main() {
   server.registerTool(
     "get_routes",
     {
-      description: "Get all routes from the FastAPI app in the workspace",
+      description:
+        "Get all FastAPI routes in the workspace. Returns method, path, function name, docstring, and source file location (file path + line number) for each route.",
       inputSchema: z.object({}),
     },
     async () => {
-      const routes = collectRoutes(apps)
+      const routes = collectRoutes(apps).map((route) => ({
+        ...route,
+        location: {
+          ...route.location,
+          filePath: path.relative(
+            workspacePath,
+            fileURLToPath(route.location.filePath),
+          ),
+        },
+      }))
       return {
         content: [
           {
