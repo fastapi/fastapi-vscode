@@ -121,7 +121,7 @@ def handler():
       const result = decoratorExtractor(decoratedDefs[0])
 
       assert.ok(result)
-      assert.strictEqual(result.path, "{BASE_PATH}")
+      assert.strictEqual(result.path, "\uE000BASE_PATH\uE000")
     })
 
     test("handles dynamic path with attribute", () => {
@@ -138,7 +138,7 @@ def handler():
       const result = decoratorExtractor(decoratedDefs[0])
 
       assert.ok(result)
-      assert.strictEqual(result.path, "{settings.API_PREFIX}")
+      assert.strictEqual(result.path, "\uE000settings.API_PREFIX\uE000")
     })
 
     test("handles path concatenation", () => {
@@ -155,7 +155,7 @@ def handler():
       const result = decoratorExtractor(decoratedDefs[0])
 
       assert.ok(result)
-      assert.strictEqual(result.path, "{BASE}/users")
+      assert.strictEqual(result.path, "\uE000BASE\uE000/users")
     })
 
     test("returns null for simple decorator without call", () => {
@@ -405,7 +405,7 @@ def list_users():
       const result = routerExtractor(assignments[0])
 
       assert.ok(result)
-      assert.strictEqual(result.prefix, "{settings.API_PREFIX}")
+      assert.strictEqual(result.prefix, "\uE000settings.API_PREFIX\uE000")
     })
 
     test("returns null for non-router assignment", () => {
@@ -563,7 +563,7 @@ def list_users():
       const result = includeRouterExtractor(calls[0])
 
       assert.ok(result)
-      assert.strictEqual(result.prefix, "{settings.PREFIX}")
+      assert.strictEqual(result.prefix, "\uE000settings.PREFIX\uE000")
     })
 
     test("extracts include_router with tags", () => {
@@ -615,7 +615,7 @@ def list_users():
       const result = mountExtractor(calls[0])
 
       assert.ok(result)
-      assert.strictEqual(result.path, "{settings.STATIC_PATH}")
+      assert.strictEqual(result.path, "\uE000settings.STATIC_PATH\uE000")
     })
 
     test("returns null for non-mount call", () => {
@@ -652,7 +652,7 @@ def list_users():
       const tree = parse(code)
       const ops = findNodesByType(tree.rootNode, "binary_operator")
       const result = extractPathFromNode(ops[0])
-      assert.strictEqual(result, "{a - b}")
+      assert.strictEqual(result, "\uE000a - b\uE000")
     })
   })
 
@@ -688,7 +688,7 @@ def handler():
       const result = decoratorExtractor(decoratedDefs[0])
 
       assert.ok(result)
-      assert.strictEqual(result.path, "{get_path()}")
+      assert.strictEqual(result.path, "\uE000get_path()\uE000")
     })
   })
 })

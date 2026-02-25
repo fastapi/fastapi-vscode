@@ -182,6 +182,35 @@ app.include_router(users.router, prefix=USERS_PREFIX)
       assert.strictEqual(result.includeRouters[0].prefix, "/users")
     })
 
+    test("does not substitute function-local variables into URL path parameters", () => {
+      const code = `
+from fastapi import APIRouter
+
+router = APIRouter()
+
+@router.get("/integrations/{integration}/authorize")
+def initiate_oauth_flow(integration: str):
+    integration = "redis"
+    pass
+
+@router.get("/integrations/{integration}/callback")
+def handle_callback(integration: str):
+    pass
+`
+      const tree = parse(code)
+      const result = analyzeTree(tree, "/test/file.py")
+
+      assert.strictEqual(result.routes.length, 2)
+      assert.strictEqual(
+        result.routes[0].path,
+        "/integrations/{integration}/authorize",
+      )
+      assert.strictEqual(
+        result.routes[1].path,
+        "/integrations/{integration}/callback",
+      )
+    })
+
     test("sets filePath correctly", () => {
       const code = "x = 1"
       const tree = parse(code)
