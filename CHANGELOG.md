@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Fixes
+
+* 🐛 Fix path parameters being replaced by same-named local variables. PR [#79](https://github.com/fastapi/fastapi-vscode/pull/79) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Docs
 
 * 📝 Update `entryPoint` setting description in README to specify module notation. PR [#74](https://github.com/fastapi/fastapi-vscode/pull/74) by [@savannahostrowski](https://github.com/savannahostrowski).
