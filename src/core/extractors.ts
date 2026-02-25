@@ -62,29 +62,8 @@ function collectNodesByType(node: Node, type: string, results: Node[]): void {
 }
 
 /**
- * Returns true if the node is nested inside a function, class, or lambda body.
- * Used to restrict variable collection to module-level scope.
- */
-function isInsideFunctionOrClass(node: Node): boolean {
-  let current = node.parent
-  while (current !== null) {
-    if (
-      current.type === "function_definition" ||
-      current.type === "class_definition" ||
-      current.type === "lambda"
-    ) {
-      return true
-    }
-    current = current.parent
-  }
-  return false
-}
-
-/**
  * Collects string variable assignments from the AST for path resolution.
- * Only resolves module-level simple assignments (e.g. `WEBHOOK_PATH = "/webhook"`).
- * Skips assignments inside functions or classes to avoid substituting URL path
- * parameters with local variable values that happen to share a name.
+ * Handles simple assignments like `WEBHOOK_PATH = "/webhook"`.
  *
  * Examples:
  *   WEBHOOK_PATH = "/webhook"  -> Map { "WEBHOOK_PATH" => "/webhook" }
@@ -96,11 +75,6 @@ export function collectStringVariables(rootNode: Node): Map<string, string> {
   const assignmentNodes = findNodesByType(rootNode, "assignment")
 
   for (const assign of assignmentNodes) {
-    // Skip assignments inside function/class bodies to prevent local variable
-    // names (e.g. `integration = "redis"`) from replacing URL path parameters
-    // with the same name (e.g. `{integration}`).
-    if (isInsideFunctionOrClass(assign)) continue
-
     const left = assign.childForFieldName("left")
     const right = assign.childForFieldName("right")
     if (
