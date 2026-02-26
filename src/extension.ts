@@ -52,6 +52,22 @@ export function getExtensionVersion(): string {
 
 let parserService: Parser | null = null
 
+async function getActivePythonPath(
+  folderUri: vscode.Uri,
+): Promise<string | null> {
+  try {
+    const pythonExtension = vscode.extensions.getExtension("ms-python.python")
+    if (!pythonExtension?.isActive) return null
+    const pythonApi = pythonExtension.exports
+    const envPath =
+      await pythonApi.environments.getActiveEnvironmentPath(folderUri)
+    const env = await pythonApi.environments.resolveEnvironment(envPath)
+    return env?.executable?.uri?.fsPath ?? null
+  } catch {
+    return null
+  }
+}
+
 function navigateToLocation(location: SourceLocation): void {
   const uri = vscode.Uri.parse(location.filePath)
   const position = new vscode.Position(location.line - 1, location.column)
@@ -328,18 +344,21 @@ export async function activate(context: vscode.ExtensionContext) {
   // Register MCP server provider so agents can query FastAPI routes
   context.subscriptions.push(
     vscode.lm.registerMcpServerDefinitionProvider("fastapi", {
-      provideMcpServerDefinitions(_token) {
-        return (vscode.workspace.workspaceFolders ?? []).map(
-          (folder) =>
-            new vscode.McpStdioServerDefinition(
+      async provideMcpServerDefinitions(_token) {
+        return Promise.all(
+          (vscode.workspace.workspaceFolders ?? []).map(async (folder) => {
+            const pythonPath = await getActivePythonPath(folder.uri)
+            return new vscode.McpStdioServerDefinition(
               `FastAPI (${folder.name})`,
               "node",
               [
                 context.asAbsolutePath("dist/mcp/server.js"),
                 folder.uri.fsPath,
                 context.extensionPath,
+                ...(pythonPath ? [pythonPath] : []),
               ],
-            ),
+            )
+          }),
         )
       },
     }),
