@@ -334,6 +334,7 @@
     "watch": "bun run esbuild.js --watch",
     "package": "vsce package",
     "publish:marketplace": "vsce publish",
+    "publish:openvsx": "ovsx publish",
     "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/",
     "test": "bun run compile && vscode-test",
     "test:coverage": "bash scripts/test-coverage.sh",

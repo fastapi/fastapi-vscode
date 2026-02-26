@@ -16,3 +16,7 @@ jobs:
         run: bun run publish:marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Publish to Open VSX
+        run: bun run publish:openvsx
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
