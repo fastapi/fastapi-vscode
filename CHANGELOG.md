@@ -2,25 +2,7 @@
 
 ## Latest Changes
 
-### Fixes
-
-* 🐛 Fix path parameters being replaced by same-named local variables. PR [#79](https://github.com/fastapi/fastapi-vscode/pull/79) by [@savannahostrowski](https://github.com/savannahostrowski).
-
-### Docs
-
-* 📝  Update details about application discovery in README. PR [#80](https://github.com/fastapi/fastapi-vscode/pull/80) by [@savannahostrowski](https://github.com/savannahostrowski).
-* 📝 Update `entryPoint` setting description in README to specify module notation. PR [#74](https://github.com/fastapi/fastapi-vscode/pull/74) by [@savannahostrowski](https://github.com/savannahostrowski).
-* 📝 Update GIFs and simplify walkthrough. PR [#73](https://github.com/fastapi/fastapi-vscode/pull/73) by [@savannahostrowski](https://github.com/savannahostrowski).
-
-### Internal
-
-* ⚙️ Rename to `release-notes.md` to `CHANGELOG.md`. PR [#78](https://github.com/fastapi/fastapi-vscode/pull/78) by [@savannahostrowski](https://github.com/savannahostrowski).
-* 🔍️ Update marketplace metadata. PR [#77](https://github.com/fastapi/fastapi-vscode/pull/77) by [@savannahostrowski](https://github.com/savannahostrowski).
-* 📌 Add dependabot.yml and pin SHAs for GHAs. PR [#76](https://github.com/fastapi/fastapi-vscode/pull/76) by [@savannahostrowski](https://github.com/savannahostrowski).
-* 🔖  Bump extension version. PR [#75](https://github.com/fastapi/fastapi-vscode/pull/75) by [@savannahostrowski](https://github.com/savannahostrowski).
-* 🔧 Fix latest-changes sub-header config and current release notes with it. PR [#72](https://github.com/fastapi/fastapi-vscode/pull/72) by [@tiangolo](https://github.com/tiangolo).
-
-## Features
+### Features
 
 * ✨ Display docstrings on hover in path operations panel. PR [#67](https://github.com/fastapi/fastapi-vscode/pull/67) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🚸  Allow users to change `since` when actively streaming logs. PR [#63](https://github.com/fastapi/fastapi-vscode/pull/63) by [@savannahostrowski](https://github.com/savannahostrowski).
@@ -41,8 +23,9 @@
 * ✨ Add endpoint discovery service for Endpoint Explorer. PR [#2](https://github.com/fastapi/fastapi-vscode/pull/2) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ✨ Initial frontend work for explorer view. PR [#1](https://github.com/fastapi/fastapi-vscode/pull/1) by [@savannahostrowski](https://github.com/savannahostrowski).
 
-## Fixes
+### Fixes
 
+* 🐛 Fix path parameters being replaced by same-named local variables. PR [#79](https://github.com/fastapi/fastapi-vscode/pull/79) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔧  Update `.vscodeignore` to make bundle smaller. PR [#6](https://github.com/fastapi/fastapi-vscode/pull/6) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🐛  Add `matchOnDescription` to allow function name searching. PR [#60](https://github.com/fastapi/fastapi-vscode/pull/60) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🐛  Find all FastAPI apps in a workspace folder, rather than just the shallowest. PR [#69](https://github.com/fastapi/fastapi-vscode/pull/69) by [@savannahostrowski](https://github.com/savannahostrowski).
@@ -59,20 +42,28 @@
 * 🐛 Fix CodeLens route matching and nested router discovery . PR [#20](https://github.com/fastapi/fastapi-vscode/pull/20) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🐛  Fix incorrect selection of root when app and router defined in same file. PR [#9](https://github.com/fastapi/fastapi-vscode/pull/9) by [@savannahostrowski](https://github.com/savannahostrowski).
 
-## Docs
+### Docs
 
+* 📝  Update details about application discovery in README. PR [#80](https://github.com/fastapi/fastapi-vscode/pull/80) by [@savannahostrowski](https://github.com/savannahostrowski).
+* 📝 Update `entryPoint` setting description in README to specify module notation. PR [#74](https://github.com/fastapi/fastapi-vscode/pull/74) by [@savannahostrowski](https://github.com/savannahostrowski).
+* 📝 Update GIFs and simplify walkthrough. PR [#73](https://github.com/fastapi/fastapi-vscode/pull/73) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 📝 Document FastAPI Cloud deployment in README. PR [#37](https://github.com/fastapi/fastapi-vscode/pull/37) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 📝  Add cloud deploy to walkthrough. PR [#35](https://github.com/fastapi/fastapi-vscode/pull/35) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 📝  Cleanup README to highlight features and usage. PR [#26](https://github.com/fastapi/fastapi-vscode/pull/26) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 📝 Update feature list in docs. PR [#24](https://github.com/fastapi/fastapi-vscode/pull/24) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 📝 Add documentation for `fastapi.showTestCodeLenses`. PR [#16](https://github.com/fastapi/fastapi-vscode/pull/16) by [@savannahostrowski](https://github.com/savannahostrowski).
 
-## Refactors
+### Refactors
 
 * ♻️ Refactor `fastapi.entryPoint` accept module notation only. PR [#65](https://github.com/fastapi/fastapi-vscode/pull/65) by [@savannahostrowski](https://github.com/savannahostrowski).
 
-## Internal
+### Internal
 
+* ⚙️ Rename to `release-notes.md` to `CHANGELOG.md`. PR [#78](https://github.com/fastapi/fastapi-vscode/pull/78) by [@savannahostrowski](https://github.com/savannahostrowski).
+* 🔍️ Update marketplace metadata. PR [#77](https://github.com/fastapi/fastapi-vscode/pull/77) by [@savannahostrowski](https://github.com/savannahostrowski).
+* 📌 Add dependabot.yml and pin SHAs for GHAs. PR [#76](https://github.com/fastapi/fastapi-vscode/pull/76) by [@savannahostrowski](https://github.com/savannahostrowski).
+* 🔖  Bump extension version. PR [#75](https://github.com/fastapi/fastapi-vscode/pull/75) by [@savannahostrowski](https://github.com/savannahostrowski).
+* 🔧 Fix latest-changes sub-header config and current release notes with it. PR [#72](https://github.com/fastapi/fastapi-vscode/pull/72) by [@tiangolo](https://github.com/tiangolo).
 * ⚙️  Remove `dist/` before running tests to prevent stale files. PR [#61](https://github.com/fastapi/fastapi-vscode/pull/61) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ⚙️ Bump `@types/vscode` and `engine.vscode`. PR [#62](https://github.com/fastapi/fastapi-vscode/pull/62) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ⚙️   Allow per-project telemetry configuration. PR [#68](https://github.com/fastapi/fastapi-vscode/pull/68) by [@savannahostrowski](https://github.com/savannahostrowski).
