@@ -45,7 +45,7 @@ View real-time logs from your FastAPI Cloud deployed applications directly withi
 | `fastapi.cloud.enabled` | Enable FastAPI Cloud integration (status bar, deploy commands). | `true` |
 | `fastapi.telemetry.enabled` | Send anonymous usage data to help improve the extension. See [TELEMETRY.md](TELEMETRY.md) for details on what is collected. | `true` |
 
-**Note:** Currently the extension discovers one FastAPI app per workspace folder. If you have multiple apps, use separate workspace folders or configure `fastapi.entryPoint` to point to your primary app.
+The extension automatically discovers your FastAPI app by scanning for files that instantiate `FastAPI()`. If auto-detection doesn't work for your project structure, you can specify an entrypoint via `[tool.fastapi]` in `pyproject.toml` or the `fastapi.entryPoint` VS Code setting.
 
 ## Data and telemetry
 
