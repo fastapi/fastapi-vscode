@@ -1,6 +1,6 @@
 # FastAPI extension for Visual Studio Code
 
-A Visual Studio Code extension for FastAPI application development. Available on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=FastAPILabs.fastapi).
+A Visual Studio Code extension for FastAPI application development. Available on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=FastAPILabs.fastapi-vscode).
 
 ## Overview
 
