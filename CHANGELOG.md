@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.1.0
+
 ### Features
 
 * ✨ Display docstrings on hover in path operations panel. PR [#67](https://github.com/fastapi/fastapi-vscode/pull/67) by [@savannahostrowski](https://github.com/savannahostrowski).
