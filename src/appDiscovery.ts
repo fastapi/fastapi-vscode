@@ -63,7 +63,8 @@ async function findAllFastAPIFiles(
     )
       continue
     const content = await vscode.workspace.fs.readFile(uri)
-    if (new TextDecoder().decode(content).includes("FastAPI(")) {
+    const text = new TextDecoder().decode(content)
+    if (text.includes("FastAPI(") || text.includes("APIRouter(")) {
       results.push(uri.toString())
     }
   }

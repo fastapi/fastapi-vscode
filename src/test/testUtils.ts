@@ -65,6 +65,10 @@ export const fixtures = {
     root: uri(join(fixturesPath, "error-cases")),
     mainPy: uri(join(fixturesPath, "error-cases", "main.py")),
   },
+  routerOnly: {
+    root: uri(join(fixturesPath, "router-only")),
+    mainPy: uri(join(fixturesPath, "router-only", "main.py")),
+  },
   nestedRouter: {
     root: uri(join(fixturesPath, "nested-router")),
     mainPy: uri(join(fixturesPath, "nested-router", "app", "main.py")),

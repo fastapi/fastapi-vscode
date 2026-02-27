@@ -517,5 +517,28 @@ suite("routerResolver", () => {
         "neon router should have routes",
       )
     })
+
+    test("builds graph from standalone APIRouter-only file", async () => {
+      const result = await buildRouterGraph(
+        fixtures.routerOnly.mainPy,
+        parser,
+        fixtures.routerOnly.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result, "Should find router in APIRouter-only file")
+      assert.strictEqual(result.type, "APIRouter")
+      assert.strictEqual(result.variableName, "router")
+      assert.strictEqual(result.prefix, "/api")
+
+      // Should have 2 routes: GET /items and POST /items
+      assert.strictEqual(result.routes.length, 2)
+      const getPaths = result.routes.map((r) => `${r.method} ${r.path}`)
+      assert.ok(getPaths.includes("get /items"), "Should have GET /items route")
+      assert.ok(
+        getPaths.includes("post /items"),
+        "Should have POST /items route",
+      )
+    })
   })
 })
