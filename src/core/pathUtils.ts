@@ -140,9 +140,8 @@ export function pathMatchesPathOperation(
 }
 
 /**
- * Finds the Python project root by walking up from the entry file
- * until we find a directory without __init__.py (or hit the workspace root).
- * This is the directory from which absolute imports are resolved.
+ * Finds the Python project root (the directory from which absolute imports
+ * are resolved) by walking up from the entry file toward the workspace root.
  */
 export async function findProjectRoot(
   entryUri: string,
@@ -154,8 +153,20 @@ export async function findProjectRoot(
 ): Promise<string> {
   let dirUri = uriDirname(entryUri)
 
-  // If the entry file's directory doesn't have __init__.py, it's a top-level script
+  // If the entry file's directory doesn't have __init__.py it could be a
+  // top-level script OR a namespace package (no __init__.py) in a monorepo.
+  // Walk up toward the workspace root to find a pyproject.toml; if found,
+  // that directory is the Python project root. Otherwise fall back to the
+  // entry dir as before.
   if (!(await fs.exists(fs.joinPath(dirUri, "__init__.py")))) {
+    let searchDir = dirUri
+    while (isWithinDirectory(searchDir, workspaceRootUri)) {
+      if (await fs.exists(fs.joinPath(searchDir, "pyproject.toml"))) {
+        return searchDir
+      }
+      if (uriPath(searchDir) === uriPath(workspaceRootUri)) break
+      searchDir = uriDirname(searchDir)
+    }
     return dirUri
   }
 

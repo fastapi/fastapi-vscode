@@ -78,6 +78,11 @@ export const fixtures = {
       join(fixturesPath, "nested-router", "app", "routes", "settings.py"),
     ),
   },
+  monorepo: {
+    workspaceRoot: uri(join(fixturesPath, "monorepo")),
+    projectRoot: uri(join(fixturesPath, "monorepo", "service")),
+    mainPy: uri(join(fixturesPath, "monorepo", "service", "myapp", "main.py")),
+  },
 }
 
 /**
