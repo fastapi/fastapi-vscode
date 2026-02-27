@@ -153,11 +153,9 @@ export async function findProjectRoot(
 ): Promise<string> {
   let dirUri = uriDirname(entryUri)
 
-  // If the entry file's directory doesn't have __init__.py it could be a
-  // top-level script OR a namespace package (no __init__.py) in a monorepo.
-  // Walk up toward the workspace root to find a pyproject.toml; if found,
-  // that directory is the Python project root. Otherwise fall back to the
-  // entry dir as before.
+  // No __init__.py — could be a namespace package. Walk up toward the
+  // workspace root to find a pyproject.toml; if found, that directory is
+  // the Python project root. Otherwise fall back to the entry dir.
   if (!(await fs.exists(fs.joinPath(dirUri, "__init__.py")))) {
     let searchDir = dirUri
     while (isWithinDirectory(searchDir, workspaceRootUri)) {
