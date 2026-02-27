@@ -116,7 +116,9 @@ async function parsePyprojectForEntryPoint(
       return (await vscodeFileSystem.exists(fullUri.toString()))
         ? { filePath: fullUri.toString(), variableName }
         : null
-    } catch {}
+    } catch {
+      // Invalid TOML syntax - silently fall back to next file
+    }
   }
 
   return null
