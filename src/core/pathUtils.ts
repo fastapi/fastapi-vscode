@@ -168,7 +168,9 @@ export async function findProjectRoot(
     return dirUri
   }
 
-  // Walk up until we find a directory whose parent doesn't have __init__.py
+  // __init__.py is present, so this is a traditional package. Walk up until
+  // we find a directory whose parent doesn't have __init__.py — that parent
+  // is the project root (the directory Python adds to sys.path).
   while (
     isWithinDirectory(dirUri, workspaceRootUri) &&
     uriPath(dirUri) !== uriPath(workspaceRootUri)

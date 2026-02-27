@@ -80,7 +80,7 @@ async function findAllFastAPIFiles(
 async function parsePyprojectForEntryPoint(
   folderUri: vscode.Uri,
 ): Promise<EntryPoint | null> {
-  const pyprojecttomlFiles = await vscode.workspace.findFiles(
+  const pyprojectTomlFiles = await vscode.workspace.findFiles(
     new vscode.RelativePattern(folderUri, "**/pyproject.toml"),
     new vscode.RelativePattern(
       folderUri,
@@ -88,15 +88,15 @@ async function parsePyprojectForEntryPoint(
     ),
   )
 
-  if (pyprojecttomlFiles.length === 0) {
+  if (pyprojectTomlFiles.length === 0) {
     return null
   }
 
-  pyprojecttomlFiles.sort(
+  pyprojectTomlFiles.sort(
     (a, b) => a.path.split("/").length - b.path.split("/").length,
   )
 
-  for (const fileUri of pyprojecttomlFiles) {
+  for (const fileUri of pyprojectTomlFiles) {
     try {
       const document = await vscode.workspace.openTextDocument(fileUri)
       const contents = toml.parse(document.getText()) as Record<string, unknown>
@@ -111,7 +111,8 @@ async function parsePyprojectForEntryPoint(
 
       const { relativePath, variableName } =
         parseEntrypointString(entrypointValue)
-      const fullUri = vscode.Uri.joinPath(fileUri, "..", relativePath)
+      const dirUri = vscode.Uri.joinPath(fileUri, "..")
+      const fullUri = vscode.Uri.joinPath(dirUri, relativePath)
 
       return (await vscodeFileSystem.exists(fullUri.toString()))
         ? { filePath: fullUri.toString(), variableName }
