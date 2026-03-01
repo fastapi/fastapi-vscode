@@ -8,6 +8,7 @@
 
 ### Internal
 
+* ⚙️  Remove 'Extension' from display name. PR [#92](https://github.com/fastapi/fastapi-vscode/pull/92) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ⚙️ Add issue template and configuration. PR [#88](https://github.com/fastapi/fastapi-vscode/pull/88) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔖  Release version 0.1.0. PR [#83](https://github.com/fastapi/fastapi-vscode/pull/83) by [@savannahostrowski](https://github.com/savannahostrowski).
 
