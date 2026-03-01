@@ -195,6 +195,17 @@ suite("pathUtils", () => {
 
       assert.strictEqual(result, appRootUri)
     })
+
+    test("returns pyproject.toml dir for namespace packages in a monorepo", async () => {
+      // myapp/ has no __init__.py (namespace package), but service/ has pyproject.toml
+      const result = await findProjectRoot(
+        fixtures.monorepo.mainPy,
+        fixtures.monorepo.workspaceRoot,
+        nodeFileSystem,
+      )
+
+      assert.strictEqual(result, fixtures.monorepo.projectRoot)
+    })
   })
 
   suite("pathMatchesPathOperation", () => {

@@ -80,35 +80,49 @@ async function findAllFastAPIFiles(
 async function parsePyprojectForEntryPoint(
   folderUri: vscode.Uri,
 ): Promise<EntryPoint | null> {
-  const pyprojectUri = vscode.Uri.joinPath(folderUri, "pyproject.toml")
+  const pyprojectTomlFiles = await vscode.workspace.findFiles(
+    new vscode.RelativePattern(folderUri, "**/pyproject.toml"),
+    new vscode.RelativePattern(
+      folderUri,
+      "**/{.venv,venv,__pycache__,node_modules,.git,tests,test}/**",
+    ),
+  )
 
-  if (!(await vscodeFileSystem.exists(pyprojectUri.toString()))) {
+  if (pyprojectTomlFiles.length === 0) {
     return null
   }
 
-  try {
-    const document = await vscode.workspace.openTextDocument(pyprojectUri)
-    const contents = toml.parse(document.getText()) as Record<string, unknown>
+  pyprojectTomlFiles.sort(
+    (a, b) => a.path.split("/").length - b.path.split("/").length,
+  )
 
-    const entrypoint = (contents.tool as Record<string, unknown> | undefined)
-      ?.fastapi as Record<string, unknown> | undefined
-    const entrypointValue = entrypoint?.entrypoint as string | undefined
+  for (const fileUri of pyprojectTomlFiles) {
+    try {
+      const document = await vscode.workspace.openTextDocument(fileUri)
+      const contents = toml.parse(document.getText()) as Record<string, unknown>
 
-    if (!entrypointValue) {
-      return null
+      const entrypoint = (contents.tool as Record<string, unknown> | undefined)
+        ?.fastapi as Record<string, unknown> | undefined
+      const entrypointValue = entrypoint?.entrypoint as string | undefined
+
+      if (!entrypointValue) {
+        continue
+      }
+
+      const { relativePath, variableName } =
+        parseEntrypointString(entrypointValue)
+      const dirUri = vscode.Uri.joinPath(fileUri, "..")
+      const fullUri = vscode.Uri.joinPath(dirUri, relativePath)
+
+      return (await vscodeFileSystem.exists(fullUri.toString()))
+        ? { filePath: fullUri.toString(), variableName }
+        : null
+    } catch {
+      // Invalid TOML syntax - silently fall back to next file
     }
-
-    const { relativePath, variableName } =
-      parseEntrypointString(entrypointValue)
-    const fullUri = vscode.Uri.joinPath(folderUri, relativePath)
-
-    return (await vscodeFileSystem.exists(fullUri.toString()))
-      ? { filePath: fullUri.toString(), variableName }
-      : null
-  } catch {
-    // Invalid TOML syntax - silently fall back to auto-detection
-    return null
   }
+
+  return null
 }
 
 /**

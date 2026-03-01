@@ -1,5 +1,6 @@
 import * as assert from "node:assert"
 import { Parser } from "../../core/parser"
+import { findProjectRoot } from "../../core/pathUtils"
 import { buildRouterGraph } from "../../core/routerResolver"
 import {
   fixtures,
@@ -516,6 +517,26 @@ suite("routerResolver", () => {
         neonChild.router.routes.length >= 2,
         "neon router should have routes",
       )
+    })
+
+    test("resolves imports in a monorepo with pyproject.toml in a subdirectory", async () => {
+      const projectRoot = await findProjectRoot(
+        fixtures.monorepo.mainPy,
+        fixtures.monorepo.workspaceRoot,
+        nodeFileSystem,
+      )
+      const result = await buildRouterGraph(
+        fixtures.monorepo.mainPy,
+        parser,
+        projectRoot,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.children.length, 1)
+      assert.strictEqual(result.children[0].router.prefix, "/users")
+      assert.ok(result.children[0].router.routes.length >= 2)
     })
   })
 })
