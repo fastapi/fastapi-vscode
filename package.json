@@ -1,6 +1,6 @@
 {
   "name": "fastapi-vscode",
-  "displayName": "FastAPI Extension",
+  "displayName": "FastAPI",
   "description": "VS Code extension for FastAPI development",
   "icon": "media/icons/logo-marketplace.png",
   "keywords": [
