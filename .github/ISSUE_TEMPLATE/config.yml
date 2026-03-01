@@ -1,0 +1,7 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Contact
+    about: Please report security vulnerabilities to security@tiangolo.com
+  - name: Feature Request
+    about: To suggest an idea or ask about a feature, please start a discussion.
+    url: https://github.com/fastapi/fastapi-vscode/discussions/categories/questions
