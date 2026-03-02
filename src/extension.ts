@@ -37,6 +37,8 @@ import {
   PathOperationTreeProvider,
 } from "./vscode/pathOperationTreeProvider"
 import { TestCodeLensProvider } from "./vscode/testCodeLensProvider"
+import { vscodeFileSystem } from "./vscode/vscodeFileSystem"
+import { vscodeWorkspace } from "./vscode/vscodeWorkspace"
 
 export const EXTENSION_ID = "FastAPILabs.fastapi-vscode"
 
@@ -105,7 +107,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   try {
     // Discover apps and create providers
-    apps = await discoverFastAPIApps(parserService)
+    apps = await discoverFastAPIApps(
+      parserService,
+      vscodeWorkspace,
+      vscodeFileSystem,
+    )
   } catch (error) {
     success = false
     trackActivationFailed(error, "discovery")
@@ -163,7 +169,11 @@ export async function activate(context: vscode.ExtensionContext) {
     if (refreshTimeout) clearTimeout(refreshTimeout)
     refreshTimeout = setTimeout(async () => {
       if (!parserService) return
-      const newApps = await discoverFastAPIApps(parserService)
+      const newApps = await discoverFastAPIApps(
+        parserService,
+        vscodeWorkspace,
+        vscodeFileSystem,
+      )
       pathOperationProvider.setApps(newApps, groupApps(newApps))
       codeLensProvider.setApps(newApps)
     }, 300)
@@ -401,7 +411,11 @@ function registerCommands(
       async () => {
         if (!parserService) return
         clearImportCache()
-        const newApps = await discoverFastAPIApps(parserService)
+        const newApps = await discoverFastAPIApps(
+          parserService,
+          vscodeWorkspace,
+          vscodeFileSystem,
+        )
         pathOperationProvider.setApps(newApps, groupApps(newApps))
         codeLensProvider.setApps(newApps)
       },
