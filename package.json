@@ -49,6 +49,11 @@
         "label": "FastAPI Cloud"
       }
     ],
+    "chatSkills": [
+      {
+        "path": "./skills/fastapi-cloud/SKILL.md"
+      }
+    ],
     "commands": [
       {
         "command": "fastapi-vscode.refreshPathOperations",

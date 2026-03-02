@@ -16,6 +16,7 @@ import {
 } from "vscode"
 import { trackCloudSignIn } from "../utils/telemetry"
 import { ApiService } from "./api"
+import { getAuthFilePath } from "./authPath"
 
 export const AUTH_PROVIDER_ID = "fastapi-vscode"
 export const NAME = "FastAPI Cloud"
@@ -96,24 +97,8 @@ export class CloudAuthenticationProvider
     if (env.uiKind === UIKind.Web) {
       return null
     }
-
-    const home = process.env.HOME || process.env.USERPROFILE
-    if (!home) return null
-
-    const platform = process.platform
-    let authPath: string
-
-    if (platform === "darwin") {
-      authPath = `${home}/Library/Application Support/fastapi-cli/auth.json`
-    } else if (platform === "win32") {
-      const appData = process.env.APPDATA || `${home}/AppData/Roaming`
-      authPath = `${appData}/fastapi-cli/auth.json`
-    } else {
-      const xdgData = process.env.XDG_DATA_HOME || `${home}/.local/share`
-      authPath = `${xdgData}/fastapi-cli/auth.json`
-    }
-
-    return Uri.file(authPath)
+    const authPath = getAuthFilePath()
+    return authPath ? Uri.file(authPath) : null
   }
 
   get onDidChangeSessions() {
