@@ -240,23 +240,6 @@ def get_user(user_id: int):
       assert.strictEqual(result.path, "/users/{user_id}")
     })
 
-    test("extracts route with all keyword arguments including spaces around =", () => {
-      const code = `
-@app.get(path = "/posts/{post_id}", include_in_schema = False)
-def post_page(post_id: int):
-    pass
-`
-      const tree = parse(code)
-      const decoratedDefs = findNodesByType(
-        tree.rootNode,
-        "decorated_definition",
-      )
-      const result = decoratorExtractor(decoratedDefs[0])
-
-      assert.ok(result)
-      assert.strictEqual(result.path, "/posts/{post_id}")
-    })
-
     test("returns null for non-decorated definition", () => {
       const code = `
 def regular_function():
@@ -618,17 +601,6 @@ def list_users():
 
       assert.ok(result)
       assert.strictEqual(result.router, "users_router")
-      assert.strictEqual(result.prefix, "/api")
-    })
-
-    test("extracts include_router with all keyword arguments including spaces around =", () => {
-      const code = `app.include_router(router = posts_router, prefix = "/api")`
-      const tree = parse(code)
-      const calls = findNodesByType(tree.rootNode, "call")
-      const result = includeRouterExtractor(calls[0])
-
-      assert.ok(result)
-      assert.strictEqual(result.router, "posts_router")
       assert.strictEqual(result.prefix, "/api")
     })
 

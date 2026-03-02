@@ -374,7 +374,6 @@ export function importExtractor(node: Node): ImportInfo | null {
 
 /**
  * Resolves a function argument value node by positional index or keyword name.
- * Handles both positional and keyword argument styles, including mixed usage.
  *
  * Examples:
  *   app.get("/users", response_model=List[User])  → position 0 = string node "/users"
@@ -385,16 +384,10 @@ function resolveArgNode(
   position: number,
   keywordName: string,
 ): Node | undefined {
-  let positionalIndex = 0
-  for (const arg of args) {
-    if (arg.type !== "keyword_argument") {
-      if (positionalIndex === position) {
-        return arg
-      }
-      positionalIndex++
-    }
+  const positional = args.filter((a) => a.type !== "keyword_argument")
+  if (positional[position]) {
+    return positional[position]
   }
-  // Fall back to keyword argument
   return (
     args
       .find(
