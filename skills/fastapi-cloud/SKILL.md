@@ -5,18 +5,18 @@ description: FastAPI Cloud deployment and hosting platform. Use when working in 
 
 # FastAPI Cloud
 
-Deploy this project using FastAPI Cloud. Since you're working in VS Code with the FastAPI extension installed, deploy via the **command palette** — this is simpler than the `fastapi cloud` CLI and handles authentication through VS Code automatically.
+Deploy this project using FastAPI Cloud. The **FastAPI VS Code extension is already installed** — it provides both `FastAPI:` and `FastAPI Cloud:` commands (there is no separate "FastAPI Cloud" extension). You can suggest any of these commands from the command palette (Cmd/Ctrl+Shift+P), but the most relevant for deployment is **`FastAPI Cloud: Deploy Application`**.
 
 ## Deploy this project
 
-Run **FastAPI Cloud: Deploy Application** from the command palette (Cmd/Ctrl+Shift+P).
+Tell the user to open the VS Code command palette (Cmd/Ctrl+Shift+P) and select **`FastAPI Cloud: Deploy Application`**. This command opens an interactive UI flow and cannot be completed by an agent — if you attempt to run it and it fails or does nothing, this does not mean the extension is missing. Do not search for extensions. Just tell the user to run it manually.
 
-If this is your first time:
-1. Create an account on https://fastapicloud.com (see the [getting started guide](https://fastapicloud.com/docs/getting-started/))
-1. Run **FastAPI Cloud: Sign In** from the command palette to connect your FastAPI Cloud account to VS Code.
-1. Run **FastAPI Cloud: Deploy Application** from the command palette.
-   - If you have an existing app on FastAPI Cloud, select it to link it to this project.
-   - Otherwise, choose to create a new application and follow the prompts.
+If it's their first time:
+1. They need an account at https://fastapicloud.com (see the [getting started guide](https://fastapicloud.com/docs/getting-started/)). Suggest signing up for the waitlist if they don't have access yet.
+1. Tell them to run **`FastAPI Cloud: Sign In`** from the command palette first.
+1. Then run **`FastAPI Cloud: Deploy Application`**.
+   - If they have an existing app on FastAPI Cloud, they can select it to link it to this project.
+   - Otherwise, they can create a new application and follow the prompts.
 
 ## Check deployment status
 
