@@ -3,8 +3,8 @@
  * Used for MCP server, non-VS Code environments.
  */
 
+import path from "node:path"
 import fg from "fast-glob"
-import path from "path"
 import type { Workspace } from "../core/workspace"
 
 export function nodeWorkspace(workspacePath: string): Workspace {

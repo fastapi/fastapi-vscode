@@ -3,6 +3,7 @@ import { log } from "../../utils/logger"
 import { trackCloudLogsOpened } from "../../utils/telemetry"
 import { type ApiService, type AppLogEntry, StreamLogError } from "../api"
 import type { ConfigService } from "../config"
+import { normalizeLevel } from "../logStream"
 
 const DEFAULT_TAIL = 100
 export const LOGS_VIEW_ID = "fastapi-cloud-logs"
@@ -50,25 +51,6 @@ function escapeHtml(text: string): string {
 function formatTimestamp(ts: string): string {
   const d = new Date(ts)
   return Number.isNaN(d.getTime()) ? ts : `${d.toISOString().slice(0, 23)}Z`
-}
-
-const MESSAGE_LEVEL_RE = new RegExp(
-  `^\\s*(${Object.keys(LEVEL_COLORS)
-    .filter((k) => k !== "default")
-    .join("|")})\\b`,
-  "i",
-)
-
-function normalizeLevel(level: string, message?: string): string {
-  // The streaming API returns "unknown" for new logs (Loki limitation) so try to infer from message prefix
-  let resolved = level
-  if (resolved === "unknown" && message) {
-    const match = message.match(MESSAGE_LEVEL_RE)
-    if (match) resolved = match[1].toLowerCase()
-  }
-  if (resolved === "warn") return "warning"
-  if (resolved === "fatal") return "critical"
-  return resolved
 }
 
 export function formatLogEntry(entry: AppLogEntry): string {

@@ -4,8 +4,8 @@
  *  such as when running as a separate process or in a non-VS Code context.
  */
 
-import * as fs from "fs/promises"
-import * as path from "path"
+import * as fs from "node:fs/promises"
+import * as path from "node:path"
 import type { FileSystem } from "../core/filesystem"
 
 export const nodeFileSystem: FileSystem = {

@@ -7,7 +7,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod"
 import { discoverFastAPIApps } from "../appDiscovery"
+import { BASE_URL } from "../cloud/api"
 import { getAuthFilePath } from "../cloud/authPath"
+import {
+  type AppLogEntry,
+  normalizeLevel,
+  streamLogEntries,
+} from "../cloud/logStream"
 import {
   type App,
   type Config,
@@ -42,63 +48,7 @@ async function readFastAPISkillMd(pythonPath: string): Promise<string | null> {
   }
 }
 
-const CLOUD_API_BASE = "https://api.fastapicloud.com/api/v1"
-
 class UnauthorizedError extends Error {}
-
-async function fetchAppLogs(
-  appId: string,
-  token: string,
-  tail: number,
-): Promise<Array<{ timestamp: string; message: string; level: string }>> {
-  const params = new URLSearchParams({
-    tail: String(tail),
-    since: "1d",
-    follow: "false",
-  })
-  const response = await fetch(
-    `${CLOUD_API_BASE}/apps/${appId}/logs/stream?${params}`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  )
-  if (response.status === 401) throw new UnauthorizedError()
-  if (!response.ok || !response.body)
-    throw new Error(`${response.status} /apps/${appId}/logs/stream`)
-
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ""
-  const entries: Array<{ timestamp: string; message: string; level: string }> =
-    []
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split("\n")
-      buffer = lines.pop()!
-      for (const line of lines) {
-        if (!line.trim()) continue
-        try {
-          const data = JSON.parse(line) as Record<string, unknown>
-          if (data.type === "heartbeat") continue
-          if (data.type === "error")
-            throw new Error((data.message as string) ?? "Log stream error")
-          if (data.timestamp && data.message && data.level) {
-            entries.push(
-              data as { timestamp: string; message: string; level: string },
-            )
-          }
-        } catch {
-          // skip unparseable lines
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock()
-  }
-  return entries
-}
 
 async function parseFileRefs(
   message: string,
@@ -152,7 +102,7 @@ async function readAuthToken(): Promise<string | null> {
 }
 
 async function cloudGet<T>(endpoint: string, token: string): Promise<T> {
-  const response = await fetch(`${CLOUD_API_BASE}${endpoint}`, {
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -200,7 +150,7 @@ async function main() {
     )
   } catch (error) {
     console.error("Failed to discover FastAPI apps:", error)
-    process.exit(1)
+    // continue — get_deployment_info and get_log_errors still work without route data
   }
 
   const skillMd = pythonPath ? await readFastAPISkillMd(pythonPath) : null
@@ -378,14 +328,31 @@ async function main() {
       }
 
       try {
-        // Fetch logs, filtered to warning/error level
-        const error_levels = new Set(["warning", "error", "critical"])
-        const all_logs = await fetchAppLogs(config.app_id, token, 500)
-        const error_logs = all_logs.filter((log) =>
-          error_levels.has(log.level.toLowerCase()),
+        const params = new URLSearchParams({
+          tail: "500",
+          since: "1d",
+          follow: "false",
+        })
+        const logsResponse = await fetch(
+          `${BASE_URL}/apps/${config.app_id}/logs/stream?${params}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        if (logsResponse.status === 401) throw new UnauthorizedError()
+        if (!logsResponse.ok || !logsResponse.body)
+          throw new Error(
+            `${logsResponse.status} /apps/${config.app_id}/logs/stream`,
+          )
+
+        const errorLevels = new Set(["warning", "error", "critical"])
+        const allLogs: AppLogEntry[] = []
+        for await (const entry of streamLogEntries(logsResponse.body)) {
+          allLogs.push(entry)
+        }
+        const errorLogs = allLogs.filter((entry) =>
+          errorLevels.has(normalizeLevel(entry.level, entry.message)),
         )
 
-        if (error_logs.length === 0) {
+        if (errorLogs.length === 0) {
           return {
             content: [
               {
@@ -398,12 +365,9 @@ async function main() {
 
         // Parse file refs from each entry and convert to clickable links
         const results = await Promise.all(
-          error_logs.slice(-50).map(async (log) => {
-            const refs = await parseFileRefs(log.message, workspacePath)
-            return {
-              ...log,
-              refs,
-            }
+          errorLogs.slice(-50).map(async (entry) => {
+            const refs = await parseFileRefs(entry.message, workspacePath)
+            return { ...entry, refs }
           }),
         )
 

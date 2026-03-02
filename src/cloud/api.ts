@@ -1,6 +1,5 @@
 import * as vscode from "vscode"
 import { getExtensionVersion } from "../extension"
-import { log } from "../utils/logger"
 import { AUTH_PROVIDER_ID } from "./auth"
 import type {
   App,
@@ -19,18 +18,10 @@ function getUserAgentHeaders(): Record<string, string> {
   return { "User-Agent": `fastapi-vscode/${getExtensionVersion()}` }
 }
 
-export interface AppLogEntry {
-  timestamp: string
-  message: string
-  level: string
-}
+export type { AppLogEntry } from "./logStream"
+export { StreamLogError } from "./logStream"
 
-export class StreamLogError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = "StreamLogError"
-  }
-}
+import { type AppLogEntry, streamLogEntries } from "./logStream"
 
 export class ApiService {
   static getDashboardUrl(teamSlug: string, appSlug: string): string {
@@ -179,47 +170,7 @@ export class ApiService {
       )
     }
 
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ""
-
-    try {
-      while (true) {
-        if (signal?.aborted) return
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split("\n")
-        buffer = lines.pop()! // last element may be incomplete
-
-        for (const line of lines) {
-          if (!line.trim()) continue
-
-          let data: Record<string, unknown>
-          try {
-            data = JSON.parse(line)
-          } catch {
-            log(`Failed to parse log line: ${line}`)
-            continue
-          }
-
-          if (data.type === "heartbeat") continue
-
-          if (data.type === "error") {
-            throw new StreamLogError(
-              (data.message as string) ?? "Unknown error",
-            )
-          }
-          if (data.timestamp && data.message && data.level) {
-            yield data as unknown as AppLogEntry
-          } else {
-            log(`Unexpected log entry format: ${line}`)
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock()
-    }
+    yield* streamLogEntries(response.body)
   }
 
   static async requestDeviceCode(clientId: string): Promise<{
