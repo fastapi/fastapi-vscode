@@ -178,10 +178,11 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
     return null
   }
 
-  // Skip comment nodes to find the actual first argument
-  const pathArgNode = argumentsNode.namedChildren.find(
+  // Find path: first positional arg, or "path" keyword argument
+  const nonCommentArgs = argumentsNode.namedChildren.filter(
     (child) => child.type !== "comment",
   )
+  const pathArgNode = resolveArgNode(nonCommentArgs, 0, "path")
   const path = pathArgNode ? extractPathFromNode(pathArgNode) : ""
 
   // For api_route, extract methods from keyword argument
@@ -371,6 +372,40 @@ export function importExtractor(node: Node): ImportInfo | null {
   return { modulePath, names, namedImports, isRelative, relativeDots }
 }
 
+/**
+ * Resolves a function argument value node by positional index or keyword name.
+ * Handles both positional and keyword argument styles, including mixed usage.
+ *
+ * Examples:
+ *   app.get("/users", response_model=List[User])  → position 0 = string node "/users"
+ *   app.get(path="/users", response_model=List[User]) → keyword "path" = string node "/users"
+ */
+function resolveArgNode(
+  args: Node[],
+  position: number,
+  keywordName: string,
+): Node | undefined {
+  let positionalIndex = 0
+  for (const arg of args) {
+    if (arg.type !== "keyword_argument") {
+      if (positionalIndex === position) {
+        return arg
+      }
+      positionalIndex++
+    }
+  }
+  // Fall back to keyword argument
+  return (
+    args
+      .find(
+        (a) =>
+          a.type === "keyword_argument" &&
+          a.childForFieldName("name")?.text === keywordName,
+      )
+      ?.childForFieldName("value") ?? undefined
+  )
+}
+
 /** Extracts method call info: object.method(args) */
 function extractMethodCall(
   node: Node,
@@ -420,9 +455,12 @@ export function includeRouterExtractor(node: Node): IncludeRouterInfo | null {
     }
   }
 
+  // Find router: first positional arg, or "router" keyword argument
+  const routerNode = resolveArgNode(call.args, 0, "router")
+
   return {
     owner: call.object,
-    router: call.args[0]?.text ?? "",
+    router: routerNode?.text ?? "",
     prefix,
     tags,
   }
@@ -435,9 +473,13 @@ export function mountExtractor(node: Node): MountInfo | null {
     return null
   }
 
+  // Find path and app: positional or keyword argument style
+  const pathNode = resolveArgNode(call.args, 0, "path")
+  const appNode = resolveArgNode(call.args, 1, "app")
+
   return {
     owner: call.object,
-    path: extractPathFromNode(call.args[0]),
-    app: call.args[1].text,
+    path: pathNode ? extractPathFromNode(pathNode) : "",
+    app: appNode?.text ?? "",
   }
 }
