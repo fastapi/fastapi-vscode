@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.1.1
+
 ### Fixes
 
 * 🐛  Add support to extractors for keyword args in definitions. PR [#95](https://github.com/fastapi/fastapi-vscode/pull/95) by [@savannahostrowski](https://github.com/savannahostrowski).
