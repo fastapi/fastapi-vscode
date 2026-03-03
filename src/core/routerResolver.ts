@@ -113,11 +113,10 @@ async function buildRouterGraphInternal(
     }
   }
 
-  // App factory pattern: if the entrypoint variable (e.g. "app" from "main:app")
+  // Factory function: if the entrypoint variable (e.g. "app" from "main:app")
   // is assigned via a factory function (`app = create_app()`) rather than a direct
-  // FastAPI() constructor call, static analysis can't confirm the type. But if
-  // routes are decorated with @app.get(...) etc., we know it must be a FastAPI
-  // instance, so infer it rather than silently returning no results.
+  // FastAPI() constructor call, static analysis can't determine the type. If routes
+  // are decorated with @app.get(...) etc. though, we know it must be a FastAPI instance.
   if (
     !appRouter &&
     targetVariable &&
