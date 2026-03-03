@@ -27,6 +27,8 @@ export function getClientInfo(): ClientInfo {
     clientType = "vscodium"
   } else if (appNameLower.includes("gitpod")) {
     clientType = "gitpod"
+  } else if (appNameLower.includes("antigravity")) {
+    clientType = "antigravity"
   } else if (appHost === "codespaces" || remoteName === "codespaces") {
     clientType = "codespaces"
   } else if (uiKind === vscode.UIKind.Web) {
