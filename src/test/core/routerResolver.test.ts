@@ -538,5 +538,37 @@ suite("routerResolver", () => {
       assert.strictEqual(result.children[0].router.prefix, "/users")
       assert.ok(result.children[0].router.routes.length >= 2)
     })
+
+    test("infers FastAPI app when assigned via factory function (app = get_fastapi_app())", async () => {
+      const result = await buildRouterGraph(
+        fixtures.factoryFunc.mainPy,
+        parser,
+        fixtures.factoryFunc.root,
+        nodeFileSystem,
+        "app",
+      )
+
+      assert.ok(
+        result,
+        "Should find app even when assigned via factory function",
+      )
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.variableName, "app")
+      assert.strictEqual(result.routes.length, 2)
+      const paths = result.routes.map((r) => r.path)
+      assert.ok(paths.includes("/1"))
+      assert.ok(paths.includes("/2"))
+    })
+
+    test("returns null without targetVariable when app is a factory function", async () => {
+      const result = await buildRouterGraph(
+        fixtures.factoryFunc.mainPy,
+        parser,
+        fixtures.factoryFunc.root,
+        nodeFileSystem,
+      )
+
+      assert.strictEqual(result, null)
+    })
   })
 })

@@ -113,6 +113,24 @@ async function buildRouterGraphInternal(
     }
   }
 
+  // If still no router found but a targetVariable is specified and routes use it
+  // as their owner (e.g. `app = get_fastapi_app()` with `@app.get("/...")`),
+  // infer the variable is a FastAPI app so routes are not silently dropped.
+  if (
+    !appRouter &&
+    targetVariable &&
+    analysis.routes.some((r) => r.owner === targetVariable)
+  ) {
+    appRouter = {
+      variableName: targetVariable,
+      type: "FastAPI",
+      prefix: "",
+      tags: [],
+      line: 0,
+      column: 0,
+    }
+  }
+
   if (!appRouter || !analysis) {
     return null
   }
