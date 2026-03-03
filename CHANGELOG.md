@@ -4,6 +4,7 @@
 
 ### Internal
 
+* 📈 Add Antigravity as a telemetry client name. PR [#99](https://github.com/fastapi/fastapi-vscode/pull/99) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔖 Release version 0.1.2. PR [#98](https://github.com/fastapi/fastapi-vscode/pull/98) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ## 0.1.2
