@@ -1,6 +1,7 @@
 import * as assert from "node:assert"
 import {
   collectRecognizedNames,
+  collectStringVariables,
   decoratorExtractor,
   extractPathFromNode,
   extractStringValue,
@@ -860,6 +861,53 @@ router = f.APIRouter(prefix="/items")
       const result = mountExtractor(calls[0])
 
       assert.strictEqual(result, null)
+    })
+  })
+
+  suite("collectStringVariables", () => {
+    test("collects module-level string assignments", () => {
+      const code = `
+PREFIX = "/api"
+VERSION = "/v1"
+`
+      const tree = parse(code)
+      const vars = collectStringVariables(tree.rootNode)
+      assert.strictEqual(vars.get("PREFIX"), "/api")
+      assert.strictEqual(vars.get("VERSION"), "/v1")
+    })
+
+    test("ignores function-local variables", () => {
+      const code = `
+PREFIX = "/api"
+
+def handler():
+    PREFIX = "/local"
+`
+      const tree = parse(code)
+      const vars = collectStringVariables(tree.rootNode)
+      assert.strictEqual(vars.get("PREFIX"), "/api")
+    })
+
+    test("ignores class-level variables", () => {
+      const code = `
+PREFIX = "/api"
+
+class Config:
+    PREFIX = "/class-level"
+`
+      const tree = parse(code)
+      const vars = collectStringVariables(tree.rootNode)
+      assert.strictEqual(vars.get("PREFIX"), "/api")
+    })
+
+    test("ignores non-string assignments", () => {
+      const code = `
+COUNT = 42
+FLAG = True
+`
+      const tree = parse(code)
+      const vars = collectStringVariables(tree.rootNode)
+      assert.strictEqual(vars.size, 0)
     })
   })
 

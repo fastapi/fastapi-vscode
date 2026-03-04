@@ -65,16 +65,27 @@ function collectNodesByType(node: Node, type: string, results: Node[]): void {
  * Collects string variable assignments from the AST for path resolution.
  * Handles simple assignments like `WEBHOOK_PATH = "/webhook"`.
  *
+ * Only module-level assignments are collected — function/class-local variables
+ * are skipped to prevent shadowing module-level constants with the same name.
+ *
  * Examples:
  *   WEBHOOK_PATH = "/webhook"  -> Map { "WEBHOOK_PATH" => "/webhook" }
  *   BASE = "/api"              -> Map { "BASE" => "/api" }
  *   settings.PREFIX = "/api"   -> (skipped, not a simple identifier)
+ *   def f(): BASE = "/local"   -> (skipped, inside function)
  */
 export function collectStringVariables(rootNode: Node): Map<string, string> {
   const variables = new Map<string, string>()
   const assignmentNodes = findNodesByType(rootNode, "assignment")
 
   for (const assign of assignmentNodes) {
+    if (
+      hasAncestor(assign, "function_definition") ||
+      hasAncestor(assign, "class_definition")
+    ) {
+      continue
+    }
+
     const left = assign.childForFieldName("left")
     const right = assign.childForFieldName("right")
     if (
