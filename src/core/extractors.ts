@@ -66,6 +66,31 @@ export function collectAPIRouterSubclasses(rootNode: Node): Set<string> {
   return subclasses
 }
 
+/**
+ * Collects aliases for FastAPI and APIRouter from import statements.
+ * Handles: from fastapi import FastAPI as FA, APIRouter as AR
+ */
+export function collectFastAPIAliases(rootNode: Node): {
+  fastAPIAliases: Set<string>
+  apiRouterAliases: Set<string>
+} {
+  const fastAPIAliases = new Set<string>()
+  const apiRouterAliases = new Set<string>()
+
+  for (const node of findNodesByType(rootNode, "import_from_statement")) {
+    const info = importExtractor(node)
+    if (!info || info.modulePath !== "fastapi") continue
+
+    for (const ni of info.namedImports) {
+      if (ni.alias === null) continue
+      if (ni.name === "FastAPI") fastAPIAliases.add(ni.alias)
+      if (ni.name === "APIRouter") apiRouterAliases.add(ni.alias)
+    }
+  }
+
+  return { fastAPIAliases, apiRouterAliases }
+}
+
 function collectNodesByType(node: Node, type: string, results: Node[]): void {
   if (node.type === type) {
     results.push(node)
@@ -257,6 +282,7 @@ function extractTags(listNode: Node): string[] {
 export function routerExtractor(
   node: Node,
   apiRouterSubclasses?: Set<string>,
+  fastAPIAliases?: Set<string>,
 ): RouterInfo | null {
   if (node.type !== "assignment") {
     return null
@@ -276,7 +302,11 @@ export function routerExtractor(
     (funcName !== undefined && apiRouterSubclasses?.has(funcName))
   ) {
     type = "APIRouter"
-  } else if (funcName === "FastAPI" || funcName === "fastapi.FastAPI") {
+  } else if (
+    funcName === "FastAPI" ||
+    funcName === "fastapi.FastAPI" ||
+    (funcName !== undefined && fastAPIAliases?.has(funcName))
+  ) {
     type = "FastAPI"
   } else {
     return null
