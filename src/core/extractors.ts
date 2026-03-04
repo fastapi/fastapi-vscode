@@ -41,6 +41,7 @@ function stripDocstring(raw: string): string {
   const dedented = lines.map((l, i) => (i === 0 ? l : l.slice(minIndent)))
   return dedented.join("\n").trim()
 }
+
 export function getNodesByType(root: Node): Map<string, Node[]> {
   const results = new Map<string, Node[]>()
 
