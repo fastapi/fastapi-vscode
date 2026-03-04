@@ -12,6 +12,13 @@ import type { Parser } from "./parser"
 
 export type { RouterNode }
 
+interface ResolutionContext {
+  projectRootUri: string
+  parser: Parser
+  fs: FileSystem
+  visited: Set<string>
+}
+
 /**
  * Finds the main FastAPI app or APIRouter in the list of routers.
  * If targetVariable is specified, only returns the router with that variable name.
@@ -55,6 +62,39 @@ function createRouterNode(
   }
 }
 
+async function processIncludeRouters(
+  analysis: FileAnalysis,
+  ownerRouter: RouterNode,
+  currentFileUri: string,
+  ctx: ResolutionContext,
+): Promise<void> {
+  const includes = analysis.includeRouters.filter(
+    (inc) => inc.owner === ownerRouter.variableName,
+  )
+  for (const include of includes) {
+    log(
+      `Resolving include_router: ${include.router} (prefix: ${include.prefix || "none"})`,
+    )
+    const childRouter = await resolveRouterReference(
+      include.router,
+      analysis,
+      currentFileUri,
+      ctx,
+    )
+    if (childRouter) {
+      // Merge tags from include_router call with the router's own tags
+      if (include.tags.length > 0) {
+        childRouter.tags = [...new Set([...childRouter.tags, ...include.tags])]
+      }
+      ownerRouter.children.push({
+        router: childRouter,
+        prefix: include.prefix,
+        tags: include.tags,
+      })
+    }
+  }
+}
+
 /**
  * Builds a router graph starting from the given entry file.
  * If targetVariable is specified, only that specific app/router will be used.
@@ -68,10 +108,7 @@ export async function buildRouterGraph(
 ): Promise<RouterNode | null> {
   return buildRouterGraphInternal(
     entryFileUri,
-    parser,
-    projectRootUri,
-    fs,
-    new Set(),
+    { projectRootUri, parser, fs, visited: new Set() },
     targetVariable,
   )
 }
@@ -81,12 +118,10 @@ export async function buildRouterGraph(
  */
 async function buildRouterGraphInternal(
   entryFileUri: string,
-  parser: Parser,
-  projectRootUri: string,
-  fs: FileSystem,
-  visited: Set<string>,
+  ctx: ResolutionContext,
   targetVariable?: string,
 ): Promise<RouterNode | null> {
+  const { projectRootUri, parser, fs, visited } = ctx
   // Check if file exists
   if (!(await fs.exists(entryFileUri))) {
     log(`File not found: "${entryFileUri}"`)
@@ -174,31 +209,7 @@ async function buildRouterGraphInternal(
   const rootRouter = createRouterNode(appRouter, appRoutes, resolvedEntryUri)
 
   // Process include_router calls to find child routers
-  for (const include of analysis.includeRouters) {
-    log(
-      `Resolving include_router: ${include.router} (prefix: ${include.prefix || "none"})`,
-    )
-    const childRouter = await resolveRouterReference(
-      include.router,
-      analysis,
-      resolvedEntryUri,
-      projectRootUri,
-      parser,
-      fs,
-      visited,
-    )
-    if (childRouter) {
-      // Merge tags from include_router call with the router's own tags
-      if (include.tags.length > 0) {
-        childRouter.tags = [...new Set([...childRouter.tags, ...include.tags])]
-      }
-      rootRouter.children.push({
-        router: childRouter,
-        prefix: include.prefix,
-        tags: include.tags,
-      })
-    }
-  }
+  await processIncludeRouters(analysis, rootRouter, resolvedEntryUri, ctx)
 
   // Process mount() calls for subapps
   for (const mount of analysis.mounts) {
@@ -206,10 +217,7 @@ async function buildRouterGraphInternal(
       mount.app,
       analysis,
       resolvedEntryUri,
-      projectRootUri,
-      parser,
-      fs,
-      visited,
+      ctx,
     )
     if (childRouter) {
       rootRouter.children.push({
@@ -234,11 +242,9 @@ async function resolveRouterReference(
   reference: string,
   analysis: FileAnalysis,
   currentFileUri: string,
-  projectRootUri: string,
-  parser: Parser,
-  fs: FileSystem,
-  visited: Set<string>,
+  ctx: ResolutionContext,
 ): Promise<RouterNode | null> {
+  const { projectRootUri, parser, fs, visited } = ctx
   const parts = reference.split(".")
   const moduleName = parts[0]
   // For dotted references like "api_routes.router", extract the attribute name
@@ -258,35 +264,7 @@ async function resolveRouterReference(
     )
 
     // Process include_router calls owned by this router (nested routers)
-    const routerIncludes = analysis.includeRouters.filter(
-      (inc) => inc.owner === moduleName,
-    )
-    for (const include of routerIncludes) {
-      log(
-        `Resolving nested include_router: ${include.router} (owner: ${moduleName}, prefix: ${include.prefix || "none"})`,
-      )
-      const childRouter = await resolveRouterReference(
-        include.router,
-        analysis,
-        currentFileUri,
-        projectRootUri,
-        parser,
-        fs,
-        visited,
-      )
-      if (childRouter) {
-        if (include.tags.length > 0) {
-          childRouter.tags = [
-            ...new Set([...childRouter.tags, ...include.tags]),
-          ]
-        }
-        routerNode.children.push({
-          router: childRouter,
-          prefix: include.prefix,
-          tags: include.tags,
-        })
-      }
-    }
+    await processIncludeRouters(analysis, routerNode, currentFileUri, ctx)
 
     return routerNode
   }
@@ -362,46 +340,17 @@ async function resolveRouterReference(
       )
 
       // Process include_router calls owned by this router (nested routers)
-      const routerIncludes = importedAnalysis.includeRouters.filter(
-        (inc) => inc.owner === attributeName,
+      await processIncludeRouters(
+        importedAnalysis,
+        routerNode,
+        importedFileUri,
+        ctx,
       )
-      for (const include of routerIncludes) {
-        log(
-          `Resolving nested include_router: ${include.router} (owner: ${attributeName}, prefix: ${include.prefix || "none"})`,
-        )
-        const childRouter = await resolveRouterReference(
-          include.router,
-          importedAnalysis,
-          importedFileUri,
-          projectRootUri,
-          parser,
-          fs,
-          visited,
-        )
-        if (childRouter) {
-          if (include.tags.length > 0) {
-            childRouter.tags = [
-              ...new Set([...childRouter.tags, ...include.tags]),
-            ]
-          }
-          routerNode.children.push({
-            router: childRouter,
-            prefix: include.prefix,
-            tags: include.tags,
-          })
-        }
-      }
 
       return routerNode
     }
     // If not found as a router, fall through to try building from file
   }
 
-  return buildRouterGraphInternal(
-    importedFileUri,
-    parser,
-    projectRootUri,
-    fs,
-    visited,
-  )
+  return buildRouterGraphInternal(importedFileUri, ctx)
 }
