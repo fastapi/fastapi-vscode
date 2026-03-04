@@ -9,6 +9,7 @@
 
 ### Internal
 
+* ♻️ Clean up `routerResolver` with extracted helpers and context object. PR [#113](https://github.com/fastapi/fastapi-vscode/pull/113) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ♻️ Extract router node creation to deduplicate. PR [#112](https://github.com/fastapi/fastapi-vscode/pull/112) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ♻️ Use RouteInfo with Omit instead of anonymous type. PR [#110](https://github.com/fastapi/fastapi-vscode/pull/110) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔖 Release version 0.1.3. PR [#108](https://github.com/fastapi/fastapi-vscode/pull/108) by [@savannahostrowski](https://github.com/savannahostrowski).
