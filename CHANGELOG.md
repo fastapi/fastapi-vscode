@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.1.3
+
 ### Fixes
 
 * 🐛 Recognize custom FastAPI/APIRouter naming patterns (aliases, subclasses, module imports). PR [#107](https://github.com/fastapi/fastapi-vscode/pull/107) by [@savannahostrowski](https://github.com/savannahostrowski).
