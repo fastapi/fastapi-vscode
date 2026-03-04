@@ -570,5 +570,36 @@ suite("routerResolver", () => {
 
       assert.strictEqual(result, null)
     })
+
+    test("resolves custom APIRouter subclass as child router", async () => {
+      const result = await buildRouterGraph(
+        fixtures.customSubclass.mainPy,
+        parser,
+        fixtures.customSubclass.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.variableName, "app")
+
+      assert.strictEqual(
+        result.children.length,
+        1,
+        "Should have one child router",
+      )
+
+      const adminRouter = result.children[0].router
+      assert.strictEqual(adminRouter.type, "APIRouter")
+      assert.strictEqual(adminRouter.prefix, "/admin")
+      assert.strictEqual(adminRouter.routes.length, 2)
+
+      const paths = adminRouter.routes.map((r) => r.path)
+      assert.ok(paths.includes("/users"))
+
+      const methods = adminRouter.routes.map((r) => r.method.toLowerCase())
+      assert.ok(methods.includes("get"))
+      assert.ok(methods.includes("post"))
+    })
   })
 })

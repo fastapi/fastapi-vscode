@@ -5,6 +5,7 @@
 import type { Tree } from "web-tree-sitter"
 import { logError } from "../utils/logger"
 import {
+  collectAPIRouterSubclasses,
   collectStringVariables,
   decoratorExtractor,
   findNodesByType,
@@ -44,7 +45,10 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
 
   // Get all router assignments
   const assignments = findNodesByType(rootNode, "assignment")
-  const routers = assignments.map(routerExtractor).filter(notNull)
+  const apiRouterSubclasses = collectAPIRouterSubclasses(rootNode)
+  const routers = assignments
+    .map((node) => routerExtractor(node, apiRouterSubclasses))
+    .filter(notNull)
 
   // Get all include_router and mount calls
   const callNodes = findNodesByType(rootNode, "call")

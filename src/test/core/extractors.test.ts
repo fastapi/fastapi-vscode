@@ -1,5 +1,6 @@
 import * as assert from "node:assert"
 import {
+  collectAPIRouterSubclasses,
   decoratorExtractor,
   extractPathFromNode,
   extractStringValue,
@@ -464,6 +465,55 @@ def list_users():
       assert.strictEqual(result.variableName, "router")
       assert.strictEqual(result.type, "APIRouter")
       assert.strictEqual(result.prefix, "/api")
+    })
+
+    test("returns null for custom subclass without subclasses set", () => {
+      const code = "admin_router = AdminAPIRouter(prefix='/admin')"
+      const tree = parse(code)
+      const assignments = findNodesByType(tree.rootNode, "assignment")
+      const result = routerExtractor(assignments[0])
+
+      assert.strictEqual(result, null)
+    })
+
+    test("recognizes custom APIRouter subclass when subclasses set provided", () => {
+      const code = `
+class AdminAPIRouter(APIRouter):
+    pass
+
+admin_router = AdminAPIRouter(prefix="/admin")
+`
+      const tree = parse(code)
+      const subclasses = collectAPIRouterSubclasses(tree.rootNode)
+      assert.ok(subclasses.has("AdminAPIRouter"))
+
+      const assignments = findNodesByType(tree.rootNode, "assignment")
+      const result = routerExtractor(assignments[0], subclasses)
+
+      assert.ok(result)
+      assert.strictEqual(result.variableName, "admin_router")
+      assert.strictEqual(result.type, "APIRouter")
+      assert.strictEqual(result.prefix, "/admin")
+    })
+
+    test("does not treat FastAPI subclass as APIRouter", () => {
+      const code = `
+class MyApp(FastAPI):
+    pass
+
+app = MyApp()
+`
+      const tree = parse(code)
+      const subclasses = collectAPIRouterSubclasses(tree.rootNode)
+      assert.ok(
+        !subclasses.has("MyApp"),
+        "FastAPI subclass should not be in APIRouter subclasses",
+      )
+
+      const assignments = findNodesByType(tree.rootNode, "assignment")
+      const result = routerExtractor(assignments[0], subclasses)
+
+      assert.strictEqual(result, null)
     })
   })
 

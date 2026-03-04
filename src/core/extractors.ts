@@ -49,6 +49,23 @@ function stripDocstring(raw: string): string {
   return dedented.join("\n").trim()
 }
 
+export function collectAPIRouterSubclasses(rootNode: Node): Set<string> {
+  const subclasses = new Set<string>()
+  for (const cls of findNodesByType(rootNode, "class_definition")) {
+    const nameNode = cls.childForFieldName("name")
+    const superclassesNode = cls.childForFieldName("superclasses")
+    if (!nameNode || !superclassesNode) continue
+
+    const extendsAPIRouter = superclassesNode.namedChildren.some(
+      (s) => s.text === "APIRouter" || s.text === "fastapi.APIRouter",
+    )
+    if (extendsAPIRouter) {
+      subclasses.add(nameNode.text)
+    }
+  }
+  return subclasses
+}
+
 function collectNodesByType(node: Node, type: string, results: Node[]): void {
   if (node.type === type) {
     results.push(node)
@@ -237,7 +254,10 @@ function extractTags(listNode: Node): string[] {
     .filter((v): v is string => v !== null)
 }
 
-export function routerExtractor(node: Node): RouterInfo | null {
+export function routerExtractor(
+  node: Node,
+  apiRouterSubclasses?: Set<string>,
+): RouterInfo | null {
   if (node.type !== "assignment") {
     return null
   }
@@ -250,7 +270,11 @@ export function routerExtractor(node: Node): RouterInfo | null {
 
   const funcName = valueNode.childForFieldName("function")?.text
   let type: RouterType
-  if (funcName === "APIRouter" || funcName === "fastapi.APIRouter") {
+  if (
+    funcName === "APIRouter" ||
+    funcName === "fastapi.APIRouter" ||
+    (funcName !== undefined && apiRouterSubclasses?.has(funcName))
+  ) {
     type = "APIRouter"
   } else if (funcName === "FastAPI" || funcName === "fastapi.FastAPI") {
     type = "FastAPI"
