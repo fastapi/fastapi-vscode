@@ -4,6 +4,7 @@
 
 ### Fixes
 
+* 🐛 Recognize custom FastAPI/APIRouter naming patterns (aliases, subclasses, module imports). PR [#107](https://github.com/fastapi/fastapi-vscode/pull/107) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🐛 Support factory function apps when entrypoint is configured. PR [#101](https://github.com/fastapi/fastapi-vscode/pull/101) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ### Internal
