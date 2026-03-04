@@ -8,7 +8,7 @@ import {
   collectRecognizedNames,
   collectStringVariables,
   decoratorExtractor,
-  findNodesByType,
+  getNodesByType,
   importExtractor,
   includeRouterExtractor,
   mountExtractor,
@@ -37,32 +37,32 @@ function resolveVariables(
 
 /** Analyze a syntax tree and extract FastAPI-related information */
 export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
-  const rootNode = tree.rootNode
+  const nodesByType = getNodesByType(tree.rootNode)
 
   // Get all decorated definitions (functions and classes with decorators)
-  const decoratedDefs = findNodesByType(rootNode, "decorated_definition")
+  const decoratedDefs = nodesByType.get("decorated_definition") ?? []
   const routes = decoratedDefs.map(decoratorExtractor).filter(notNull)
 
   // Get all router assignments
-  const assignments = findNodesByType(rootNode, "assignment")
-  const { fastAPINames, apiRouterNames } = collectRecognizedNames(rootNode)
+  const assignments = nodesByType.get("assignment") ?? []
+  const { fastAPINames, apiRouterNames } = collectRecognizedNames(nodesByType)
   const routers = assignments
     .map((node) => routerExtractor(node, apiRouterNames, fastAPINames))
     .filter(notNull)
 
   // Get all include_router and mount calls
-  const callNodes = findNodesByType(rootNode, "call")
+  const callNodes = nodesByType.get("call") ?? []
   const includeRouters = callNodes.map(includeRouterExtractor).filter(notNull)
   const mounts = callNodes.map(mountExtractor).filter(notNull)
 
   // Get all import statements
-  const importNodes = findNodesByType(rootNode, "import_statement")
-  const importFromNodes = findNodesByType(rootNode, "import_from_statement")
+  const importNodes = nodesByType.get("import_statement") ?? []
+  const importFromNodes = nodesByType.get("import_from_statement") ?? []
   const imports = [...importNodes, ...importFromNodes]
     .map(importExtractor)
     .filter(notNull)
 
-  const stringVariables = collectStringVariables(rootNode)
+  const stringVariables = collectStringVariables(nodesByType)
 
   for (const route of routes) {
     route.path = resolveVariables(route.path, stringVariables)

@@ -14,13 +14,6 @@ import type {
 } from "./internal"
 import { ROUTE_METHODS } from "./internal"
 
-/** Recursively finds all nodes of a given type within a subtree */
-export function findNodesByType(node: Node, type: string): Node[] {
-  const results: Node[] = []
-  collectNodesByType(node, type, results)
-  return results
-}
-
 function stripDocstring(raw: string): string {
   let content: string
   if (
@@ -48,17 +41,24 @@ function stripDocstring(raw: string): string {
   const dedented = lines.map((l, i) => (i === 0 ? l : l.slice(minIndent)))
   return dedented.join("\n").trim()
 }
+export function getNodesByType(root: Node): Map<string, Node[]> {
+  const results = new Map<string, Node[]>()
 
-function collectNodesByType(node: Node, type: string, results: Node[]): void {
-  if (node.type === type) {
-    results.push(node)
-  }
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i)
-    if (child) {
-      collectNodesByType(child, type, results)
+  function collectNodesByType(node: Node, results: Map<string, Node[]>): void {
+    if (!results.has(node.type)) {
+      results.set(node.type, [])
+    }
+    results.get(node.type)!.push(node)
+
+    for (let i = 0; i < node.childCount; i++) {
+      const child = node.child(i)
+      if (child) {
+        collectNodesByType(child, results)
+      }
     }
   }
+  collectNodesByType(root, results)
+  return results
 }
 
 /**
@@ -74,9 +74,11 @@ function collectNodesByType(node: Node, type: string, results: Node[]): void {
  *   settings.PREFIX = "/api"   -> (skipped, not a simple identifier)
  *   def f(): BASE = "/local"   -> (skipped, inside function)
  */
-export function collectStringVariables(rootNode: Node): Map<string, string> {
+export function collectStringVariables(
+  nodesByType: Map<string, Node[]>,
+): Map<string, string> {
   const variables = new Map<string, string>()
-  const assignmentNodes = findNodesByType(rootNode, "assignment")
+  const assignmentNodes = nodesByType.get("assignment") ?? []
 
   for (const assign of assignmentNodes) {
     if (
@@ -172,7 +174,11 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
   // Grammar guarantees: decorated_definition always has a first child (the decorator)
   const decoratorNode = node.firstNamedChild!
 
-  const callNode = findNodesByType(decoratorNode, "call")[0]
+  const callNode =
+    decoratorNode.firstNamedChild?.type === "call"
+      ? decoratorNode.firstNamedChild
+      : null
+
   const functionNode = callNode?.childForFieldName("function")
   const argumentsNode = callNode?.childForFieldName("arguments")
   const objectNode = functionNode?.childForFieldName("object")
@@ -351,7 +357,8 @@ export function importExtractor(node: Node): ImportInfo | null {
   if (node.type === "import_statement") {
     let modulePath = ""
     // Handle aliased imports: "import fastapi as f"
-    for (const aliased of findNodesByType(node, "aliased_import")) {
+    const aliasedImports = getNodesByType(node).get("aliased_import") ?? []
+    for (const aliased of aliasedImports) {
       const nameNode = aliased.childForFieldName("name")
       const aliasNode = aliased.childForFieldName("alias")
       if (nameNode) {
@@ -362,7 +369,7 @@ export function importExtractor(node: Node): ImportInfo | null {
       }
     }
     // Non-aliased: "import fastapi" or "import fastapi.routing"
-    const nameNodes = findNodesByType(node, "dotted_name")
+    const nameNodes = getNodesByType(node).get("dotted_name") ?? []
     for (const nameNode of nameNodes) {
       if (!hasAncestor(nameNode, "aliased_import")) {
         if (!modulePath) modulePath = nameNode.text // preserve full dotted path
@@ -387,7 +394,8 @@ export function importExtractor(node: Node): ImportInfo | null {
   )
 
   // Aliased imports (e.g., "router as users_router")
-  for (const aliased of findNodesByType(node, "aliased_import")) {
+  const aliasedImports = getNodesByType(node).get("aliased_import") ?? []
+  for (const aliased of aliasedImports) {
     const nameNode = aliased.childForFieldName("name")
     const aliasNode = aliased.childForFieldName("alias")
     if (nameNode) {
@@ -398,7 +406,7 @@ export function importExtractor(node: Node): ImportInfo | null {
   }
 
   // Non-aliased imports (skip first dotted_name which is the module path)
-  const nameNodes = findNodesByType(node, "dotted_name")
+  const nameNodes = getNodesByType(node).get("dotted_name") ?? []
   for (let i = 1; i < nameNodes.length; i++) {
     const nameNode = nameNodes[i]
     if (!hasAncestor(nameNode, "aliased_import")) {
@@ -423,7 +431,7 @@ export function importExtractor(node: Node): ImportInfo | null {
  *   fastAPINames = Set { "FastAPI", "fastapi.FastAPI", "MyApp" }
  *   apiRouterNames = Set { "APIRouter", "fastapi.APIRouter", "MyRouter", "CustomRouter" }
  */
-export function collectRecognizedNames(rootNode: Node): {
+export function collectRecognizedNames(nodesByType: Map<string, Node[]>): {
   fastAPINames: Set<string>
   apiRouterNames: Set<string>
 } {
@@ -431,7 +439,7 @@ export function collectRecognizedNames(rootNode: Node): {
   const apiRouterNames = new Set<string>(["APIRouter", "fastapi.APIRouter"])
 
   // Add aliases from "from fastapi import X as Y" imports
-  for (const node of findNodesByType(rootNode, "import_from_statement")) {
+  for (const node of nodesByType.get("import_from_statement") ?? []) {
     const info = importExtractor(node)
     if (!info || info.modulePath !== "fastapi") continue
     for (const named of info.namedImports) {
@@ -442,7 +450,7 @@ export function collectRecognizedNames(rootNode: Node): {
   }
 
   // Add module aliases from "import fastapi as f" → recognizes f.FastAPI, f.APIRouter
-  for (const node of findNodesByType(rootNode, "import_statement")) {
+  for (const node of nodesByType.get("import_statement") ?? []) {
     const info = importExtractor(node)
     if (!info) continue
     for (const named of info.namedImports) {
@@ -456,7 +464,7 @@ export function collectRecognizedNames(rootNode: Node): {
 
   // Add subclasses, checking against the already-accumulated alias sets so
   // "class MyRouter(AR)" works when AR is an alias for APIRouter
-  for (const cls of findNodesByType(rootNode, "class_definition")) {
+  for (const cls of nodesByType.get("class_definition") ?? []) {
     const nameNode = cls.childForFieldName("name")
     const superclassesNode = cls.childForFieldName("superclasses")
     if (!nameNode || !superclassesNode) continue

@@ -16,7 +16,7 @@ import {
 import type { Node } from "web-tree-sitter"
 import {
   extractPathFromNode,
-  findNodesByType,
+  getNodesByType,
   resolveArgNode,
 } from "../core/extractors"
 import { ROUTE_METHODS } from "../core/internal"
@@ -110,7 +110,8 @@ export class TestCodeLensProvider implements CodeLensProvider {
 
   private findTestClientCalls(rootNode: Node): TestClientCall[] {
     const calls: TestClientCall[] = []
-    const callNodes = findNodesByType(rootNode, "call")
+    const nodesByType = getNodesByType(rootNode)
+    const callNodes = nodesByType.get("call") ?? []
 
     for (const callNode of callNodes) {
       // Grammar guarantees: call nodes always have a function field
