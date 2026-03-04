@@ -625,5 +625,25 @@ suite("routerResolver", () => {
       assert.strictEqual(usersRouter.prefix, "/users")
       assert.strictEqual(usersRouter.routes.length, 2)
     })
+
+    test("resolves module-aliased fastapi import (import fastapi as f)", async () => {
+      const result = await buildRouterGraph(
+        fixtures.aliasedModule.mainPy,
+        parser,
+        fixtures.aliasedModule.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.variableName, "app")
+
+      assert.strictEqual(result.children.length, 1)
+
+      const usersRouter = result.children[0].router
+      assert.strictEqual(usersRouter.type, "APIRouter")
+      assert.strictEqual(usersRouter.prefix, "/users")
+      assert.strictEqual(usersRouter.routes.length, 2)
+    })
   })
 })

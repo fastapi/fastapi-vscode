@@ -1,7 +1,6 @@
 import * as assert from "node:assert"
 import {
-  collectAPIRouterSubclasses,
-  collectFastAPIAliases,
+  collectRecognizedNames,
   decoratorExtractor,
   extractPathFromNode,
   extractStringValue,
@@ -477,7 +476,7 @@ def list_users():
       assert.strictEqual(result, null)
     })
 
-    test("recognizes custom APIRouter subclass when subclasses set provided", () => {
+    test("recognizes custom APIRouter subclass", () => {
       const code = `
 class AdminAPIRouter(APIRouter):
     pass
@@ -485,11 +484,11 @@ class AdminAPIRouter(APIRouter):
 admin_router = AdminAPIRouter(prefix="/admin")
 `
       const tree = parse(code)
-      const subclasses = collectAPIRouterSubclasses(tree.rootNode)
-      assert.ok(subclasses.has("AdminAPIRouter"))
+      const { apiRouterNames } = collectRecognizedNames(tree.rootNode)
+      assert.ok(apiRouterNames.has("AdminAPIRouter"))
 
       const assignments = findNodesByType(tree.rootNode, "assignment")
-      const result = routerExtractor(assignments[0], subclasses)
+      const result = routerExtractor(assignments[0], apiRouterNames)
 
       assert.ok(result)
       assert.strictEqual(result.variableName, "admin_router")
@@ -497,7 +496,7 @@ admin_router = AdminAPIRouter(prefix="/admin")
       assert.strictEqual(result.prefix, "/admin")
     })
 
-    test("does not treat FastAPI subclass as APIRouter", () => {
+    test("recognizes FastAPI subclass", () => {
       const code = `
 class MyApp(FastAPI):
     pass
@@ -505,16 +504,22 @@ class MyApp(FastAPI):
 app = MyApp()
 `
       const tree = parse(code)
-      const subclasses = collectAPIRouterSubclasses(tree.rootNode)
-      assert.ok(
-        !subclasses.has("MyApp"),
-        "FastAPI subclass should not be in APIRouter subclasses",
+      const { fastAPINames, apiRouterNames } = collectRecognizedNames(
+        tree.rootNode,
       )
+      assert.ok(fastAPINames.has("MyApp"))
+      assert.ok(!apiRouterNames.has("MyApp"))
 
       const assignments = findNodesByType(tree.rootNode, "assignment")
-      const result = routerExtractor(assignments[0], subclasses)
+      const result = routerExtractor(
+        assignments[0],
+        apiRouterNames,
+        fastAPINames,
+      )
 
-      assert.strictEqual(result, null)
+      assert.ok(result)
+      assert.strictEqual(result.variableName, "app")
+      assert.strictEqual(result.type, "FastAPI")
     })
 
     test("recognizes aliased FastAPI import (FastAPI as FA)", () => {
@@ -524,11 +529,17 @@ from fastapi import FastAPI as FA
 app = FA()
 `
       const tree = parse(code)
-      const { fastAPIAliases } = collectFastAPIAliases(tree.rootNode)
-      assert.ok(fastAPIAliases.has("FA"))
+      const { fastAPINames, apiRouterNames } = collectRecognizedNames(
+        tree.rootNode,
+      )
+      assert.ok(fastAPINames.has("FA"))
 
       const assignments = findNodesByType(tree.rootNode, "assignment")
-      const result = routerExtractor(assignments[0], undefined, fastAPIAliases)
+      const result = routerExtractor(
+        assignments[0],
+        apiRouterNames,
+        fastAPINames,
+      )
 
       assert.ok(result)
       assert.strictEqual(result.variableName, "app")
@@ -542,11 +553,11 @@ from fastapi import APIRouter as AR
 router = AR(prefix="/items")
 `
       const tree = parse(code)
-      const { apiRouterAliases } = collectFastAPIAliases(tree.rootNode)
-      assert.ok(apiRouterAliases.has("AR"))
+      const { apiRouterNames } = collectRecognizedNames(tree.rootNode)
+      assert.ok(apiRouterNames.has("AR"))
 
       const assignments = findNodesByType(tree.rootNode, "assignment")
-      const result = routerExtractor(assignments[0], apiRouterAliases)
+      const result = routerExtractor(assignments[0], apiRouterNames)
 
       assert.ok(result)
       assert.strictEqual(result.variableName, "router")
@@ -554,14 +565,71 @@ router = AR(prefix="/items")
       assert.strictEqual(result.prefix, "/items")
     })
 
-    test("collectFastAPIAliases ignores non-aliased imports", () => {
+    test("recognizes subclass of aliased APIRouter (class MyRouter(AR))", () => {
+      const code = `
+from fastapi import APIRouter as AR
+
+class MyRouter(AR):
+    pass
+
+router = MyRouter(prefix="/items")
+`
+      const tree = parse(code)
+      const { apiRouterNames } = collectRecognizedNames(tree.rootNode)
+      assert.ok(apiRouterNames.has("AR"))
+      assert.ok(apiRouterNames.has("MyRouter"))
+
+      const assignments = findNodesByType(tree.rootNode, "assignment")
+      const result = routerExtractor(assignments[0], apiRouterNames)
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "APIRouter")
+    })
+
+    test("collectRecognizedNames ignores non-aliased imports", () => {
       const code = "from fastapi import FastAPI, APIRouter"
       const tree = parse(code)
-      const { fastAPIAliases, apiRouterAliases } = collectFastAPIAliases(
+      const { fastAPINames, apiRouterNames } = collectRecognizedNames(
         tree.rootNode,
       )
-      assert.strictEqual(fastAPIAliases.size, 0)
-      assert.strictEqual(apiRouterAliases.size, 0)
+      // Only the defaults — no extras from non-aliased imports
+      assert.strictEqual(fastAPINames.size, 2) // "FastAPI", "fastapi.FastAPI"
+      assert.strictEqual(apiRouterNames.size, 2) // "APIRouter", "fastapi.APIRouter"
+    })
+
+    test("recognizes module alias (import fastapi as f)", () => {
+      const code = `
+import fastapi as f
+
+app = f.FastAPI()
+router = f.APIRouter(prefix="/items")
+`
+      const tree = parse(code)
+      const { fastAPINames, apiRouterNames } = collectRecognizedNames(
+        tree.rootNode,
+      )
+      assert.ok(fastAPINames.has("f.FastAPI"))
+      assert.ok(apiRouterNames.has("f.APIRouter"))
+
+      const assignments = findNodesByType(tree.rootNode, "assignment")
+      const appResult = routerExtractor(
+        assignments[0],
+        apiRouterNames,
+        fastAPINames,
+      )
+      assert.ok(appResult)
+      assert.strictEqual(appResult.variableName, "app")
+      assert.strictEqual(appResult.type, "FastAPI")
+
+      const routerResult = routerExtractor(
+        assignments[1],
+        apiRouterNames,
+        fastAPINames,
+      )
+      assert.ok(routerResult)
+      assert.strictEqual(routerResult.variableName, "router")
+      assert.strictEqual(routerResult.type, "APIRouter")
+      assert.strictEqual(routerResult.prefix, "/items")
     })
   })
 
@@ -575,6 +643,24 @@ router = AR(prefix="/items")
       assert.ok(result)
       assert.strictEqual(result.modulePath, "fastapi")
       assert.deepStrictEqual(result.names, ["fastapi"])
+      assert.deepStrictEqual(result.namedImports, [
+        { name: "fastapi", alias: null },
+      ])
+      assert.strictEqual(result.isRelative, false)
+    })
+
+    test("extracts aliased module import (import fastapi as f)", () => {
+      const code = "import fastapi as f"
+      const tree = parse(code)
+      const imports = findNodesByType(tree.rootNode, "import_statement")
+      const result = importExtractor(imports[0])
+
+      assert.ok(result)
+      assert.strictEqual(result.modulePath, "fastapi")
+      assert.deepStrictEqual(result.names, ["f"])
+      assert.deepStrictEqual(result.namedImports, [
+        { name: "fastapi", alias: "f" },
+      ])
       assert.strictEqual(result.isRelative, false)
     })
 

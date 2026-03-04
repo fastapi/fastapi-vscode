@@ -48,47 +48,66 @@ function stripDocstring(raw: string): string {
   const dedented = lines.map((l, i) => (i === 0 ? l : l.slice(minIndent)))
   return dedented.join("\n").trim()
 }
+/*
+ * Extracts recognized FastAPI and APIRouter names from imports and class definitions
+ * This allows the rest of the extractors to handle user-defined aliases and subclasses.
+ *
+ * For example, if the code has:
+ *   from fastapi import FastAPI as MyApp
+ *   from fastapi import APIRouter as MyRouter
+ *   class CustomRouter(MyRouter): ...
+ *
+ * Then this function will return:
+ *   fastAPINames = Set { "FastAPI", "fastapi.FastAPI", "MyApp" }
+ *   apiRouterNames = Set { "APIRouter", "fastapi.APIRouter", "MyRouter", "CustomRouter" }
+ *
+ * This allows decoratorExtractor and routerExtractor to recognize routes and routers
+ * defined using these aliases and subclasses without needing complex logic in those functions.
+ */
+export function collectRecognizedNames(rootNode: Node): {
+  fastAPINames: Set<string>
+  apiRouterNames: Set<string>
+} {
+  const fastAPINames = new Set<string>(["FastAPI", "fastapi.FastAPI"])
+  const apiRouterNames = new Set<string>(["APIRouter", "fastapi.APIRouter"])
 
-export function collectAPIRouterSubclasses(rootNode: Node): Set<string> {
-  const subclasses = new Set<string>()
+  // Add aliases from "from fastapi import X as Y" imports
+  for (const node of findNodesByType(rootNode, "import_from_statement")) {
+    const info = importExtractor(node)
+    if (!info || info.modulePath !== "fastapi") continue
+    for (const named of info.namedImports) {
+      if (named.alias === null) continue
+      if (named.name === "FastAPI") fastAPINames.add(named.alias)
+      else if (named.name === "APIRouter") apiRouterNames.add(named.alias)
+    }
+  }
+
+  // Add module aliases from "import fastapi as f" → recognizes f.FastAPI, f.APIRouter
+  for (const node of findNodesByType(rootNode, "import_statement")) {
+    const info = importExtractor(node)
+    if (!info) continue
+    for (const named of info.namedImports) {
+      if (named.alias === null) continue
+      if (named.name === "fastapi") {
+        fastAPINames.add(`${named.alias}.FastAPI`)
+        apiRouterNames.add(`${named.alias}.APIRouter`)
+      }
+    }
+  }
+
+  // Add subclasses, checking against the already-accumulated alias sets so
+  // "class MyRouter(AR)" works when AR is an alias for APIRouter
   for (const cls of findNodesByType(rootNode, "class_definition")) {
     const nameNode = cls.childForFieldName("name")
     const superclassesNode = cls.childForFieldName("superclasses")
     if (!nameNode || !superclassesNode) continue
-
-    const extendsAPIRouter = superclassesNode.namedChildren.some(
-      (s) => s.text === "APIRouter" || s.text === "fastapi.APIRouter",
-    )
-    if (extendsAPIRouter) {
-      subclasses.add(nameNode.text)
-    }
-  }
-  return subclasses
-}
-
-/**
- * Collects aliases for FastAPI and APIRouter from import statements.
- * Handles: from fastapi import FastAPI as FA, APIRouter as AR
- */
-export function collectFastAPIAliases(rootNode: Node): {
-  fastAPIAliases: Set<string>
-  apiRouterAliases: Set<string>
-} {
-  const fastAPIAliases = new Set<string>()
-  const apiRouterAliases = new Set<string>()
-
-  for (const node of findNodesByType(rootNode, "import_from_statement")) {
-    const info = importExtractor(node)
-    if (!info || info.modulePath !== "fastapi") continue
-
-    for (const ni of info.namedImports) {
-      if (ni.alias === null) continue
-      if (ni.name === "FastAPI") fastAPIAliases.add(ni.alias)
-      if (ni.name === "APIRouter") apiRouterAliases.add(ni.alias)
+    for (const parent of superclassesNode.namedChildren) {
+      if (apiRouterNames.has(parent.text)) apiRouterNames.add(nameNode.text)
+      else if (fastAPINames.has(parent.text)) fastAPINames.add(nameNode.text)
     }
   }
 
-  return { fastAPIAliases, apiRouterAliases }
+  return { fastAPINames, apiRouterNames }
 }
 
 function collectNodesByType(node: Node, type: string, results: Node[]): void {
@@ -281,8 +300,8 @@ function extractTags(listNode: Node): string[] {
 
 export function routerExtractor(
   node: Node,
-  apiRouterSubclasses?: Set<string>,
-  fastAPIAliases?: Set<string>,
+  apiRouterNames?: Set<string>,
+  fastAPINames?: Set<string>,
 ): RouterInfo | null {
   if (node.type !== "assignment") {
     return null
@@ -299,13 +318,13 @@ export function routerExtractor(
   if (
     funcName === "APIRouter" ||
     funcName === "fastapi.APIRouter" ||
-    (funcName !== undefined && apiRouterSubclasses?.has(funcName))
+    (funcName !== undefined && apiRouterNames?.has(funcName))
   ) {
     type = "APIRouter"
   } else if (
     funcName === "FastAPI" ||
     funcName === "fastapi.FastAPI" ||
-    (funcName !== undefined && fastAPIAliases?.has(funcName))
+    (funcName !== undefined && fastAPINames?.has(funcName))
   ) {
     type = "FastAPI"
   } else {
@@ -380,13 +399,26 @@ export function importExtractor(node: Node): ImportInfo | null {
   const namedImports: ImportedName[] = []
 
   if (node.type === "import_statement") {
+    // Handle aliased imports: "import fastapi as f"
+    for (const aliased of findNodesByType(node, "aliased_import")) {
+      const nameNode = aliased.childForFieldName("name")
+      const aliasNode = aliased.childForFieldName("alias")
+      if (nameNode) {
+        const alias = aliasNode?.text ?? null
+        names.push(alias ?? nameNode.text)
+        namedImports.push({ name: nameNode.text, alias })
+      }
+    }
+    // Non-aliased: "import fastapi"
     const nameNodes = findNodesByType(node, "dotted_name")
     for (const nameNode of nameNodes) {
-      const firstName = nameNode.text.split(".")[0]
-      names.push(firstName)
-      namedImports.push({ name: firstName, alias: null })
+      if (!hasAncestor(nameNode, "aliased_import")) {
+        const firstName = nameNode.text.split(".")[0]
+        names.push(firstName)
+        namedImports.push({ name: firstName, alias: null })
+      }
     }
-    const modulePath = nameNodes[0]?.text ?? ""
+    const modulePath = namedImports[0]?.name ?? ""
     return {
       modulePath,
       names,

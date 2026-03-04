@@ -95,6 +95,10 @@ export const fixtures = {
     root: uri(join(fixturesPath, "aliased-class")),
     mainPy: uri(join(fixturesPath, "aliased-class", "main.py")),
   },
+  aliasedModule: {
+    root: uri(join(fixturesPath, "aliased-module")),
+    mainPy: uri(join(fixturesPath, "aliased-module", "main.py")),
+  },
 }
 
 /**
