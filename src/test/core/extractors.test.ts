@@ -649,6 +649,20 @@ router = f.APIRouter(prefix="/items")
       assert.strictEqual(result.isRelative, false)
     })
 
+    test("preserves full dotted modulePath for import fastapi.routing", () => {
+      const code = "import fastapi.routing"
+      const tree = parse(code)
+      const imports = findNodesByType(tree.rootNode, "import_statement")
+      const result = importExtractor(imports[0])
+
+      assert.ok(result)
+      assert.strictEqual(result.modulePath, "fastapi.routing")
+      assert.deepStrictEqual(result.names, ["fastapi"])
+      assert.deepStrictEqual(result.namedImports, [
+        { name: "fastapi", alias: null },
+      ])
+    })
+
     test("extracts aliased module import (import fastapi as f)", () => {
       const code = "import fastapi as f"
       const tree = parse(code)

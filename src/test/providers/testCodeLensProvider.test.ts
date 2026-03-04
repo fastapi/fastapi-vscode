@@ -287,6 +287,22 @@ def test_something():
       assert.strictEqual(lenses.length, 0)
     })
 
+    test("creates CodeLens for url= keyword argument", async () => {
+      const app = createMockApp([createRoute("GET", "/users")])
+      provider.setApps([app])
+
+      const doc = await vscode.workspace.openTextDocument({
+        content: `
+def test_get_users():
+    response = client.get(url="/users")
+`,
+        language: "python",
+      })
+      const lenses = provider.provideCodeLenses(doc)
+      assert.strictEqual(lenses.length, 1)
+      assert.ok(lenses[0].command?.title.includes("/users"))
+    })
+
     test("ignores calls with no arguments", async () => {
       const app = createMockApp([createRoute("GET", "/users")])
       provider.setApps([app])

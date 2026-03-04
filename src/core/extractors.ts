@@ -399,26 +399,28 @@ export function importExtractor(node: Node): ImportInfo | null {
   const namedImports: ImportedName[] = []
 
   if (node.type === "import_statement") {
+    let modulePath = ""
     // Handle aliased imports: "import fastapi as f"
     for (const aliased of findNodesByType(node, "aliased_import")) {
       const nameNode = aliased.childForFieldName("name")
       const aliasNode = aliased.childForFieldName("alias")
       if (nameNode) {
+        if (!modulePath) modulePath = nameNode.text // preserve full dotted path
         const alias = aliasNode?.text ?? null
         names.push(alias ?? nameNode.text)
         namedImports.push({ name: nameNode.text, alias })
       }
     }
-    // Non-aliased: "import fastapi"
+    // Non-aliased: "import fastapi" or "import fastapi.routing"
     const nameNodes = findNodesByType(node, "dotted_name")
     for (const nameNode of nameNodes) {
       if (!hasAncestor(nameNode, "aliased_import")) {
+        if (!modulePath) modulePath = nameNode.text // preserve full dotted path
         const firstName = nameNode.text.split(".")[0]
         names.push(firstName)
         namedImports.push({ name: firstName, alias: null })
       }
     }
-    const modulePath = namedImports[0]?.name ?? ""
     return {
       modulePath,
       names,
@@ -465,7 +467,7 @@ export function importExtractor(node: Node): ImportInfo | null {
  *   app.get("/users", response_model=List[User])  → position 0 = string node "/users"
  *   app.get(path="/users", response_model=List[User]) → keyword "path" = string node "/users"
  */
-function resolveArgNode(
+export function resolveArgNode(
   args: Node[],
   position: number,
   keywordName: string,
