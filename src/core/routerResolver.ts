@@ -2,7 +2,12 @@ import { log } from "../utils/logger"
 import { analyzeFile } from "./analyzer"
 import type { FileSystem } from "./filesystem"
 import { resolveNamedImport, resolveRouterFromInit } from "./importResolver"
-import type { FileAnalysis, RouterInfo, RouterNode } from "./internal"
+import type {
+  FileAnalysis,
+  RouteInfo,
+  RouterInfo,
+  RouterNode,
+} from "./internal"
 import type { Parser } from "./parser"
 
 export type { RouterNode }
@@ -23,6 +28,31 @@ function findAppRouter(
     routers.find((r) => r.type === "FastAPI") ??
     routers.find((r) => r.type === "APIRouter")
   )
+}
+
+function createRouterNode(
+  router: RouterInfo,
+  routes: RouteInfo[],
+  filePath: string,
+): RouterNode {
+  return {
+    filePath,
+    variableName: router.variableName,
+    type: router.type,
+    prefix: router.prefix,
+    tags: router.tags,
+    line: router.line,
+    column: router.column,
+    routes: routes.map((r) => ({
+      method: r.method,
+      path: r.path,
+      function: r.function,
+      line: r.line,
+      column: r.column,
+      docstring: r.docstring,
+    })),
+    children: [],
+  }
 }
 
 /**
@@ -141,24 +171,7 @@ async function buildRouterGraphInternal(
   const appRoutes = analysis.routes.filter(
     (r) => r.owner === appRouter.variableName,
   )
-  const rootRouter: RouterNode = {
-    filePath: resolvedEntryUri,
-    variableName: appRouter.variableName,
-    type: appRouter.type,
-    prefix: appRouter.prefix,
-    tags: appRouter.tags,
-    line: appRouter.line,
-    column: appRouter.column,
-    routes: appRoutes.map((r) => ({
-      method: r.method,
-      path: r.path,
-      function: r.function,
-      line: r.line,
-      column: r.column,
-      docstring: r.docstring,
-    })),
-    children: [],
-  }
+  const rootRouter = createRouterNode(appRouter, appRoutes, resolvedEntryUri)
 
   // Process include_router calls to find child routers
   for (const include of analysis.includeRouters) {
@@ -238,24 +251,11 @@ async function resolveRouterReference(
   if (localRouter) {
     // Filter routes that belong to this router (decorated with @router.method)
     const routerRoutes = analysis.routes.filter((r) => r.owner === moduleName)
-    const routerNode: RouterNode = {
-      filePath: currentFileUri,
-      variableName: localRouter.variableName,
-      type: localRouter.type,
-      prefix: localRouter.prefix,
-      tags: localRouter.tags,
-      line: localRouter.line,
-      column: localRouter.column,
-      routes: routerRoutes.map((r) => ({
-        method: r.method,
-        path: r.path,
-        function: r.function,
-        line: r.line,
-        column: r.column,
-        docstring: r.docstring,
-      })),
-      children: [],
-    }
+    const routerNode = createRouterNode(
+      localRouter,
+      routerRoutes,
+      currentFileUri,
+    )
 
     // Process include_router calls owned by this router (nested routers)
     const routerIncludes = analysis.includeRouters.filter(
@@ -355,24 +355,11 @@ async function resolveRouterReference(
       const routerRoutes = importedAnalysis.routes.filter(
         (r) => r.owner === attributeName,
       )
-      const routerNode: RouterNode = {
-        filePath: importedFileUri,
-        variableName: targetRouter.variableName,
-        type: targetRouter.type,
-        prefix: targetRouter.prefix,
-        tags: targetRouter.tags,
-        line: targetRouter.line,
-        column: targetRouter.column,
-        routes: routerRoutes.map((r) => ({
-          method: r.method,
-          path: r.path,
-          function: r.function,
-          line: r.line,
-          column: r.column,
-          docstring: r.docstring,
-        })),
-        children: [],
-      }
+      const routerNode = createRouterNode(
+        targetRouter,
+        routerRoutes,
+        importedFileUri,
+      )
 
       // Process include_router calls owned by this router (nested routers)
       const routerIncludes = importedAnalysis.includeRouters.filter(
