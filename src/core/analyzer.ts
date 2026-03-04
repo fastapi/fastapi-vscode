@@ -5,6 +5,7 @@
 import type { Tree } from "web-tree-sitter"
 import { logError } from "../utils/logger"
 import {
+  aliasExtractor,
   collectStringVariables,
   decoratorExtractor,
   findNodesByType,
@@ -42,9 +43,13 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
   const decoratedDefs = findNodesByType(rootNode, "decorated_definition")
   const routes = decoratedDefs.map(decoratorExtractor).filter(notNull)
 
+  const aliases = aliasExtractor(rootNode)
+
   // Get all router assignments
   const assignments = findNodesByType(rootNode, "assignment")
-  const routers = assignments.map(routerExtractor).filter(notNull)
+  const routers = assignments
+    .map((node) => routerExtractor(node, aliases))
+    .filter(notNull)
 
   // Get all include_router and mount calls
   const callNodes = findNodesByType(rootNode, "call")

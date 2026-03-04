@@ -237,7 +237,10 @@ function extractTags(listNode: Node): string[] {
     .filter((v): v is string => v !== null)
 }
 
-export function routerExtractor(node: Node): RouterInfo | null {
+export function routerExtractor(
+  node: Node,
+  aliasMap?: Map<string, "FastAPI" | "APIRouter">,
+): RouterInfo | null {
   if (node.type !== "assignment") {
     return null
   }
@@ -254,6 +257,8 @@ export function routerExtractor(node: Node): RouterInfo | null {
     type = "APIRouter"
   } else if (funcName === "FastAPI" || funcName === "fastapi.FastAPI") {
     type = "FastAPI"
+  } else if (funcName && aliasMap?.has(funcName)) {
+    type = aliasMap.get(funcName)!
   } else {
     return null
   }
@@ -475,4 +480,37 @@ export function mountExtractor(node: Node): MountInfo | null {
     path: pathNode ? extractPathFromNode(pathNode) : "",
     app: appNode?.text ?? "",
   }
+}
+
+export function aliasExtractor(
+  node: Node,
+): Map<string, "FastAPI" | "APIRouter"> {
+  const importAliases = findNodesByType(node, "aliased_import")
+
+  const aliasMap = new Map<string, "FastAPI" | "APIRouter">()
+
+  for (const node of importAliases) {
+    const originalNode = node.childForFieldName("name")
+    const aliasNode = node.childForFieldName("alias")
+
+    if (
+      originalNode?.text === "FastAPI" ||
+      originalNode?.text === "fastapi.FastAPI"
+    ) {
+      const alias = aliasNode?.text
+      if (alias) {
+        aliasMap.set(alias, "FastAPI")
+      }
+    } else if (
+      originalNode?.text === "APIRouter" ||
+      originalNode?.text === "fastapi.APIRouter"
+    ) {
+      const alias = aliasNode?.text
+      if (alias) {
+        aliasMap.set(alias, "APIRouter")
+      }
+    }
+  }
+
+  return aliasMap
 }
