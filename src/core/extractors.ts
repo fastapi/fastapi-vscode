@@ -48,67 +48,6 @@ function stripDocstring(raw: string): string {
   const dedented = lines.map((l, i) => (i === 0 ? l : l.slice(minIndent)))
   return dedented.join("\n").trim()
 }
-/*
- * Extracts recognized FastAPI and APIRouter names from imports and class definitions
- * This allows the rest of the extractors to handle user-defined aliases and subclasses.
- *
- * For example, if the code has:
- *   from fastapi import FastAPI as MyApp
- *   from fastapi import APIRouter as MyRouter
- *   class CustomRouter(MyRouter): ...
- *
- * Then this function will return:
- *   fastAPINames = Set { "FastAPI", "fastapi.FastAPI", "MyApp" }
- *   apiRouterNames = Set { "APIRouter", "fastapi.APIRouter", "MyRouter", "CustomRouter" }
- *
- * This allows decoratorExtractor and routerExtractor to recognize routes and routers
- * defined using these aliases and subclasses without needing complex logic in those functions.
- */
-export function collectRecognizedNames(rootNode: Node): {
-  fastAPINames: Set<string>
-  apiRouterNames: Set<string>
-} {
-  const fastAPINames = new Set<string>(["FastAPI", "fastapi.FastAPI"])
-  const apiRouterNames = new Set<string>(["APIRouter", "fastapi.APIRouter"])
-
-  // Add aliases from "from fastapi import X as Y" imports
-  for (const node of findNodesByType(rootNode, "import_from_statement")) {
-    const info = importExtractor(node)
-    if (!info || info.modulePath !== "fastapi") continue
-    for (const named of info.namedImports) {
-      if (named.alias === null) continue
-      if (named.name === "FastAPI") fastAPINames.add(named.alias)
-      else if (named.name === "APIRouter") apiRouterNames.add(named.alias)
-    }
-  }
-
-  // Add module aliases from "import fastapi as f" → recognizes f.FastAPI, f.APIRouter
-  for (const node of findNodesByType(rootNode, "import_statement")) {
-    const info = importExtractor(node)
-    if (!info) continue
-    for (const named of info.namedImports) {
-      if (named.alias === null) continue
-      if (named.name === "fastapi") {
-        fastAPINames.add(`${named.alias}.FastAPI`)
-        apiRouterNames.add(`${named.alias}.APIRouter`)
-      }
-    }
-  }
-
-  // Add subclasses, checking against the already-accumulated alias sets so
-  // "class MyRouter(AR)" works when AR is an alias for APIRouter
-  for (const cls of findNodesByType(rootNode, "class_definition")) {
-    const nameNode = cls.childForFieldName("name")
-    const superclassesNode = cls.childForFieldName("superclasses")
-    if (!nameNode || !superclassesNode) continue
-    for (const parent of superclassesNode.namedChildren) {
-      if (apiRouterNames.has(parent.text)) apiRouterNames.add(nameNode.text)
-      else if (fastAPINames.has(parent.text)) fastAPINames.add(nameNode.text)
-    }
-  }
-
-  return { fastAPINames, apiRouterNames }
-}
 
 function collectNodesByType(node: Node, type: string, results: Node[]): void {
   if (node.type === type) {
@@ -316,15 +255,15 @@ export function routerExtractor(
   const funcName = valueNode.childForFieldName("function")?.text
   let type: RouterType
   if (
-    funcName === "APIRouter" ||
-    funcName === "fastapi.APIRouter" ||
-    (funcName !== undefined && apiRouterNames?.has(funcName))
+    funcName !== undefined &&
+    (apiRouterNames?.has(funcName) ??
+      (funcName === "APIRouter" || funcName === "fastapi.APIRouter"))
   ) {
     type = "APIRouter"
   } else if (
-    funcName === "FastAPI" ||
-    funcName === "fastapi.FastAPI" ||
-    (funcName !== undefined && fastAPINames?.has(funcName))
+    funcName !== undefined &&
+    (fastAPINames?.has(funcName) ??
+      (funcName === "FastAPI" || funcName === "fastapi.FastAPI"))
   ) {
     type = "FastAPI"
   } else {
@@ -458,6 +397,65 @@ export function importExtractor(node: Node): ImportInfo | null {
   }
 
   return { modulePath, names, namedImports, isRelative, relativeDots }
+}
+
+/**
+ * Extracts recognized FastAPI and APIRouter names from imports and class definitions.
+ * This allows routerExtractor to handle user-defined aliases and subclasses.
+ *
+ * For example, if the code has:
+ *   from fastapi import FastAPI as MyApp
+ *   from fastapi import APIRouter as MyRouter
+ *   class CustomRouter(MyRouter): ...
+ *
+ * Then this function will return:
+ *   fastAPINames = Set { "FastAPI", "fastapi.FastAPI", "MyApp" }
+ *   apiRouterNames = Set { "APIRouter", "fastapi.APIRouter", "MyRouter", "CustomRouter" }
+ */
+export function collectRecognizedNames(rootNode: Node): {
+  fastAPINames: Set<string>
+  apiRouterNames: Set<string>
+} {
+  const fastAPINames = new Set<string>(["FastAPI", "fastapi.FastAPI"])
+  const apiRouterNames = new Set<string>(["APIRouter", "fastapi.APIRouter"])
+
+  // Add aliases from "from fastapi import X as Y" imports
+  for (const node of findNodesByType(rootNode, "import_from_statement")) {
+    const info = importExtractor(node)
+    if (!info || info.modulePath !== "fastapi") continue
+    for (const named of info.namedImports) {
+      if (named.alias === null) continue
+      if (named.name === "FastAPI") fastAPINames.add(named.alias)
+      else if (named.name === "APIRouter") apiRouterNames.add(named.alias)
+    }
+  }
+
+  // Add module aliases from "import fastapi as f" → recognizes f.FastAPI, f.APIRouter
+  for (const node of findNodesByType(rootNode, "import_statement")) {
+    const info = importExtractor(node)
+    if (!info) continue
+    for (const named of info.namedImports) {
+      if (named.alias === null) continue
+      if (named.name === "fastapi") {
+        fastAPINames.add(`${named.alias}.FastAPI`)
+        apiRouterNames.add(`${named.alias}.APIRouter`)
+      }
+    }
+  }
+
+  // Add subclasses, checking against the already-accumulated alias sets so
+  // "class MyRouter(AR)" works when AR is an alias for APIRouter
+  for (const cls of findNodesByType(rootNode, "class_definition")) {
+    const nameNode = cls.childForFieldName("name")
+    const superclassesNode = cls.childForFieldName("superclasses")
+    if (!nameNode || !superclassesNode) continue
+    for (const parent of superclassesNode.namedChildren) {
+      if (apiRouterNames.has(parent.text)) apiRouterNames.add(nameNode.text)
+      else if (fastAPINames.has(parent.text)) fastAPINames.add(nameNode.text)
+    }
+  }
+
+  return { fastAPINames, apiRouterNames }
 }
 
 /**

@@ -143,7 +143,6 @@ export class TestCodeLensProvider implements CodeLensProvider {
       if (!pathArg) {
         continue
       }
-      // extractPathFromNode always returns a non-empty string for valid AST nodes
       const path = extractPathFromNode(pathArg)
 
       calls.push({
