@@ -83,6 +83,10 @@ export const fixtures = {
     projectRoot: uri(join(fixturesPath, "monorepo", "service")),
     mainPy: uri(join(fixturesPath, "monorepo", "service", "myapp", "main.py")),
   },
+  factoryFunc: {
+    root: uri(join(fixturesPath, "factory-func")),
+    mainPy: uri(join(fixturesPath, "factory-func", "main.py")),
+  },
 }
 
 /**

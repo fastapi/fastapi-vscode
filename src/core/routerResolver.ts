@@ -113,6 +113,25 @@ async function buildRouterGraphInternal(
     }
   }
 
+  // Factory function: if the entrypoint variable (e.g. "app" from "main:app")
+  // is assigned via a factory function (`app = create_app()`) rather than a direct
+  // FastAPI() constructor call, static analysis can't determine the type. If routes
+  // are decorated with @app.get(...) etc. though, we know it must be a FastAPI instance.
+  if (
+    !appRouter &&
+    targetVariable &&
+    analysis.routes.some((r) => r.owner === targetVariable)
+  ) {
+    appRouter = {
+      variableName: targetVariable,
+      type: "FastAPI",
+      prefix: "",
+      tags: [],
+      line: 0,
+      column: 0,
+    }
+  }
+
   if (!appRouter || !analysis) {
     return null
   }
