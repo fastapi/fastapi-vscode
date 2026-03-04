@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Fixes
+
+* 🐛 Support factory function apps when entrypoint is configured. PR [#101](https://github.com/fastapi/fastapi-vscode/pull/101) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Internal
 
 * 📈 Add Antigravity as a telemetry client name. PR [#99](https://github.com/fastapi/fastapi-vscode/pull/99) by [@savannahostrowski](https://github.com/savannahostrowski).
