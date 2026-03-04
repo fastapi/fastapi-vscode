@@ -94,14 +94,7 @@ export interface RouterNode {
   tags: string[]
   line: number
   column: number
-  routes: {
-    method: string
-    path: string
-    function: string
-    line: number
-    column: number
-    docstring?: string
-  }[]
+  routes: Omit<RouteInfo, "owner">[]
   children: { router: RouterNode; prefix: string; tags: string[] }[]
 }
 
