@@ -24,35 +24,9 @@ export const fixturesPath = join(__DIST_ROOT__, "..", "src", "test", "fixtures")
 const uri = (path: string) => `file://${path}`
 
 export const fixtures = {
-  standard: {
-    root: uri(join(fixturesPath, "standard")),
-    rootMainPy: uri(join(fixturesPath, "standard", "main.py")),
-    mainPy: uri(join(fixturesPath, "standard", "app", "main.py")),
-    usersPy: uri(join(fixturesPath, "standard", "app", "routes", "users.py")),
-    initPy: uri(join(fixturesPath, "standard", "app", "__init__.py")),
-  },
-  flat: {
-    root: uri(join(fixturesPath, "flat")),
-    mainPy: uri(join(fixturesPath, "flat", "main.py")),
-  },
-  namespace: {
-    root: uri(join(fixturesPath, "namespace")),
-    mainPy: uri(join(fixturesPath, "namespace", "app", "main.py")),
-  },
-  reexport: {
-    root: uri(join(fixturesPath, "reexport")),
-    mainPy: uri(join(fixturesPath, "reexport", "app", "main.py")),
-    initPy: uri(
-      join(fixturesPath, "reexport", "app", "integrations", "__init__.py"),
-    ),
-  },
-  sameFile: {
-    root: uri(join(fixturesPath, "same-file")),
-    mainPy: uri(join(fixturesPath, "same-file", "main.py")),
-  },
-  multiApp: {
-    root: uri(join(fixturesPath, "multi-app")),
-    mainPy: uri(join(fixturesPath, "multi-app", "main.py")),
+  aliasedClass: {
+    root: uri(join(fixturesPath, "aliased-class")),
+    mainPy: uri(join(fixturesPath, "aliased-class", "main.py")),
   },
   aliasedImport: {
     root: uri(join(fixturesPath, "aliased-import")),
@@ -61,9 +35,38 @@ export const fixtures = {
       join(fixturesPath, "aliased-import", "app", "routes", "tokens.py"),
     ),
   },
+  aliasedModule: {
+    root: uri(join(fixturesPath, "aliased-module")),
+    mainPy: uri(join(fixturesPath, "aliased-module", "main.py")),
+  },
+  customSubclass: {
+    root: uri(join(fixturesPath, "custom-subclass")),
+    mainPy: uri(join(fixturesPath, "custom-subclass", "main.py")),
+  },
   errorCases: {
     root: uri(join(fixturesPath, "error-cases")),
     mainPy: uri(join(fixturesPath, "error-cases", "main.py")),
+  },
+  factoryFunc: {
+    root: uri(join(fixturesPath, "factory-func")),
+    mainPy: uri(join(fixturesPath, "factory-func", "main.py")),
+  },
+  flat: {
+    root: uri(join(fixturesPath, "flat")),
+    mainPy: uri(join(fixturesPath, "flat", "main.py")),
+  },
+  monorepo: {
+    workspaceRoot: uri(join(fixturesPath, "monorepo")),
+    projectRoot: uri(join(fixturesPath, "monorepo", "service")),
+    mainPy: uri(join(fixturesPath, "monorepo", "service", "myapp", "main.py")),
+  },
+  multiApp: {
+    root: uri(join(fixturesPath, "multi-app")),
+    mainPy: uri(join(fixturesPath, "multi-app", "main.py")),
+  },
+  namespace: {
+    root: uri(join(fixturesPath, "namespace")),
+    mainPy: uri(join(fixturesPath, "namespace", "app", "main.py")),
   },
   nestedRouter: {
     root: uri(join(fixturesPath, "nested-router")),
@@ -78,26 +81,23 @@ export const fixtures = {
       join(fixturesPath, "nested-router", "app", "routes", "settings.py"),
     ),
   },
-  monorepo: {
-    workspaceRoot: uri(join(fixturesPath, "monorepo")),
-    projectRoot: uri(join(fixturesPath, "monorepo", "service")),
-    mainPy: uri(join(fixturesPath, "monorepo", "service", "myapp", "main.py")),
+  reexport: {
+    root: uri(join(fixturesPath, "reexport")),
+    mainPy: uri(join(fixturesPath, "reexport", "app", "main.py")),
+    initPy: uri(
+      join(fixturesPath, "reexport", "app", "integrations", "__init__.py"),
+    ),
   },
-  factoryFunc: {
-    root: uri(join(fixturesPath, "factory-func")),
-    mainPy: uri(join(fixturesPath, "factory-func", "main.py")),
+  sameFile: {
+    root: uri(join(fixturesPath, "same-file")),
+    mainPy: uri(join(fixturesPath, "same-file", "main.py")),
   },
-  customSubclass: {
-    root: uri(join(fixturesPath, "custom-subclass")),
-    mainPy: uri(join(fixturesPath, "custom-subclass", "main.py")),
-  },
-  aliasedClass: {
-    root: uri(join(fixturesPath, "aliased-class")),
-    mainPy: uri(join(fixturesPath, "aliased-class", "main.py")),
-  },
-  aliasedModule: {
-    root: uri(join(fixturesPath, "aliased-module")),
-    mainPy: uri(join(fixturesPath, "aliased-module", "main.py")),
+  standard: {
+    root: uri(join(fixturesPath, "standard")),
+    rootMainPy: uri(join(fixturesPath, "standard", "main.py")),
+    mainPy: uri(join(fixturesPath, "standard", "app", "main.py")),
+    usersPy: uri(join(fixturesPath, "standard", "app", "routes", "users.py")),
+    initPy: uri(join(fixturesPath, "standard", "app", "__init__.py")),
   },
 }
 
