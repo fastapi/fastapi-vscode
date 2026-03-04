@@ -4,6 +4,7 @@
 
 ### Refactors
 
+* ♻️ Alphabetize test fixtures. PR [#111](https://github.com/fastapi/fastapi-vscode/pull/111) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ♻️ Traverse AST in a single pass during file analysis. PR [#109](https://github.com/fastapi/fastapi-vscode/pull/109) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ### Internal
