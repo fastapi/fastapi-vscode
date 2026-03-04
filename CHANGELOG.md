@@ -2,8 +2,13 @@
 
 ## Latest Changes
 
+### Refactors
+
+* ♻️ Traverse AST in a single pass during file analysis. PR [#109](https://github.com/fastapi/fastapi-vscode/pull/109) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Internal
 
+* ♻️ Use RouteInfo with Omit instead of anonymous type. PR [#110](https://github.com/fastapi/fastapi-vscode/pull/110) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔖 Release version 0.1.3. PR [#108](https://github.com/fastapi/fastapi-vscode/pull/108) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ## 0.1.3
