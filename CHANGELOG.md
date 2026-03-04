@@ -9,6 +9,7 @@
 
 ### Internal
 
+* 🐛  Prevent activation failure when workspace files are unreadable. PR [#114](https://github.com/fastapi/fastapi-vscode/pull/114) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ♻️ Clean up `routerResolver` with extracted helpers and context object. PR [#113](https://github.com/fastapi/fastapi-vscode/pull/113) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ♻️ Extract router node creation to deduplicate. PR [#112](https://github.com/fastapi/fastapi-vscode/pull/112) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ♻️ Use RouteInfo with Omit instead of anonymous type. PR [#110](https://github.com/fastapi/fastapi-vscode/pull/110) by [@savannahostrowski](https://github.com/savannahostrowski).
