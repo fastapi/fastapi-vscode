@@ -50,6 +50,7 @@ export const fixtures = {
   factoryFunc: {
     root: uri(join(fixturesPath, "factory-func")),
     mainPy: uri(join(fixturesPath, "factory-func", "main.py")),
+    factoryMainPy: uri(join(fixturesPath, "factory-func", "factory_main.py")),
   },
   flat: {
     root: uri(join(fixturesPath, "flat")),

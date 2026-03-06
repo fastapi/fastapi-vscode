@@ -197,7 +197,52 @@ async function buildRouterGraphInternal(
     }
   }
 
-  if (!appRouter || !analysis) {
+  // Factory function in another module: if the entrypoint variable is assigned via
+  // `app = create_app()` where `create_app` is imported, follow the import to the
+  // factory file and build the router graph from there. This works because
+  // routerExtractor and includeRouterExtractor recurse into function bodies, so
+  // `app = FastAPI()` and `app.include_router(...)` inside `create_app` are visible
+  // when analyzing the factory file directly.
+  if (!appRouter && targetVariable) {
+    const factoryCall = analysis.factoryCalls.find(
+      (fc) => fc.variableName === targetVariable,
+    )
+    if (factoryCall) {
+      const matchingImport = analysis.imports.find((imp) =>
+        imp.names.includes(factoryCall.functionName),
+      )
+      if (matchingImport) {
+        const namedImport = matchingImport.namedImports.find(
+          (ni) => (ni.alias ?? ni.name) === factoryCall.functionName,
+        )
+        const originalName = namedImport?.name ?? factoryCall.functionName
+        const factoryFileUri = await resolveNamedImport(
+          {
+            modulePath: matchingImport.modulePath,
+            names: [originalName],
+            isRelative: matchingImport.isRelative,
+            relativeDots: matchingImport.relativeDots,
+          },
+          entryFileUri,
+          projectRootUri,
+          fs,
+          analyzeFileFn,
+        )
+        if (factoryFileUri && !visited.has(factoryFileUri)) {
+          const factoryGraph = await buildRouterGraphInternal(
+            factoryFileUri,
+            ctx,
+          )
+          if (factoryGraph) {
+            factoryGraph.variableName = targetVariable
+            return factoryGraph
+          }
+        }
+      }
+    }
+  }
+
+  if (!appRouter) {
     return null
   }
 

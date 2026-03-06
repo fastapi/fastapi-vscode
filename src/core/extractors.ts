@@ -4,6 +4,7 @@
 
 import type { Node } from "web-tree-sitter"
 import type {
+  FactoryCallInfo,
   ImportedName,
   ImportInfo,
   IncludeRouterInfo,
@@ -580,5 +581,43 @@ export function mountExtractor(node: Node): MountInfo | null {
     owner: call.object,
     path: pathNode ? extractPathFromNode(pathNode) : "",
     app: appNode?.text ?? "",
+  }
+}
+
+export function factoryCallExtractor(
+  node: Node,
+  knownConstructors: Set<string>,
+): FactoryCallInfo | null {
+  if (node.type !== "assignment") {
+    return null
+  }
+
+  const variableNameNode = node.childForFieldName("left")
+  const valueNode = node.childForFieldName("right")
+  if (!variableNameNode || valueNode?.type !== "call") {
+    return null
+  }
+
+  const functionNode = valueNode.childForFieldName("function")
+  if (functionNode?.type !== "identifier") {
+    return null
+  }
+
+  const functionName = functionNode.text
+  if (knownConstructors.has(functionName)) {
+    return null
+  }
+
+  // Skip function and class-local variables to avoid false positives
+  if (
+    hasAncestor(node, "function_definition") ||
+    hasAncestor(node, "class_definition")
+  ) {
+    return null
+  }
+
+  return {
+    variableName: variableNameNode.text,
+    functionName: functionName,
   }
 }

@@ -571,6 +571,39 @@ suite("routerResolver", () => {
       assert.strictEqual(result, null)
     })
 
+    test("follows imported factory function to resolve include_router calls", async () => {
+      const result = await buildRouterGraph(
+        fixtures.factoryFunc.factoryMainPy,
+        parser,
+        fixtures.factoryFunc.root,
+        nodeFileSystem,
+        "app",
+      )
+
+      assert.ok(result, "Should find app via imported factory function")
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.variableName, "app")
+      assert.strictEqual(
+        result.children.length,
+        1,
+        "Should have one included router",
+      )
+      assert.ok(
+        result.children[0].router.routes.length >= 2,
+        "Should have routes from routers.py",
+      )
+    })
+
+    test("returns null without targetVariable when factory function has no local routes", async () => {
+      const result = await buildRouterGraph(
+        fixtures.factoryFunc.factoryMainPy,
+        parser,
+        fixtures.factoryFunc.root,
+        nodeFileSystem,
+      )
+      assert.strictEqual(result, null)
+    })
+
     test("resolves custom APIRouter subclass as child router", async () => {
       const result = await buildRouterGraph(
         fixtures.customSubclass.mainPy,

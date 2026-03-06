@@ -8,6 +8,7 @@ import {
   collectRecognizedNames,
   collectStringVariables,
   decoratorExtractor,
+  factoryCallExtractor,
   getNodesByType,
   importExtractor,
   includeRouterExtractor,
@@ -46,6 +47,10 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
   // Get all router assignments
   const assignments = nodesByType.get("assignment") ?? []
   const { fastAPINames, apiRouterNames } = collectRecognizedNames(nodesByType)
+  const knownConstructors = new Set([...fastAPINames, ...apiRouterNames])
+  const factoryCalls = assignments
+    .map((node) => factoryCallExtractor(node, knownConstructors))
+    .filter(notNull)
   const routers = assignments
     .map((node) => routerExtractor(node, apiRouterNames, fastAPINames))
     .filter(notNull)
@@ -84,6 +89,7 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
     includeRouters,
     mounts,
     imports,
+    factoryCalls,
   }
 }
 
