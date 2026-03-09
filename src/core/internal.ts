@@ -77,6 +77,11 @@ export interface MountInfo {
   app: string
 }
 
+export interface FactoryCallInfo {
+  variableName: string
+  functionName: string
+}
+
 export interface FileAnalysis {
   filePath: string
   routes: RouteInfo[]
@@ -84,6 +89,7 @@ export interface FileAnalysis {
   includeRouters: IncludeRouterInfo[]
   mounts: MountInfo[]
   imports: ImportInfo[]
+  factoryCalls: FactoryCallInfo[]
 }
 
 export interface RouterNode {
