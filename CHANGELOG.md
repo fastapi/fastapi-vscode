@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Fixes
+
+* 🐛 Handle cross-file factory functions. PR [#120](https://github.com/fastapi/fastapi-vscode/pull/120) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Refactors
 
 * ♻️ Alphabetize test fixtures. PR [#111](https://github.com/fastapi/fastapi-vscode/pull/111) by [@savannahostrowski](https://github.com/savannahostrowski).
