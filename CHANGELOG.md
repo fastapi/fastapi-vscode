@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.1.4
+
 ### Fixes
 
 * 🐛 Support stacked decorators and deprecated route warnings. PR [#121](https://github.com/fastapi/fastapi-vscode/pull/121) by [@savannahostrowski](https://github.com/savannahostrowski).
