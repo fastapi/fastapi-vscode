@@ -105,7 +105,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   try {
     // Discover apps and create providers
-    apps = await discoverFastAPIApps(parserService)
+    apps = await discoverFastAPIApps(parserService, true)
   } catch (error) {
     success = false
     trackActivationFailed(error, "discovery")

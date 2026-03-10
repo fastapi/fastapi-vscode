@@ -16,6 +16,7 @@
 
 ### Internal
 
+* 📈 Only fire entrypoint detected on initial activation. PR [#122](https://github.com/fastapi/fastapi-vscode/pull/122) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ⬆ Bump oven-sh/setup-bun from 2.1.2 to 2.1.3. PR [#115](https://github.com/fastapi/fastapi-vscode/pull/115) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * 🐛  Prevent activation failure when workspace files are unreadable. PR [#114](https://github.com/fastapi/fastapi-vscode/pull/114) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ♻️ Clean up `routerResolver` with extracted helpers and context object. PR [#113](https://github.com/fastapi/fastapi-vscode/pull/113) by [@savannahostrowski](https://github.com/savannahostrowski).
