@@ -46,11 +46,12 @@ def list_users():
       assert.strictEqual(decoratedDefs.length, 1)
 
       const result = decoratorExtractor(decoratedDefs[0])
-      assert.ok(result)
-      assert.strictEqual(result.owner, "router")
-      assert.strictEqual(result.method, "get")
-      assert.strictEqual(result.path, "/users")
-      assert.strictEqual(result.function, "list_users")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.owner, "router")
+      assert.strictEqual(route.method, "get")
+      assert.strictEqual(route.path, "/users")
+      assert.strictEqual(route.function, "list_users")
     })
 
     test("extracts route with path parameter", () => {
@@ -64,8 +65,9 @@ def get_user(user_id: int):
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.path, "/users/{user_id}")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.path, "/users/{user_id}")
     })
 
     test("extracts POST route", () => {
@@ -79,10 +81,11 @@ def create_item():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.owner, "app")
-      assert.strictEqual(result.method, "post")
-      assert.strictEqual(result.path, "/items")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.owner, "app")
+      assert.strictEqual(route.method, "post")
+      assert.strictEqual(route.path, "/items")
     })
 
     test("extracts websocket route", () => {
@@ -96,9 +99,10 @@ def websocket_handler(websocket: WebSocket):
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.method, "websocket")
-      assert.strictEqual(result.path, "/ws")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.method, "websocket")
+      assert.strictEqual(route.path, "/ws")
     })
 
     test("handles dynamic path with variable", () => {
@@ -112,8 +116,9 @@ def handler():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.path, "\uE000BASE_PATH\uE000")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.path, "\uE000BASE_PATH\uE000")
     })
 
     test("handles dynamic path with attribute", () => {
@@ -127,8 +132,9 @@ def handler():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.path, "\uE000settings.API_PREFIX\uE000")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.path, "\uE000settings.API_PREFIX\uE000")
     })
 
     test("handles path concatenation", () => {
@@ -142,11 +148,12 @@ def handler():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.path, "\uE000BASE\uE000/users")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.path, "\uE000BASE\uE000/users")
     })
 
-    test("returns null for simple decorator without call", () => {
+    test("returns empty array for simple decorator without call", () => {
       const code = `
 @staticmethod
 def handler():
@@ -156,10 +163,10 @@ def handler():
       const nodesByType = getNodesByType(tree.rootNode)
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
-      assert.strictEqual(result, null)
+      assert.strictEqual(result.length, 0)
     })
 
-    test("returns null for non-route decorator", () => {
+    test("returns empty array for non-route decorator", () => {
       const code = `
 @app.exception_handler(404)
 def not_found(request, exc):
@@ -169,7 +176,7 @@ def not_found(request, exc):
       const nodesByType = getNodesByType(tree.rootNode)
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
-      assert.strictEqual(result, null)
+      assert.strictEqual(result.length, 0)
     })
 
     test("extracts api_route decorator", () => {
@@ -183,9 +190,10 @@ def handle_items():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.method, "POST")
-      assert.strictEqual(result.path, "/items")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.method, "POST")
+      assert.strictEqual(route.path, "/items")
     })
 
     test("extracts api_route with default GET when no methods specified", () => {
@@ -199,8 +207,9 @@ def handle_items():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.method, "GET")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.method, "GET")
     })
 
     test("extracts route with 'path' keyword argument", () => {
@@ -214,11 +223,12 @@ def get_user(user_id: int):
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.path, "/users/{user_id}")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.path, "/users/{user_id}")
     })
 
-    test("returns null for non-decorated definition", () => {
+    test("returns empty array for non-decorated definition", () => {
       const code = `
 def regular_function():
     pass
@@ -228,7 +238,7 @@ def regular_function():
       const funcDefs = nodesByType.get("function_definition") ?? []
       const result = decoratorExtractor(funcDefs[0])
 
-      assert.strictEqual(result, null)
+      assert.strictEqual(result.length, 0)
     })
 
     test("includes line and column information", () => {
@@ -242,9 +252,10 @@ def handler():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.line, 2) // 1-indexed
-      assert.strictEqual(result.column, 0)
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.line, 2) // 1-indexed
+      assert.strictEqual(route.column, 0)
     })
 
     test("extracts single-line docstring", () => {
@@ -259,8 +270,9 @@ def list_users():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.docstring, "List all users.")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.docstring, "List all users.")
     })
 
     test("extracts multi-line docstring and dedents", () => {
@@ -279,9 +291,10 @@ def list_users():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
       assert.strictEqual(
-        result.docstring,
+        route.docstring,
         "List all users.\n\nReturns a list of user objects.",
       )
     })
@@ -298,8 +311,9 @@ def list_users():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.docstring, "List all users.")
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.docstring, "List all users.")
     })
 
     test("returns undefined docstring when none present", () => {
@@ -313,8 +327,9 @@ def list_users():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.docstring, undefined)
+      assert.strictEqual(result.length, 1)
+      const route = result[0]
+      assert.strictEqual(route.docstring, undefined)
     })
   })
 
@@ -951,8 +966,8 @@ def handler():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.path, "/api/v1/users")
+      assert.strictEqual(result.length, 1)
+      assert.strictEqual(result[0].path, "/api/v1/users")
     })
 
     test("handles function call as path", () => {
@@ -966,8 +981,61 @@ def handler():
       const decoratedDefs = nodesByType.get("decorated_definition") ?? []
       const result = decoratorExtractor(decoratedDefs[0])
 
-      assert.ok(result)
-      assert.strictEqual(result.path, "\uE000get_path()\uE000")
+      assert.strictEqual(result.length, 1)
+      assert.strictEqual(result[0].path, "\uE000get_path()\uE000")
+    })
+
+    test("extracts both routes from stacked decorators", () => {
+      const code = `
+@router.post("/vendor-order", deprecated=True)
+@router.post("/lab/orders")
+async def post_order():
+    pass
+`
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const decoratedDefs = nodesByType.get("decorated_definition") ?? []
+      const result = decoratorExtractor(decoratedDefs[0])
+
+      assert.strictEqual(result.length, 2)
+      assert.strictEqual(result[0].path, "/vendor-order")
+      assert.strictEqual(result[0].method, "post")
+      assert.strictEqual(result[0].deprecated, true)
+      assert.strictEqual(result[1].path, "/lab/orders")
+      assert.strictEqual(result[1].method, "post")
+      assert.strictEqual(result[1].deprecated, undefined)
+      assert.strictEqual(result[0].function, "post_order")
+      assert.strictEqual(result[1].function, "post_order")
+    })
+
+    test("extracts deprecated=True flag", () => {
+      const code = `
+@router.get("/old-path", deprecated=True)
+def handler():
+    pass
+`
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const decoratedDefs = nodesByType.get("decorated_definition") ?? []
+      const result = decoratorExtractor(decoratedDefs[0])
+
+      assert.strictEqual(result.length, 1)
+      assert.strictEqual(result[0].deprecated, true)
+    })
+
+    test("does not set deprecated when not present", () => {
+      const code = `
+@router.get("/path")
+def handler():
+    pass
+`
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const decoratedDefs = nodesByType.get("decorated_definition") ?? []
+      const result = decoratorExtractor(decoratedDefs[0])
+
+      assert.strictEqual(result.length, 1)
+      assert.strictEqual(result[0].deprecated, undefined)
     })
   })
 })

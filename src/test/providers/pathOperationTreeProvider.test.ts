@@ -517,4 +517,75 @@ suite("PathOperationTreeProvider", () => {
     const parent = p.getParent({ type: "router", router: childRouter })
     assert.strictEqual(parent?.type, "router")
   })
+
+  test("deprecated route shows '· deprecated' in description", () => {
+    const route: RouteDefinition = {
+      method: "POST",
+      path: "/vendor-order",
+      functionName: "post_order",
+      deprecated: true,
+      location: { filePath: "test.py", line: 1, column: 0 },
+    }
+    const p = new PathOperationTreeProvider(testExtUri, [])
+    const treeItem = p.getTreeItem({ type: "route", route })
+    assert.ok(
+      treeItem.description?.toString().includes("deprecated"),
+      "Description should include 'deprecated'",
+    )
+    assert.ok(
+      treeItem.description?.toString().includes("post_order"),
+      "Description should include function name",
+    )
+  })
+
+  test("non-deprecated route description shows only function name", () => {
+    const route: RouteDefinition = {
+      method: "GET",
+      path: "/path",
+      functionName: "get_handler",
+      location: { filePath: "test.py", line: 1, column: 0 },
+    }
+    const p = new PathOperationTreeProvider(testExtUri, [])
+    const treeItem = p.getTreeItem({ type: "route", route })
+    assert.strictEqual(treeItem.description, "get_handler")
+  })
+
+  test("deprecated route tooltip includes deprecated warning", () => {
+    const route: RouteDefinition = {
+      method: "POST",
+      path: "/vendor-order",
+      functionName: "post_order",
+      deprecated: true,
+      location: { filePath: "test.py", line: 1, column: 0 },
+    }
+    const p = new PathOperationTreeProvider(testExtUri, [])
+    const treeItem = p.getTreeItem({ type: "route", route })
+    const tooltipValue =
+      typeof treeItem.tooltip === "string"
+        ? treeItem.tooltip
+        : (treeItem.tooltip as { value: string }).value
+    assert.ok(
+      tooltipValue.includes("Deprecated"),
+      "Tooltip should include 'Deprecated'",
+    )
+  })
+
+  test("non-deprecated route tooltip does not include deprecated warning", () => {
+    const route: RouteDefinition = {
+      method: "GET",
+      path: "/path",
+      functionName: "get_handler",
+      location: { filePath: "test.py", line: 1, column: 0 },
+    }
+    const p = new PathOperationTreeProvider(testExtUri, [])
+    const treeItem = p.getTreeItem({ type: "route", route })
+    const tooltipValue =
+      typeof treeItem.tooltip === "string"
+        ? treeItem.tooltip
+        : (treeItem.tooltip as { value: string }).value
+    assert.ok(
+      !tooltipValue.includes("Deprecated"),
+      "Tooltip should not include 'Deprecated'",
+    )
+  })
 })

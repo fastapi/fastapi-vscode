@@ -36,6 +36,7 @@ export interface RouteInfo {
   line: number
   column: number
   docstring?: string
+  deprecated?: boolean
 }
 
 export type RouterType = "APIRouter" | "FastAPI" | "Unknown"
