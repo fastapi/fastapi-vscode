@@ -137,6 +137,7 @@ async function parsePyprojectForEntryPoint(
  */
 export async function discoverFastAPIApps(
   parser: Parser,
+  trackTelemetry = false,
 ): Promise<AppDefinition[]> {
   const workspaceFolders = vscode.workspace.workspaceFolders
   if (!workspaceFolders) {
@@ -229,14 +230,16 @@ export async function discoverFastAPIApps(
       )
     }
 
-    // Track entrypoint detection per workspace folder
-    trackEntrypointDetected({
-      duration_ms: folderTimer(),
-      method: detectionMethod,
-      success: folderApps.length > 0,
-      routes_count: folderRoutes.length,
-      routers_count: countRouters(folderApps),
-    })
+    // Track entrypoint detection per workspace folder (initial discovery only)
+    if (trackTelemetry) {
+      trackEntrypointDetected({
+        duration_ms: folderTimer(),
+        method: detectionMethod,
+        success: folderApps.length > 0,
+        routes_count: folderRoutes.length,
+        routers_count: countRouters(folderApps),
+      })
+    }
   }
 
   if (apps.length === 0) {
