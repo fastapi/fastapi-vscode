@@ -42,7 +42,7 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
 
   // Get all decorated definitions (functions and classes with decorators)
   const decoratedDefs = nodesByType.get("decorated_definition") ?? []
-  const routes = decoratedDefs.map(decoratorExtractor).filter(notNull)
+  const routes = decoratedDefs.flatMap(decoratorExtractor)
 
   // Get all router assignments
   const assignments = nodesByType.get("assignment") ?? []

@@ -50,14 +50,7 @@ function createRouterNode(
     tags: router.tags,
     line: router.line,
     column: router.column,
-    routes: routes.map((r) => ({
-      method: r.method,
-      path: r.path,
-      function: r.function,
-      line: r.line,
-      column: r.column,
-      docstring: r.docstring,
-    })),
+    routes: routes.map(({ owner: _, ...rest }) => rest),
     children: [],
   }
 }

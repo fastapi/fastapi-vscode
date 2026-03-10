@@ -21,6 +21,7 @@ function toRouteDefinition(
     path: prefix + route.path,
     functionName: route.function,
     docstring: route.docstring,
+    deprecated: route.deprecated,
     location: {
       filePath,
       line: route.line,
