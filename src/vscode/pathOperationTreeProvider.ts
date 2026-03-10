@@ -271,22 +271,30 @@ export class PathOperationTreeProvider
 
       case "route": {
         const routeItem = new TreeItem(getRouteLabel(element.route))
-        routeItem.description = element.route.functionName
+        routeItem.description = element.route.deprecated
+          ? `${element.route.functionName} · deprecated`
+          : element.route.functionName
         routeItem.iconPath = getMethodSvgIcon(
           this.extensionUri,
           element.route.method,
         )
         routeItem.contextValue = "route"
         const tooltipPath = stripLeadingDynamicSegments(element.route.path)
+        const deprecatedSection = element.route.deprecated
+          ? "\n\n$(warning) **Deprecated**"
+          : ""
         const docstringSection = element.route.docstring
           ? `\n\n---\n\n${element.route.docstring}`
           : ""
-        routeItem.tooltip = new MarkdownString(
-          `**${element.route.method}** \`${tooltipPath}\`\n\n` +
-            `**Function:** \`${element.route.functionName}\`\n\n` +
+        const tooltip = new MarkdownString(
+          `**${element.route.method}** \`${tooltipPath}\`` +
+            deprecatedSection +
+            `\n\n**Function:** \`${element.route.functionName}\`\n\n` +
             `**File:** ${Uri.parse(element.route.location.filePath).fsPath}:${element.route.location.line}` +
             docstringSection,
         )
+        tooltip.supportThemeIcons = true
+        routeItem.tooltip = tooltip
         routeItem.command = {
           command: "fastapi-vscode.goToPathOperation",
           title: "Go to Definition",

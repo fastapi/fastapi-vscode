@@ -167,66 +167,14 @@ export function extractPathFromNode(node: Node): string {
 
 /**
  * Extracts from route decorators like @app.get("/path"), @router.post("/path"), etc.
+ * Handles stacked decorators — returns one RouteInfo per route decorator found.
  */
-export function decoratorExtractor(node: Node): RouteInfo | null {
+export function decoratorExtractor(node: Node): RouteInfo[] {
   if (node.type !== "decorated_definition") {
-    return null
+    return []
   }
 
-  // Grammar guarantees: decorated_definition always has a first child (the decorator)
-  const decoratorNode = node.firstNamedChild!
-
-  const callNode =
-    decoratorNode.firstNamedChild?.type === "call"
-      ? decoratorNode.firstNamedChild
-      : null
-
-  const functionNode = callNode?.childForFieldName("function")
-  const argumentsNode = callNode?.childForFieldName("arguments")
-  const objectNode = functionNode?.childForFieldName("object")
-  const methodNode = functionNode?.childForFieldName("attribute")
-
-  if (!objectNode || !methodNode || !argumentsNode) {
-    return null
-  }
-
-  // Filter out non-route decorators (exception_handler, middleware, on_event)
-  const method = methodNode.text.toLowerCase()
-  const isApiRoute = method === "api_route"
-  if (!ROUTE_METHODS.has(method) && !isApiRoute) {
-    return null
-  }
-
-  // Find path: first positional arg, or "path" keyword argument
-  const nonCommentArgs = argumentsNode.namedChildren.filter(
-    (child) => child.type !== "comment",
-  )
-  const pathArgNode = resolveArgNode(nonCommentArgs, 0, "path")
-  const path = pathArgNode ? extractPathFromNode(pathArgNode) : ""
-
-  // For api_route, extract methods from keyword argument
-  let resolvedMethod = methodNode.text
-  if (isApiRoute) {
-    // Default to GET if no methods specified
-    resolvedMethod = "GET"
-    for (const argNode of argumentsNode.namedChildren) {
-      if (argNode.type === "keyword_argument") {
-        const nameNode = argNode.childForFieldName("name")
-        const valueNode = argNode.childForFieldName("value")
-        if (nameNode?.text === "methods" && valueNode) {
-          // Extract first method from list
-          const listItems = valueNode.namedChildren
-          const firstMethod =
-            listItems.length > 0 ? extractStringValue(listItems[0]) : null
-          if (firstMethod) {
-            resolvedMethod = firstMethod
-          }
-        }
-      }
-    }
-  }
-
-  // Grammar guarantees: decorated_definition always has a definition field with a name
+  // Shared across all stacked decorators: function name and docstring
   const functionDefNode = node.childForFieldName("definition")!
   const functionName = functionDefNode.childForFieldName("name")?.text ?? ""
   const functionBody = functionDefNode.childForFieldName("body")
@@ -238,15 +186,76 @@ export function decoratorExtractor(node: Node): RouteInfo | null {
       docstring = stripDocstring(expr.text)
     }
   }
-  return {
-    owner: objectNode.text,
-    method: resolvedMethod,
-    path,
-    function: functionName,
-    line: node.startPosition.row + 1,
-    column: node.startPosition.column,
-    docstring,
+
+  const routes: RouteInfo[] = []
+
+  for (const decoratorNode of node.namedChildren) {
+    if (decoratorNode.type !== "decorator") {
+      continue
+    }
+
+    const callNode =
+      decoratorNode.firstNamedChild?.type === "call"
+        ? decoratorNode.firstNamedChild
+        : null
+
+    const functionNode = callNode?.childForFieldName("function")
+    const argumentsNode = callNode?.childForFieldName("arguments")
+    const objectNode = functionNode?.childForFieldName("object")
+    const methodNode = functionNode?.childForFieldName("attribute")
+
+    if (!objectNode || !methodNode || !argumentsNode) {
+      continue
+    }
+
+    // Filter out non-route decorators (exception_handler, middleware, on_event)
+    const method = methodNode.text.toLowerCase()
+    const isApiRoute = method === "api_route"
+    if (!ROUTE_METHODS.has(method) && !isApiRoute) {
+      continue
+    }
+
+    // Find path: first positional arg, or "path" keyword argument
+    const nonCommentArgs = argumentsNode.namedChildren.filter(
+      (child) => child.type !== "comment",
+    )
+    const pathArgNode = resolveArgNode(nonCommentArgs, 0, "path")
+    const path = pathArgNode ? extractPathFromNode(pathArgNode) : ""
+
+    let deprecated: boolean | undefined
+    let resolvedMethod = methodNode.text
+    if (isApiRoute) resolvedMethod = "GET"
+
+    for (const argNode of argumentsNode.namedChildren) {
+      if (argNode.type !== "keyword_argument") continue
+      const nameNode = argNode.childForFieldName("name")
+      const valueNode = argNode.childForFieldName("value")
+      if (nameNode?.text === "deprecated" && valueNode?.text === "True") {
+        deprecated = true
+      }
+      if (isApiRoute && nameNode?.text === "methods" && valueNode) {
+        // Extract first method from list
+        const firstMethod =
+          valueNode.namedChildren.length > 0
+            ? extractStringValue(valueNode.namedChildren[0])
+            : null
+        if (firstMethod) resolvedMethod = firstMethod
+      }
+    }
+
+    routes.push({
+      owner: objectNode.text,
+      method: resolvedMethod,
+      path,
+      function: functionName,
+      line: node.startPosition.row + 1,
+      column: node.startPosition.column,
+      docstring,
+      deprecated,
+    })
   }
+
+  return routes
 }
 
 /** Extracts tags from a list node like ["users", "admin"] */

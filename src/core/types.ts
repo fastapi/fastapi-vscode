@@ -25,6 +25,7 @@ export interface RouteDefinition {
   functionName: string
   location: SourceLocation
   docstring?: string
+  deprecated?: boolean
 }
 
 export interface RouterDefinition {
