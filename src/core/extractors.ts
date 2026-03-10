@@ -222,31 +222,24 @@ export function decoratorExtractor(node: Node): RouteInfo[] {
     const pathArgNode = resolveArgNode(nonCommentArgs, 0, "path")
     const path = pathArgNode ? extractPathFromNode(pathArgNode) : ""
 
-    const deprecated =
-      argumentsNode.namedChildren.some(
-        (a) =>
-          a.type === "keyword_argument" &&
-          a.childForFieldName("name")?.text === "deprecated" &&
-          a.childForFieldName("value")?.text === "True",
-      ) || undefined
-
-    // For api_route, extract methods from keyword argument
+    let deprecated: boolean | undefined
     let resolvedMethod = methodNode.text
-    if (isApiRoute) {
-      resolvedMethod = "GET"
-      for (const argNode of argumentsNode.namedChildren) {
-        if (argNode.type !== "keyword_argument") continue
-        const nameNode = argNode.childForFieldName("name")
-        const valueNode = argNode.childForFieldName("value")
-        if (nameNode?.text === "methods" && valueNode) {
-          // Extract first method from list
-          const listItems = valueNode.namedChildren
-          const firstMethod =
-            listItems.length > 0 ? extractStringValue(listItems[0]) : null
-          if (firstMethod) {
-            resolvedMethod = firstMethod
-          }
-        }
+    if (isApiRoute) resolvedMethod = "GET"
+
+    for (const argNode of argumentsNode.namedChildren) {
+      if (argNode.type !== "keyword_argument") continue
+      const nameNode = argNode.childForFieldName("name")
+      const valueNode = argNode.childForFieldName("value")
+      if (nameNode?.text === "deprecated" && valueNode?.text === "True") {
+        deprecated = true
+      }
+      if (isApiRoute && nameNode?.text === "methods" && valueNode) {
+        // Extract first method from list
+        const firstMethod =
+          valueNode.namedChildren.length > 0
+            ? extractStringValue(valueNode.namedChildren[0])
+            : null
+        if (firstMethod) resolvedMethod = firstMethod
       }
     }
 
