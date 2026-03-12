@@ -89,6 +89,11 @@ export const fixtures = {
       join(fixturesPath, "reexport", "app", "integrations", "__init__.py"),
     ),
   },
+  multiRouterSameFile: {
+    root: uri(join(fixturesPath, "multi-router-same-file")),
+    mainPy: uri(join(fixturesPath, "multi-router-same-file", "main.py")),
+    routersPy: uri(join(fixturesPath, "multi-router-same-file", "routers.py")),
+  },
   sameFile: {
     root: uri(join(fixturesPath, "same-file")),
     mainPy: uri(join(fixturesPath, "same-file", "main.py")),

@@ -659,6 +659,33 @@ suite("routerResolver", () => {
       assert.strictEqual(usersRouter.routes.length, 2)
     })
 
+    test("resolves multiple routers imported from the same file (issue #126)", async () => {
+      const result = await buildRouterGraph(
+        fixtures.multiRouterSameFile.mainPy,
+        parser,
+        fixtures.multiRouterSameFile.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.variableName, "app")
+
+      assert.strictEqual(
+        result.children.length,
+        2,
+        "Should have two child routers (router1 and router2)",
+      )
+
+      const v1Child = result.children.find((c) => c.router.prefix === "/v1")
+      assert.ok(v1Child, "Should have /v1 router")
+      assert.strictEqual(v1Child.router.routes.length, 2)
+
+      const v2Child = result.children.find((c) => c.router.prefix === "/v2")
+      assert.ok(v2Child, "Should have /v2 router")
+      assert.strictEqual(v2Child.router.routes.length, 2)
+    })
+
     test("resolves module-aliased fastapi import (import fastapi as f)", async () => {
       const result = await buildRouterGraph(
         fixtures.aliasedModule.mainPy,

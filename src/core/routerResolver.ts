@@ -347,10 +347,13 @@ async function resolveRouterReference(
     return null
   }
 
-  // For dotted references (e.g., "api_routes.router"), we need to find
-  // the specific attribute within the resolved module
-  if (attributeName) {
-    // Analyze the imported file to find the router by attribute name
+  // When we know the specific variable name to look for (either via a dotted
+  // reference like "module.router" or a named import like "from x import router"),
+  // resolve it directly by name. This avoids marking the whole file as visited,
+  // which would prevent resolving other variables from the same file (issue #126).
+  const targetVariableName =
+    attributeName ?? (namedImport ? originalName : null)
+  if (targetVariableName) {
     const importedAnalysis = await analyzeFileFn(importedFileUri)
     if (!importedAnalysis) {
       return null
@@ -358,18 +361,20 @@ async function resolveRouterReference(
 
     // Find the router with the matching variable name
     const targetRouter = importedAnalysis.routers.find(
-      (r) => r.variableName === attributeName,
+      (r) => r.variableName === targetVariableName,
     )
     if (targetRouter) {
-      // Mark as visited to prevent infinite recursion
-      if (visited.has(importedFileUri)) {
+      // Use file#variable as the visited key so multiple variables from the
+      // same file can be resolved independently.
+      const visitedKey = `${importedFileUri}#${targetVariableName}`
+      if (visited.has(visitedKey)) {
         return null
       }
-      visited.add(importedFileUri)
+      visited.add(visitedKey)
 
       // Get routes belonging to this router
       const routerRoutes = importedAnalysis.routes.filter(
-        (r) => r.owner === attributeName,
+        (r) => r.owner === targetVariableName,
       )
       const routerNode = createRouterNode(
         targetRouter,
