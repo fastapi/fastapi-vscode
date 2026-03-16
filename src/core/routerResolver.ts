@@ -25,7 +25,7 @@ interface ResolutionContext {
    * When we resolve a router from a file, we resolve ALL routers in that file
    * in one pass and cache them here. Subsequent requests for other variables
    * from the same file are served from the cache without re-entering the file.
-   * This allows multiple routers from the same file (issue #126) while keeping
+   * This allows multiple routers from the same file while keeping
    * cycle prevention simple — a single whole-file visited set.
    */
   resolvedRouters: Map<string, RouterNode>
