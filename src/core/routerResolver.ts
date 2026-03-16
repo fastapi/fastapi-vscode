@@ -16,54 +16,24 @@ interface ResolutionContext {
   projectRootUri: string
   fs: FileSystem
   /**
-   * Unified visited guard that prevents infinite recursion during graph
-   * traversal. Uses two key formats:
-   *
-   * - `"fileUri#*"` — whole-file sentinel added by buildRouterGraphInternal.
-   *   Blocks re-entering a file for full graph traversal.
-   * - `"fileUri#variableName"` — per-variable key added by
-   *   resolveRouterReference when resolving a specific named import or dotted
-   *   reference. Allows multiple distinct variables from the same file to be
-   *   resolved independently (issue #126) while still catching cycles.
-   *
-   * The whole-file sentinel also blocks per-variable resolution (a file fully
-   * traversed by buildRouterGraphInternal should not be re-entered via a
-   * named import), and vice-versa a per-variable key blocks the same variable
-   * from being resolved twice.
+   * Set of file URIs already visited during graph traversal.
+   * Prevents infinite recursion on circular imports.
    */
   visited: Set<string>
+  /**
+   * Cache of already-resolved RouterNodes keyed by "fileUri#variableName".
+   * When we resolve a router from a file, we resolve ALL routers in that file
+   * in one pass and cache them here. Subsequent requests for other variables
+   * from the same file are served from the cache without re-entering the file.
+   * This allows multiple routers from the same file (issue #126) while keeping
+   * cycle prevention simple — a single whole-file visited set.
+   */
+  resolvedRouters: Map<string, RouterNode>
   /**
    * Memoized file analyzer shared across the resolution session. Each file is
    * parsed at most once even when referenced from multiple include_router calls.
    */
   analyzeFile: (uri: string) => Promise<FileAnalysis | null>
-}
-
-/** Whole-file sentinel key for the visited set. */
-function fileKey(uri: string): string {
-  return `${uri}#*`
-}
-
-/** Per-variable key for the visited set. */
-function varKey(uri: string, variable: string): string {
-  return `${uri}#${variable}`
-}
-
-/** Check whether a file has been fully visited (whole-file sentinel). */
-function hasVisitedFile(visited: Set<string>, uri: string): boolean {
-  return visited.has(fileKey(uri))
-}
-
-/**
- * Check whether a specific variable in a file has been visited, either
- * individually or as part of a whole-file traversal.
- */
-function hasVisitedVar(
-  visited: Set<string>,
-  uri: string,
-  variable: string,
-): boolean {
-  return visited.has(fileKey(uri)) || visited.has(varKey(uri, variable))
 }
 
 /**
@@ -160,6 +130,7 @@ export async function buildRouterGraph(
       projectRootUri,
       fs,
       visited: new Set(),
+      resolvedRouters: new Map(),
       analyzeFile: analyzeFileMemo,
     },
     targetVariable,
@@ -183,12 +154,12 @@ async function buildRouterGraphInternal(
   }
 
   // Prevent infinite recursion on circular imports
-  if (hasVisitedFile(visited, entryFileUri)) {
+  if (visited.has(entryFileUri)) {
     log(`Skipping already visited file: "${entryFileUri}"`)
     return null
   }
 
-  visited.add(fileKey(entryFileUri))
+  visited.add(entryFileUri)
 
   // Analyze the entry file
   let analysis = await analyzeFileFn(entryFileUri)
@@ -215,8 +186,8 @@ async function buildRouterGraphInternal(
       fs,
       analyzeFileFn,
     )
-    if (actualRouterUri && !hasVisitedFile(visited, actualRouterUri)) {
-      visited.add(fileKey(actualRouterUri))
+    if (actualRouterUri && !visited.has(actualRouterUri)) {
+      visited.add(actualRouterUri)
       const actualAnalysis = await analyzeFileFn(actualRouterUri)
       if (actualAnalysis) {
         const actualRouter = findAppRouter(actualAnalysis.routers)
@@ -279,7 +250,7 @@ async function buildRouterGraphInternal(
           fs,
           analyzeFileFn,
         )
-        if (factoryFileUri && !hasVisitedFile(visited, factoryFileUri)) {
+        if (factoryFileUri && !visited.has(factoryFileUri)) {
           const factoryGraph = await buildRouterGraphInternal(
             factoryFileUri,
             ctx,
@@ -325,6 +296,54 @@ async function buildRouterGraphInternal(
   }
 
   return rootRouter
+}
+
+/**
+ * Resolves all routers in a file and caches them. When we first encounter a
+ * file through a named import, we resolve every router defined in it in one
+ * pass. This lets multiple imports from the same file (issue #126) be served
+ * from the cache without re-entering the file, keeping the visited guard as a
+ * simple whole-file set.
+ */
+async function resolveAllRoutersInFile(
+  importedFileUri: string,
+  ctx: ResolutionContext,
+): Promise<void> {
+  const { visited, analyzeFile: analyzeFileFn } = ctx
+
+  // Mark the file as visited so recursive include_router calls inside these
+  // routers cannot re-enter it.
+  visited.add(importedFileUri)
+
+  const importedAnalysis = await analyzeFileFn(importedFileUri)
+  if (!importedAnalysis) {
+    return
+  }
+
+  for (const router of importedAnalysis.routers) {
+    const cacheKey = `${importedFileUri}#${router.variableName}`
+    // Skip if already resolved (shouldn't happen, but be safe)
+    if (ctx.resolvedRouters.has(cacheKey)) {
+      continue
+    }
+
+    const routerRoutes = importedAnalysis.routes.filter(
+      (r) => r.owner === router.variableName,
+    )
+    const routerNode = createRouterNode(router, routerRoutes, importedFileUri)
+
+    // Process include_router calls owned by this router (nested routers).
+    // This may recursively resolve other files, which is safe because we
+    // already added importedFileUri to visited above.
+    await processIncludeRouters(
+      importedAnalysis,
+      routerNode,
+      importedFileUri,
+      ctx,
+    )
+
+    ctx.resolvedRouters.set(cacheKey, routerNode)
+  }
 }
 
 /**
@@ -407,45 +426,29 @@ async function resolveRouterReference(
 
   // When we know the specific variable name to look for — either via a dotted
   // reference (e.g. "mod.router1") or a named import (e.g. "from x import router1")
-  // — resolve it by name using a per-variable visited key. This allows multiple
-  // distinct variables from the same file to be resolved independently (issue #126)
-  // while the unified visited set still prevents cycles (a whole-file sentinel
-  // from buildRouterGraphInternal also blocks per-variable resolution).
+  // — check the cache first, then resolve all routers in the file in one pass.
   const targetVariableName =
     attributeName ?? (namedImport !== undefined ? originalName : null)
   if (targetVariableName) {
-    const importedAnalysis = await analyzeFileFn(importedFileUri)
-    if (!importedAnalysis) {
-      return null
+    const cacheKey = `${importedFileUri}#${targetVariableName}`
+
+    // Return from cache if already resolved
+    const cached = ctx.resolvedRouters.get(cacheKey)
+    if (cached) {
+      return cached
     }
 
-    const targetRouter = importedAnalysis.routers.find(
-      (r) => r.variableName === targetVariableName,
-    )
-    if (targetRouter) {
-      if (hasVisitedVar(visited, importedFileUri, targetVariableName)) {
-        return null
+    // If the file hasn't been visited yet, resolve all its routers in one pass
+    if (!visited.has(importedFileUri)) {
+      await resolveAllRoutersInFile(importedFileUri, ctx)
+
+      // Check cache again after resolving
+      const resolved = ctx.resolvedRouters.get(cacheKey)
+      if (resolved) {
+        return resolved
       }
-      visited.add(varKey(importedFileUri, targetVariableName))
-
-      const routerRoutes = importedAnalysis.routes.filter(
-        (r) => r.owner === targetVariableName,
-      )
-      const routerNode = createRouterNode(
-        targetRouter,
-        routerRoutes,
-        importedFileUri,
-      )
-
-      await processIncludeRouters(
-        importedAnalysis,
-        routerNode,
-        importedFileUri,
-        ctx,
-      )
-
-      return routerNode
     }
+
     // targetRouter not found as a recognized router — fall through to
     // buildRouterGraphInternal with the known target variable so it can handle
     // factory functions, __init__.py re-exports, and other non-trivial patterns.
