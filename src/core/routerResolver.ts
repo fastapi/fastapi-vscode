@@ -14,9 +14,56 @@ export type { RouterNode }
 
 interface ResolutionContext {
   projectRootUri: string
-  parser: Parser
   fs: FileSystem
+  /**
+   * Unified visited guard that prevents infinite recursion during graph
+   * traversal. Uses two key formats:
+   *
+   * - `"fileUri#*"` — whole-file sentinel added by buildRouterGraphInternal.
+   *   Blocks re-entering a file for full graph traversal.
+   * - `"fileUri#variableName"` — per-variable key added by
+   *   resolveRouterReference when resolving a specific named import or dotted
+   *   reference. Allows multiple distinct variables from the same file to be
+   *   resolved independently (issue #126) while still catching cycles.
+   *
+   * The whole-file sentinel also blocks per-variable resolution (a file fully
+   * traversed by buildRouterGraphInternal should not be re-entered via a
+   * named import), and vice-versa a per-variable key blocks the same variable
+   * from being resolved twice.
+   */
   visited: Set<string>
+  /**
+   * Memoized file analyzer shared across the resolution session. Each file is
+   * parsed at most once even when referenced from multiple include_router calls.
+   */
+  analyzeFile: (uri: string) => Promise<FileAnalysis | null>
+}
+
+/** Whole-file sentinel key for the visited set. */
+function fileKey(uri: string): string {
+  return `${uri}#*`
+}
+
+/** Per-variable key for the visited set. */
+function varKey(uri: string, variable: string): string {
+  return `${uri}#${variable}`
+}
+
+/** Check whether a file has been fully visited (whole-file sentinel). */
+function hasVisitedFile(visited: Set<string>, uri: string): boolean {
+  return visited.has(fileKey(uri))
+}
+
+/**
+ * Check whether a specific variable in a file has been visited, either
+ * individually or as part of a whole-file traversal.
+ */
+function hasVisitedVar(
+  visited: Set<string>,
+  uri: string,
+  variable: string,
+): boolean {
+  return visited.has(fileKey(uri)) || visited.has(varKey(uri, variable))
 }
 
 /**
@@ -99,9 +146,22 @@ export async function buildRouterGraph(
   fs: FileSystem,
   targetVariable?: string,
 ): Promise<RouterNode | null> {
+  const cache = new Map<string, Promise<FileAnalysis | null>>()
+  const analyzeFileMemo = (uri: string): Promise<FileAnalysis | null> => {
+    if (!cache.has(uri)) {
+      cache.set(uri, analyzeFile(uri, parser, fs))
+    }
+    return cache.get(uri)!
+  }
+
   return buildRouterGraphInternal(
     entryFileUri,
-    { projectRootUri, parser, fs, visited: new Set() },
+    {
+      projectRootUri,
+      fs,
+      visited: new Set(),
+      analyzeFile: analyzeFileMemo,
+    },
     targetVariable,
   )
 }
@@ -114,7 +174,8 @@ async function buildRouterGraphInternal(
   ctx: ResolutionContext,
   targetVariable?: string,
 ): Promise<RouterNode | null> {
-  const { projectRootUri, parser, fs, visited } = ctx
+  const { projectRootUri, fs, visited, analyzeFile: analyzeFileFn } = ctx
+
   // Check if file exists
   if (!(await fs.exists(entryFileUri))) {
     log(`File not found: "${entryFileUri}"`)
@@ -122,15 +183,12 @@ async function buildRouterGraphInternal(
   }
 
   // Prevent infinite recursion on circular imports
-  if (visited.has(entryFileUri)) {
+  if (hasVisitedFile(visited, entryFileUri)) {
     log(`Skipping already visited file: "${entryFileUri}"`)
     return null
   }
 
-  visited.add(entryFileUri)
-
-  // Helper to analyze a file with the filesystem
-  const analyzeFileFn = (uri: string) => analyzeFile(uri, parser, fs)
+  visited.add(fileKey(entryFileUri))
 
   // Analyze the entry file
   let analysis = await analyzeFileFn(entryFileUri)
@@ -157,8 +215,8 @@ async function buildRouterGraphInternal(
       fs,
       analyzeFileFn,
     )
-    if (actualRouterUri && !visited.has(actualRouterUri)) {
-      visited.add(actualRouterUri)
+    if (actualRouterUri && !hasVisitedFile(visited, actualRouterUri)) {
+      visited.add(fileKey(actualRouterUri))
       const actualAnalysis = await analyzeFileFn(actualRouterUri)
       if (actualAnalysis) {
         const actualRouter = findAppRouter(actualAnalysis.routers)
@@ -221,7 +279,7 @@ async function buildRouterGraphInternal(
           fs,
           analyzeFileFn,
         )
-        if (factoryFileUri && !visited.has(factoryFileUri)) {
+        if (factoryFileUri && !hasVisitedFile(visited, factoryFileUri)) {
           const factoryGraph = await buildRouterGraphInternal(
             factoryFileUri,
             ctx,
@@ -282,7 +340,7 @@ async function resolveRouterReference(
   currentFileUri: string,
   ctx: ResolutionContext,
 ): Promise<RouterNode | null> {
-  const { projectRootUri, parser, fs, visited } = ctx
+  const { projectRootUri, fs, visited, analyzeFile: analyzeFileFn } = ctx
   const parts = reference.split(".")
   const moduleName = parts[0]
   // For dotted references like "api_routes.router", extract the attribute name
@@ -317,12 +375,12 @@ async function resolveRouterReference(
     return null
   }
 
-  // Helper to analyze a file with the filesystem
-  const analyzeFileFn = (uri: string) => analyzeFile(uri, parser, fs)
-
   // Find the original import name (in case moduleName is an alias)
   // e.g., "from .api_tokens import router as api_tokens_router"
   // moduleName = "api_tokens_router", originalName = "router"
+  //
+  // namedImport is undefined for bare module imports (e.g. "import routers"),
+  // where the module itself is referenced rather than a named symbol.
   const namedImport = matchingImport.namedImports.find(
     (ni) => (ni.alias ?? ni.name) === moduleName,
   )
@@ -347,32 +405,29 @@ async function resolveRouterReference(
     return null
   }
 
-  // When we know the specific variable name to look for (either via a dotted
-  // reference like "module.router" or a named import like "from x import router"),
-  // resolve it directly by name. This avoids marking the whole file as visited,
-  // which would prevent resolving other variables from the same file (issue #126).
+  // When we know the specific variable name to look for — either via a dotted
+  // reference (e.g. "mod.router1") or a named import (e.g. "from x import router1")
+  // — resolve it by name using a per-variable visited key. This allows multiple
+  // distinct variables from the same file to be resolved independently (issue #126)
+  // while the unified visited set still prevents cycles (a whole-file sentinel
+  // from buildRouterGraphInternal also blocks per-variable resolution).
   const targetVariableName =
-    attributeName ?? (namedImport ? originalName : null)
+    attributeName ?? (namedImport !== undefined ? originalName : null)
   if (targetVariableName) {
     const importedAnalysis = await analyzeFileFn(importedFileUri)
     if (!importedAnalysis) {
       return null
     }
 
-    // Find the router with the matching variable name
     const targetRouter = importedAnalysis.routers.find(
       (r) => r.variableName === targetVariableName,
     )
     if (targetRouter) {
-      // Use file#variable as the visited key so multiple variables from the
-      // same file can be resolved independently.
-      const visitedKey = `${importedFileUri}#${targetVariableName}`
-      if (visited.has(visitedKey)) {
+      if (hasVisitedVar(visited, importedFileUri, targetVariableName)) {
         return null
       }
-      visited.add(visitedKey)
+      visited.add(varKey(importedFileUri, targetVariableName))
 
-      // Get routes belonging to this router
       const routerRoutes = importedAnalysis.routes.filter(
         (r) => r.owner === targetVariableName,
       )
@@ -382,7 +437,6 @@ async function resolveRouterReference(
         importedFileUri,
       )
 
-      // Process include_router calls owned by this router (nested routers)
       await processIncludeRouters(
         importedAnalysis,
         routerNode,
@@ -392,7 +446,10 @@ async function resolveRouterReference(
 
       return routerNode
     }
-    // If not found as a router, fall through to try building from file
+    // targetRouter not found as a recognized router — fall through to
+    // buildRouterGraphInternal with the known target variable so it can handle
+    // factory functions, __init__.py re-exports, and other non-trivial patterns.
+    return buildRouterGraphInternal(importedFileUri, ctx, targetVariableName)
   }
 
   return buildRouterGraphInternal(importedFileUri, ctx)

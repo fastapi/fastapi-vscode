@@ -686,6 +686,41 @@ suite("routerResolver", () => {
       assert.strictEqual(v2Child.router.routes.length, 2)
     })
 
+    test("resolves multiple dotted-reference routers from the same file (attributeName path)", async () => {
+      const result = await buildRouterGraph(
+        fixtures.dottedMultiRouter.mainPy,
+        parser,
+        fixtures.dottedMultiRouter.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.variableName, "app")
+
+      assert.strictEqual(
+        result.children.length,
+        2,
+        "Should have two child routers (api_v.router1 and api_v.router2)",
+      )
+
+      const v1Child = result.children.find((c) => c.router.prefix === "/v1")
+      assert.ok(v1Child, "Should have /v1 router")
+      assert.strictEqual(
+        v1Child.router.filePath,
+        fixtures.dottedMultiRouter.apiVPy,
+      )
+      assert.strictEqual(v1Child.router.routes.length, 1)
+
+      const v2Child = result.children.find((c) => c.router.prefix === "/v2")
+      assert.ok(v2Child, "Should have /v2 router")
+      assert.strictEqual(
+        v2Child.router.filePath,
+        fixtures.dottedMultiRouter.apiVPy,
+      )
+      assert.strictEqual(v2Child.router.routes.length, 1)
+    })
+
     test("resolves module-aliased fastapi import (import fastapi as f)", async () => {
       const result = await buildRouterGraph(
         fixtures.aliasedModule.mainPy,

@@ -89,6 +89,19 @@ export const fixtures = {
       join(fixturesPath, "reexport", "app", "integrations", "__init__.py"),
     ),
   },
+  dottedMultiRouter: {
+    root: uri(join(fixturesPath, "dotted-multi-router")),
+    mainPy: uri(join(fixturesPath, "dotted-multi-router", "app", "main.py")),
+    apiVPy: uri(
+      join(
+        fixturesPath,
+        "dotted-multi-router",
+        "app",
+        "routes_pkg",
+        "api_v.py",
+      ),
+    ),
+  },
   multiRouterSameFile: {
     root: uri(join(fixturesPath, "multi-router-same-file")),
     mainPy: uri(join(fixturesPath, "multi-router-same-file", "main.py")),
