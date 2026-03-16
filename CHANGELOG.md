@@ -4,6 +4,7 @@
 
 ### Internal
 
+* ⬆ Bump oven-sh/setup-bun from 2.1.3 to 2.2.0. PR [#127](https://github.com/fastapi/fastapi-vscode/pull/127) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump actions/download-artifact from 8.0.0 to 8.0.1. PR [#125](https://github.com/fastapi/fastapi-vscode/pull/125) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * 🔖 Release version 0.1.4. PR [#123](https://github.com/fastapi/fastapi-vscode/pull/123) by [@savannahostrowski](https://github.com/savannahostrowski).
 
