@@ -482,6 +482,29 @@ suite("routerResolver", () => {
       assert.strictEqual(result.routes.length, 1)
     })
 
+    test("handles circular include_router cycle without infinite recursion", async () => {
+      // other.py imports app from main.py and does router.include_router(app),
+      // creating a real cycle exercised through include_router resolution.
+      // The whole-file sentinel (file#*) must block re-entering main.py.
+      const result = await buildRouterGraph(
+        fixtures.circularInclude.mainPy,
+        parser,
+        fixtures.circularInclude.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      // Should still have the direct route on app
+      const rootRoute = result.routes.find((r) => r.path === "/")
+      assert.ok(rootRoute)
+      // Should resolve the child router from other.py despite the cycle
+      assert.strictEqual(result.children.length, 1)
+      assert.strictEqual(result.children[0].router.prefix, "/other")
+      // The circular include_router(app) in other.py should be silently dropped
+      assert.strictEqual(result.children[0].router.children.length, 0)
+    })
+
     test("discovers nested routers via __init__.py re-export", async () => {
       // This tests the pattern: main.py imports from integrations (package),
       // integrations/__init__.py re-exports router from router.py,

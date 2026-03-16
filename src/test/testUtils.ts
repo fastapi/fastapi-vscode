@@ -43,6 +43,10 @@ export const fixtures = {
     root: uri(join(fixturesPath, "custom-subclass")),
     mainPy: uri(join(fixturesPath, "custom-subclass", "main.py")),
   },
+  circularInclude: {
+    root: uri(join(fixturesPath, "circular-include")),
+    mainPy: uri(join(fixturesPath, "circular-include", "main.py")),
+  },
   errorCases: {
     root: uri(join(fixturesPath, "error-cases")),
     mainPy: uri(join(fixturesPath, "error-cases", "main.py")),
