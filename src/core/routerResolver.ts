@@ -300,10 +300,10 @@ async function buildRouterGraphInternal(
 
 /**
  * Resolves all routers in a file and caches them. When we first encounter a
- * file through a named import, we resolve every router defined in it in one
- * pass. This lets multiple imports from the same file (issue #126) be served
- * from the cache without re-entering the file, keeping the visited guard as a
- * simple whole-file set.
+ * file through a named import or dotted reference, we resolve every router
+ * defined in it in one pass. This lets multiple imports from the same file
+ * (issue #126) be served from the cache without re-entering the file, keeping
+ * the visited guard as a simple whole-file set.
  */
 async function resolveAllRoutersInFile(
   importedFileUri: string,
