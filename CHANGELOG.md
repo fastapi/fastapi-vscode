@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Fixes
+
+* 🐛 Fix discovery when multiple routers are imported from the same file. PR [#129](https://github.com/fastapi/fastapi-vscode/pull/129) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Internal
 
 * ⬆ Bump oven-sh/setup-bun from 2.1.3 to 2.2.0. PR [#127](https://github.com/fastapi/fastapi-vscode/pull/127) by [@dependabot[bot]](https://github.com/apps/dependabot).
