@@ -392,8 +392,7 @@ async function resolveRouterReference(
     }
   }
 
-  // If it's not a dotted reference or we couldn't find the attribute, try building the router graph from the imported file directly.
-  // This handles cases where the entire module is included as a router (e.g., "include_router(api_routes)").
+  // Resolve by variable name for named imports, or fall back to full-file discovery
   const targetVarName = namedImport ? originalName : undefined
   return buildRouterGraphInternal(importedFileUri, ctx, targetVarName)
 }
