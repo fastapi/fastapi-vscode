@@ -678,5 +678,37 @@ suite("routerResolver", () => {
       assert.strictEqual(usersRouter.prefix, "/users")
       assert.strictEqual(usersRouter.routes.length, 2)
     })
+
+    test("resolves multiple routers imported from same file", async () => {
+      const result = await buildRouterGraph(
+        fixtures.multiRouterSameFile.mainPy,
+        parser,
+        fixtures.multiRouterSameFile.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(
+        result.children.length,
+        2,
+        "Should resolve both routers from same file",
+      )
+
+      const prefixes = result.children.map((c) => c.router.prefix)
+      assert.ok(
+        prefixes.includes("/v1"),
+        "Should include router1 with /v1 prefix",
+      )
+      assert.ok(
+        prefixes.includes("/v2"),
+        "Should include router2 with /v2 prefix",
+      )
+
+      for (const child of result.children) {
+        assert.strictEqual(child.router.routes.length, 1)
+        assert.strictEqual(child.router.routes[0].path, "/items")
+      }
+    })
   })
 })
