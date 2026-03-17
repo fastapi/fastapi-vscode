@@ -122,12 +122,13 @@ async function buildRouterGraphInternal(
   }
 
   // Prevent infinite recursion on circular imports
-  if (visited.has(entryFileUri)) {
-    log(`Skipping already visited file: "${entryFileUri}"`)
+  const visitedKey = `${entryFileUri}#${targetVariable ?? ""}`
+  if (visited.has(visitedKey)) {
+    log(`Skipping already visited: "${visitedKey}"`)
     return null
   }
 
-  visited.add(entryFileUri)
+  visited.add(visitedKey)
 
   // Helper to analyze a file with the filesystem
   const analyzeFileFn = (uri: string) => analyzeFile(uri, parser, fs)
@@ -361,11 +362,13 @@ async function resolveRouterReference(
       (r) => r.variableName === attributeName,
     )
     if (targetRouter) {
+      const visitedKey = `${importedFileUri}#${attributeName}`
+
       // Mark as visited to prevent infinite recursion
-      if (visited.has(importedFileUri)) {
+      if (visited.has(visitedKey)) {
         return null
       }
-      visited.add(importedFileUri)
+      visited.add(visitedKey)
 
       // Get routes belonging to this router
       const routerRoutes = importedAnalysis.routes.filter(
@@ -387,8 +390,10 @@ async function resolveRouterReference(
 
       return routerNode
     }
-    // If not found as a router, fall through to try building from file
   }
 
-  return buildRouterGraphInternal(importedFileUri, ctx)
+  // If it's not a dotted reference or we couldn't find the attribute, try building the router graph from the imported file directly.
+  // This handles cases where the entire module is included as a router (e.g., "include_router(api_routes)").
+  const targetVarName = namedImport ? originalName : undefined
+  return buildRouterGraphInternal(importedFileUri, ctx, targetVarName)
 }
