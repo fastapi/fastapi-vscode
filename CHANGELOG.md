@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.1.5
+
 ### Fixes
 
 * 🐛 Fix discovery when multiple routers are imported from the same file. PR [#129](https://github.com/fastapi/fastapi-vscode/pull/129) by [@savannahostrowski](https://github.com/savannahostrowski).
