@@ -18,7 +18,9 @@ export class Parser {
     }
 
     // Pre-compile the Wasm module from the binary
-    const wasmModule = await WebAssembly.compile(wasmBinaries.core)
+    const wasmModule = await WebAssembly.compile(
+      wasmBinaries.core as Uint8Array<ArrayBuffer>,
+    )
 
     // Use instantiateWasm to provide custom Wasm instantiation.
     // This bypasses tree-sitter's default URL-based loading which relies
