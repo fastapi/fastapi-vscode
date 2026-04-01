@@ -360,7 +360,7 @@
   "dependencies": {
     "posthog-node": "^5.24.1",
     "tinytar": "^0.1.0",
-    "toml": "^3.0.0",
+    "toml": "^4.1.1",
     "web-tree-sitter": "^0.26.3"
   },
   "lint-staged": {
