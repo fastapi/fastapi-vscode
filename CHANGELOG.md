@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Fixes
+
+* 🐛 Fix import resolution for src layout projects and bare relative imports. PR [#140](https://github.com/fastapi/fastapi-vscode/pull/140) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Internal
 
 * ⬆ Bump actions/upload-artifact from 7.0.0 to 7.0.1. PR [#139](https://github.com/fastapi/fastapi-vscode/pull/139) by [@dependabot[bot]](https://github.com/apps/dependabot).
