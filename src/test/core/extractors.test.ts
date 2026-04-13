@@ -706,6 +706,23 @@ router = f.APIRouter(prefix="/items")
       assert.strictEqual(result.relativeDots, 1)
     })
 
+    test("extracts bare relative import (from . import X)", () => {
+      const code = "from . import users"
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const imports = nodesByType.get("import_from_statement") ?? []
+      const result = importExtractor(imports[0])
+
+      assert.ok(result)
+      assert.strictEqual(result.modulePath, "")
+      assert.strictEqual(result.isRelative, true)
+      assert.strictEqual(result.relativeDots, 1)
+      assert.deepStrictEqual(result.names, ["users"])
+      assert.deepStrictEqual(result.namedImports, [
+        { name: "users", alias: null },
+      ])
+    })
+
     test("extracts relative import with double dot", () => {
       const code = "from ..api import router"
       const tree = parse(code)

@@ -122,7 +122,28 @@ export async function resolveImport(
     projectRootUri,
     fs,
   )
-  return resolvePythonModule(resolvedUri, fs)
+  const result = await resolvePythonModule(resolvedUri, fs)
+  if (result) {
+    return result
+  }
+
+  // Fallback for src layout: if the module wasn't found under the
+  // project root, try under projectRoot/src/. This handles projects where
+  // pyproject.toml is at the root but source lives under src/.
+  // Only applies to absolute imports — relative imports already resolve
+  // relative to the current file, not the project root.
+  if (!importInfo.isRelative) {
+    const srcRootUri = fs.joinPath(projectRootUri, "src")
+    const srcResolvedUri = modulePathToDir(
+      importInfo,
+      currentFileUri,
+      srcRootUri,
+      fs,
+    )
+    return resolvePythonModule(srcResolvedUri, fs)
+  }
+
+  return null
 }
 
 /**

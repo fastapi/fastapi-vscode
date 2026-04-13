@@ -99,6 +99,22 @@ suite("importResolver", () => {
       assert.ok(result.endsWith("users.py"))
     })
 
+    test("falls back to src/ for absolute imports in src layout", async () => {
+      // Project root is the pyproject.toml dir, but source is under src/
+      const currentFile = fixtures.srcLayout.mainPy
+      const projectRoot = fixtures.srcLayout.workspaceRoot
+
+      const result = await resolveImport(
+        { modulePath: "app.api", isRelative: false, relativeDots: 0 },
+        currentFile,
+        projectRoot,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.ok(result.endsWith("api/__init__.py"))
+    })
+
     test("returns null for non-existent module", async () => {
       const currentFile = nodeFileSystem.joinPath(standardRoot, "main.py")
       const projectRoot = standardRoot
@@ -240,6 +256,28 @@ suite("importResolver", () => {
 
       assert.ok(result)
       assert.ok(result.endsWith("api_routes.py"))
+    })
+
+    test("resolves named import via src/ fallback for src layout", async () => {
+      const currentFile = fixtures.srcLayout.mainPy
+      const projectRoot = fixtures.srcLayout.workspaceRoot
+
+      // "from app.api import api_router" — the actual import from the issue
+      const result = await resolveNamedImport(
+        {
+          modulePath: "app.api",
+          names: ["api_router"],
+          isRelative: false,
+          relativeDots: 0,
+        },
+        currentFile,
+        projectRoot,
+        nodeFileSystem,
+        (uri) => analyzeFile(uri, parser, nodeFileSystem),
+      )
+
+      assert.ok(result)
+      assert.ok(result.endsWith("api/__init__.py"))
     })
 
     test("resolves variable import from .py file (not submodule)", async () => {
