@@ -4,6 +4,7 @@
 
 ### Internal
 
+* ⬆ Bump actions/upload-artifact from 7.0.0 to 7.0.1. PR [#139](https://github.com/fastapi/fastapi-vscode/pull/139) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⚙️  Update dependabot.yml to match fastapi/fastapi's config. PR [#138](https://github.com/fastapi/fastapi-vscode/pull/138) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ⬆️ Bump to TypeScript 6. PR [#135](https://github.com/fastapi/fastapi-vscode/pull/135) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔖 Release version 0.1.5. PR [#130](https://github.com/fastapi/fastapi-vscode/pull/130) by [@savannahostrowski](https://github.com/savannahostrowski).
