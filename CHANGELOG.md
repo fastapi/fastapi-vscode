@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.1.6
+
 ### Fixes
 
 * 🐛 Fix import resolution for src layout projects and bare relative imports. PR [#140](https://github.com/fastapi/fastapi-vscode/pull/140) by [@savannahostrowski](https://github.com/savannahostrowski).
