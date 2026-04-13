@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Internal
+
+* 🔖 Release version 0.1.6. PR [#141](https://github.com/fastapi/fastapi-vscode/pull/141) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## 0.1.6
 
 ### Fixes
