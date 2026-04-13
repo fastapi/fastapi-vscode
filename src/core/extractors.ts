@@ -404,25 +404,33 @@ export function importExtractor(node: Node): ImportInfo | null {
     moduleNode?.text ?? "",
   )
 
-  // Aliased imports (e.g., "router as users_router")
-  const aliasedImports = getNodesByType(node).get("aliased_import") ?? []
-  for (const aliased of aliasedImports) {
-    const nameNode = aliased.childForFieldName("name")
-    const aliasNode = aliased.childForFieldName("alias")
-    if (nameNode) {
-      const alias = aliasNode?.text ?? null
-      names.push(alias ?? nameNode.text)
-      namedImports.push({ name: nameNode.text, alias })
-    }
-  }
+  // Collect imported names: everything after the "import" keyword.
+  let afterImport = false
+  for (let i = 0; i < node.childCount; i++) {
+    const child = node.child(i)
+    if (!child) continue
 
-  // Non-aliased imports (skip first dotted_name which is the module path)
-  const nameNodes = getNodesByType(node).get("dotted_name") ?? []
-  for (let i = 1; i < nameNodes.length; i++) {
-    const nameNode = nameNodes[i]
-    if (!hasAncestor(nameNode, "aliased_import")) {
-      names.push(nameNode.text)
-      namedImports.push({ name: nameNode.text, alias: null })
+    // Phase 1: scan forward looking for the "import" keyword
+    if (!afterImport) {
+      if (child.type === "import") afterImport = true
+      continue // skip this child either way (module path or the keyword itself)
+    }
+
+    // Phase 2: we're past "import", so each child is an imported name
+    // (commas and other punctuation are silently skipped by the else branch)
+    if (child.type === "aliased_import") {
+      // e.g. "router as users_router"
+      const nameNode = child.childForFieldName("name")
+      const aliasNode = child.childForFieldName("alias")
+      if (nameNode) {
+        const alias = aliasNode?.text ?? null
+        names.push(alias ?? nameNode.text)
+        namedImports.push({ name: nameNode.text, alias })
+      }
+    } else if (child.type === "dotted_name") {
+      // e.g. "users"
+      names.push(child.text)
+      namedImports.push({ name: child.text, alias: null })
     }
   }
 

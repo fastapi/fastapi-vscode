@@ -604,6 +604,47 @@ suite("routerResolver", () => {
       assert.strictEqual(result, null)
     })
 
+    test("resolves absolute imports in src layout projects", async () => {
+      const projectRoot = await findProjectRoot(
+        fixtures.srcLayout.mainPy,
+        fixtures.srcLayout.workspaceRoot,
+        nodeFileSystem,
+      )
+      const result = await buildRouterGraph(
+        fixtures.srcLayout.mainPy,
+        parser,
+        projectRoot,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      assert.strictEqual(result.type, "FastAPI")
+      assert.strictEqual(result.routes.length, 1, "Should have the root route")
+      assert.strictEqual(result.routes[0].path, "/")
+      assert.strictEqual(
+        result.children.length,
+        1,
+        "Should have one child router (api_router)",
+      )
+
+      const apiRouter = result.children[0].router
+      assert.strictEqual(apiRouter.type, "APIRouter")
+      assert.strictEqual(
+        apiRouter.children.length,
+        1,
+        "api_router should include users router",
+      )
+      assert.strictEqual(apiRouter.children[0].prefix, "/api/v1/users")
+
+      const usersRouter = apiRouter.children[0].router
+      assert.strictEqual(usersRouter.routes.length, 2)
+      const methods = usersRouter.routes
+        .map((r) => r.method.toLowerCase())
+        .sort()
+      assert.deepStrictEqual(methods, ["get", "post"])
+      assert.ok(usersRouter.routes.every((r) => r.path === "/"))
+    })
+
     test("resolves custom APIRouter subclass as child router", async () => {
       const result = await buildRouterGraph(
         fixtures.customSubclass.mainPy,

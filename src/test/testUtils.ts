@@ -93,6 +93,10 @@ export const fixtures = {
       join(fixturesPath, "reexport", "app", "integrations", "__init__.py"),
     ),
   },
+  srcLayout: {
+    workspaceRoot: uri(join(fixturesPath, "src-layout")),
+    mainPy: uri(join(fixturesPath, "src-layout", "src", "app", "main.py")),
+  },
   sameFile: {
     root: uri(join(fixturesPath, "same-file")),
     mainPy: uri(join(fixturesPath, "same-file", "main.py")),
