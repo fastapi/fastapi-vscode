@@ -71,4 +71,12 @@ export class TestCallIndex {
     }
     this._onDidChangeIndex.fire()
   }
+
+  /** @internal Exposed for testing only — set cached calls for a file URI. */
+  setCallsForFile(
+    fileUri: string,
+    calls: { method: string; path: string; line: number; column: number }[],
+  ): void {
+    this.index.set(fileUri, calls)
+  }
 }

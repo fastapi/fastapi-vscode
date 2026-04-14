@@ -42,6 +42,10 @@ function createRoute(
   }
 }
 
+function createTestCall(method: string, path: string, line = 0, column = 0) {
+  return { method, path, line, column }
+}
+
 suite("RouteToTestCodeLensProvider", () => {
   let parser: Parser
 
@@ -62,7 +66,7 @@ suite("RouteToTestCodeLensProvider", () => {
     const provider = new RouteToTestCodeLensProvider([app], testIndex)
 
     const doc = await vscode.workspace.openTextDocument({
-      content: "@app.get('/users')\ndef handler(): pass",
+      content: "",
       language: "python",
     })
     const lenses = provider.provideCodeLenses(doc)
@@ -72,7 +76,7 @@ suite("RouteToTestCodeLensProvider", () => {
   test("returns empty array when routes have no matching tests", async () => {
     const testIndex = new TestCallIndex(parser)
     const doc = await vscode.workspace.openTextDocument({
-      content: "@app.get('/users')\ndef handler(): pass",
+      content: "",
       language: "python",
     })
     const app = createMockApp([
@@ -99,18 +103,12 @@ suite("RouteToTestCodeLensProvider", () => {
 
   test("creates CodeLens with correct title for single test", async () => {
     const testIndex = new TestCallIndex(parser)
-    // Manually populate the index with a test call
-    const testCode = 'client.get("/users")'
-    const tree = parser.parse(testCode)
-    if (tree) {
-      const { findTestClientCalls } = await import("../../core/extractors")
-      const calls = findTestClientCalls(tree.rootNode)
-      // Access private index via any cast for testing
-      ;(testIndex as any).index.set("file:///test/test_app.py", calls)
-    }
+    testIndex.setCallsForFile("file:///test/test_app.py", [
+      createTestCall("get", "/users"),
+    ])
 
     const doc = await vscode.workspace.openTextDocument({
-      content: "@app.get('/users')\ndef handler(): pass",
+      content: "",
       language: "python",
     })
     const app = createMockApp([
@@ -125,19 +123,13 @@ suite("RouteToTestCodeLensProvider", () => {
 
   test("creates CodeLens with plural title for multiple tests", async () => {
     const testIndex = new TestCallIndex(parser)
-    const testCode = `
-client.get("/users")
-client.get("/users")
-`
-    const tree = parser.parse(testCode)
-    if (tree) {
-      const { findTestClientCalls } = await import("../../core/extractors")
-      const calls = findTestClientCalls(tree.rootNode)
-      ;(testIndex as any).index.set("file:///test/test_app.py", calls)
-    }
+    testIndex.setCallsForFile("file:///test/test_app.py", [
+      createTestCall("get", "/users"),
+      createTestCall("get", "/users", 5),
+    ])
 
     const doc = await vscode.workspace.openTextDocument({
-      content: "@app.get('/users')\ndef handler(): pass",
+      content: "",
       language: "python",
     })
     const app = createMockApp([
@@ -152,16 +144,12 @@ client.get("/users")
 
   test("uses goToDefinition command with locations", async () => {
     const testIndex = new TestCallIndex(parser)
-    const testCode = 'client.get("/users")'
-    const tree = parser.parse(testCode)
-    if (tree) {
-      const { findTestClientCalls } = await import("../../core/extractors")
-      const calls = findTestClientCalls(tree.rootNode)
-      ;(testIndex as any).index.set("file:///test/test_app.py", calls)
-    }
+    testIndex.setCallsForFile("file:///test/test_app.py", [
+      createTestCall("get", "/users"),
+    ])
 
     const doc = await vscode.workspace.openTextDocument({
-      content: "@app.get('/users')\ndef handler(): pass",
+      content: "",
       language: "python",
     })
     const app = createMockApp([
@@ -179,26 +167,16 @@ client.get("/users")
 
   test("aggregates test calls from multiple files", async () => {
     const testIndex = new TestCallIndex(parser)
-    const { findTestClientCalls } = await import("../../core/extractors")
-
-    // Populate index with calls from two different test files
-    const tree1 = parser.parse('client.get("/users")')
-    if (tree1) {
-      ;(testIndex as any).index.set(
-        "file:///test/test_users.py",
-        findTestClientCalls(tree1.rootNode),
-      )
-    }
-    const tree2 = parser.parse('client.get("/users")\nclient.get("/users/123")')
-    if (tree2) {
-      ;(testIndex as any).index.set(
-        "file:///test/test_admin.py",
-        findTestClientCalls(tree2.rootNode),
-      )
-    }
+    testIndex.setCallsForFile("file:///test/test_users.py", [
+      createTestCall("get", "/users"),
+    ])
+    testIndex.setCallsForFile("file:///test/test_admin.py", [
+      createTestCall("get", "/users"),
+      createTestCall("get", "/users/123"),
+    ])
 
     const doc = await vscode.workspace.openTextDocument({
-      content: "@app.get('/users')\ndef handler(): pass",
+      content: "",
       language: "python",
     })
     const app = createMockApp([
@@ -220,20 +198,14 @@ client.get("/users")
 
   test("matches routes case-insensitively", async () => {
     const testIndex = new TestCallIndex(parser)
-    // findTestClientCalls returns lowercase methods
-    const testCode = 'client.get("/items")'
-    const tree = parser.parse(testCode)
-    if (tree) {
-      const { findTestClientCalls } = await import("../../core/extractors")
-      const calls = findTestClientCalls(tree.rootNode)
-      ;(testIndex as any).index.set("file:///test/test_app.py", calls)
-    }
+    testIndex.setCallsForFile("file:///test/test_app.py", [
+      createTestCall("get", "/items"),
+    ])
 
     const doc = await vscode.workspace.openTextDocument({
-      content: "@app.get('/items')\ndef handler(): pass",
+      content: "",
       language: "python",
     })
-    // Route has uppercase method
     const app = createMockApp([
       createRoute("GET", "/items", doc.uri.toString()),
     ])
