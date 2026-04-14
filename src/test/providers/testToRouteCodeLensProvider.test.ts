@@ -6,7 +6,7 @@ import type {
   RouteDefinition,
   RouterDefinition,
 } from "../../core/types"
-import { TestCodeLensProvider } from "../../vscode/testCodeLensProvider"
+import { TestToRouteCodeLensProvider } from "../../vscode/testToRouteCodeLensProvider"
 import { wasmBinaries } from "../testUtils"
 
 function createMockApp(
@@ -54,9 +54,9 @@ function createRouter(
   }
 }
 
-suite("TestCodeLensProvider", () => {
+suite("TestToRouteCodeLensProvider", () => {
   let parser: Parser
-  let provider: TestCodeLensProvider
+  let provider: TestToRouteCodeLensProvider
 
   suiteSetup(async () => {
     parser = new Parser()
@@ -68,18 +68,18 @@ suite("TestCodeLensProvider", () => {
   })
 
   setup(() => {
-    provider = new TestCodeLensProvider(parser, [])
+    provider = new TestToRouteCodeLensProvider(parser, [])
   })
 
   suite("constructor", () => {
     test("creates provider with empty apps", () => {
-      const p = new TestCodeLensProvider(parser, [])
+      const p = new TestToRouteCodeLensProvider(parser, [])
       assert.ok(p)
     })
 
     test("creates provider with apps", () => {
       const app = createMockApp([createRoute("GET", "/")])
-      const p = new TestCodeLensProvider(parser, [app])
+      const p = new TestToRouteCodeLensProvider(parser, [app])
       assert.ok(p)
     })
   })

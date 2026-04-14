@@ -6,7 +6,7 @@ import type {
   RouteDefinition,
   RouterDefinition,
 } from "../../core/types"
-import { RouteCodeLensProvider } from "../../vscode/routeCodeLensProvider"
+import { RouteToTestCodeLensProvider } from "../../vscode/routeToTestCodeLensProvider"
 import { TestCallIndex } from "../../vscode/testIndex"
 import { wasmBinaries } from "../testUtils"
 
@@ -42,7 +42,7 @@ function createRoute(
   }
 }
 
-suite("RouteCodeLensProvider", () => {
+suite("RouteToTestCodeLensProvider", () => {
   let parser: Parser
 
   suiteSetup(async () => {
@@ -59,7 +59,7 @@ suite("RouteCodeLensProvider", () => {
     const app = createMockApp([
       createRoute("GET", "/users", "file:///other/main.py"),
     ])
-    const provider = new RouteCodeLensProvider([app], testIndex)
+    const provider = new RouteToTestCodeLensProvider([app], testIndex)
 
     const doc = await vscode.workspace.openTextDocument({
       content: "@app.get('/users')\ndef handler(): pass",
@@ -78,7 +78,7 @@ suite("RouteCodeLensProvider", () => {
     const app = createMockApp([
       createRoute("GET", "/users", doc.uri.toString()),
     ])
-    const provider = new RouteCodeLensProvider([app], testIndex)
+    const provider = new RouteToTestCodeLensProvider([app], testIndex)
 
     const lenses = provider.provideCodeLenses(doc)
     assert.strictEqual(lenses.length, 0)
@@ -86,7 +86,7 @@ suite("RouteCodeLensProvider", () => {
 
   test("setApps fires change event", () => {
     const testIndex = new TestCallIndex(parser)
-    const provider = new RouteCodeLensProvider([], testIndex)
+    const provider = new RouteToTestCodeLensProvider([], testIndex)
 
     let eventFired = false
     provider.onDidChangeCodeLenses(() => {
@@ -116,7 +116,7 @@ suite("RouteCodeLensProvider", () => {
     const app = createMockApp([
       createRoute("GET", "/users", doc.uri.toString()),
     ])
-    const provider = new RouteCodeLensProvider([app], testIndex)
+    const provider = new RouteToTestCodeLensProvider([app], testIndex)
 
     const lenses = provider.provideCodeLenses(doc)
     assert.strictEqual(lenses.length, 1)
@@ -143,7 +143,7 @@ client.get("/users")
     const app = createMockApp([
       createRoute("GET", "/users", doc.uri.toString()),
     ])
-    const provider = new RouteCodeLensProvider([app], testIndex)
+    const provider = new RouteToTestCodeLensProvider([app], testIndex)
 
     const lenses = provider.provideCodeLenses(doc)
     assert.strictEqual(lenses.length, 1)
@@ -167,7 +167,7 @@ client.get("/users")
     const app = createMockApp([
       createRoute("GET", "/users", doc.uri.toString()),
     ])
-    const provider = new RouteCodeLensProvider([app], testIndex)
+    const provider = new RouteToTestCodeLensProvider([app], testIndex)
 
     const lenses = provider.provideCodeLenses(doc)
     assert.strictEqual(
@@ -204,7 +204,7 @@ client.get("/users")
     const app = createMockApp([
       createRoute("GET", "/users", doc.uri.toString()),
     ])
-    const provider = new RouteCodeLensProvider([app], testIndex)
+    const provider = new RouteToTestCodeLensProvider([app], testIndex)
 
     const lenses = provider.provideCodeLenses(doc)
     assert.strictEqual(lenses.length, 1)
@@ -237,7 +237,7 @@ client.get("/users")
     const app = createMockApp([
       createRoute("GET", "/items", doc.uri.toString()),
     ])
-    const provider = new RouteCodeLensProvider([app], testIndex)
+    const provider = new RouteToTestCodeLensProvider([app], testIndex)
 
     const lenses = provider.provideCodeLenses(doc)
     assert.strictEqual(lenses.length, 1)

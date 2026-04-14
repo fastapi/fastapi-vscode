@@ -36,9 +36,9 @@ import {
   type PathOperationTreeItem,
   PathOperationTreeProvider,
 } from "./vscode/pathOperationTreeProvider"
-import { RouteCodeLensProvider } from "./vscode/routeCodeLensProvider"
-import { TestCodeLensProvider } from "./vscode/testCodeLensProvider"
+import { RouteToTestCodeLensProvider } from "./vscode/routeToTestCodeLensProvider"
 import { TestCallIndex } from "./vscode/testIndex"
+import { TestToRouteCodeLensProvider } from "./vscode/testToRouteCodeLensProvider"
 
 export const EXTENSION_ID = "FastAPILabs.fastapi-vscode"
 
@@ -160,8 +160,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const testIndex = new TestCallIndex(parserService)
   testIndex.build().catch((e) => log(`TestCallIndex build failed: ${e}`))
 
-  const codeLensProvider = new TestCodeLensProvider(parserService, apps)
-  const routeCodeLensProvider = new RouteCodeLensProvider(apps, testIndex)
+  const testToRouteProvider = new TestToRouteCodeLensProvider(
+    parserService,
+    apps,
+  )
+  const routeToTestProvider = new RouteToTestCodeLensProvider(apps, testIndex)
 
   // File watcher for auto-refresh
   let refreshTimeout: ReturnType<typeof setTimeout> | null = null
@@ -178,8 +181,8 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       pathOperationProvider.setApps(newApps, groupApps(newApps))
-      codeLensProvider.setApps(newApps)
-      routeCodeLensProvider.setApps(newApps)
+      testToRouteProvider.setApps(newApps)
+      routeToTestProvider.setApps(newApps)
     }, 300)
   }
 
@@ -210,11 +213,11 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
       vscode.languages.registerCodeLensProvider(
         { language: "python", pattern: "**/*test*.py" },
-        codeLensProvider,
+        testToRouteProvider,
       ),
       vscode.languages.registerCodeLensProvider(
         { language: "python", pattern: "**/*.py" },
-        routeCodeLensProvider,
+        routeToTestProvider,
       ),
     )
   }
@@ -324,7 +327,7 @@ export async function activate(context: vscode.ExtensionContext) {
     registerCommands(
       context.extensionUri,
       pathOperationProvider,
-      codeLensProvider,
+      testToRouteProvider,
       groupApps,
     ),
     { dispose: () => clearInterval(telemetryFlushInterval) },
@@ -405,7 +408,7 @@ function registerCloudCommands(
 function registerCommands(
   extensionUri: vscode.Uri,
   pathOperationProvider: PathOperationTreeProvider,
-  codeLensProvider: TestCodeLensProvider,
+  testToRouteProvider: TestToRouteCodeLensProvider,
   groupApps: (
     apps: AppDefinition[],
   ) => Array<
@@ -421,7 +424,7 @@ function registerCommands(
         clearImportCache()
         const newApps = await discoverFastAPIApps(parserService)
         pathOperationProvider.setApps(newApps, groupApps(newApps))
-        codeLensProvider.setApps(newApps)
+        testToRouteProvider.setApps(newApps)
       },
     ),
 

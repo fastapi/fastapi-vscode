@@ -15,7 +15,7 @@ import type { RouteDefinition } from "../core/types"
 import { trackCodeLensProvided } from "../utils/telemetry"
 import type { TestCallIndex } from "./testIndex"
 
-export class RouteCodeLensProvider implements CodeLensProvider {
+export class RouteToTestCodeLensProvider implements CodeLensProvider {
   private cachedRoutes: RouteDefinition[] = []
   private testIndex: TestCallIndex
   private indexListener: Disposable

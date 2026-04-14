@@ -23,7 +23,7 @@ import { collectRoutes } from "../core/treeUtils"
 import type { AppDefinition, SourceLocation } from "../core/types"
 import { trackCodeLensProvided } from "../utils/telemetry"
 
-export class TestCodeLensProvider implements CodeLensProvider {
+export class TestToRouteCodeLensProvider implements CodeLensProvider {
   private apps: AppDefinition[] = []
   private parser: Parser
 
