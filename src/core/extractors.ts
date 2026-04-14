@@ -638,3 +638,59 @@ export function factoryCallExtractor(
     functionName: functionName,
   }
 }
+
+export interface TestClientCall {
+  method: string
+  path: string
+  line: number
+  column: number
+}
+
+export function findTestClientCalls(rootNode: Node): TestClientCall[] {
+  const calls: TestClientCall[] = []
+  const nodesByType = getNodesByType(rootNode)
+  const callNodes = nodesByType.get("call") ?? []
+
+  for (const callNode of callNodes) {
+    // Grammar guarantees: call nodes always have a function field
+    const functionNode = callNode.childForFieldName("function")!
+    if (functionNode.type !== "attribute") {
+      continue
+    }
+
+    // Grammar guarantees: attribute nodes always have an attribute field
+    const methodNode = functionNode.childForFieldName("attribute")!
+
+    const method = methodNode.text.toLowerCase()
+    if (!ROUTE_METHODS.has(method)) {
+      continue
+    }
+
+    // Grammar guarantees: call nodes always have an arguments field
+    const argumentsNode = callNode.childForFieldName("arguments")!
+
+    const args = argumentsNode.namedChildren.filter(
+      (child) => child.type !== "comment",
+    )
+
+    if (args.length === 0) {
+      continue
+    }
+
+    const pathArg = resolveArgNode(args, 0, "url")
+
+    if (!pathArg) {
+      continue
+    }
+    const path = extractPathFromNode(pathArg)
+
+    calls.push({
+      method,
+      path,
+      line: callNode.startPosition.row,
+      column: callNode.startPosition.column,
+    })
+  }
+
+  return calls
+}

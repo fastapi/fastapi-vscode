@@ -36,7 +36,9 @@ import {
   type PathOperationTreeItem,
   PathOperationTreeProvider,
 } from "./vscode/pathOperationTreeProvider"
+import { RouteCodeLensProvider } from "./vscode/routeCodeLensProvider"
 import { TestCodeLensProvider } from "./vscode/testCodeLensProvider"
+import { TestCallIndex } from "./vscode/testIndex"
 
 export const EXTENSION_ID = "FastAPILabs.fastapi-vscode"
 
@@ -155,17 +157,29 @@ export async function activate(context: vscode.ExtensionContext) {
     apps,
     groupApps(apps),
   )
+  const testIndex = new TestCallIndex(parserService)
+  testIndex.build().catch((e) => log(`TestCallIndex build failed: ${e}`))
+
   const codeLensProvider = new TestCodeLensProvider(parserService, apps)
+  const routeCodeLensProvider = new RouteCodeLensProvider(apps, testIndex)
 
   // File watcher for auto-refresh
   let refreshTimeout: ReturnType<typeof setTimeout> | null = null
-  const triggerRefresh = () => {
+  const triggerRefresh = (uri?: vscode.Uri) => {
     if (refreshTimeout) clearTimeout(refreshTimeout)
     refreshTimeout = setTimeout(async () => {
       if (!parserService) return
       const newApps = await discoverFastAPIApps(parserService)
+
+      if (uri) {
+        await testIndex.invalidateFile(uri.toString())
+      } else {
+        await testIndex.build()
+      }
+
       pathOperationProvider.setApps(newApps, groupApps(newApps))
       codeLensProvider.setApps(newApps)
+      routeCodeLensProvider.setApps(newApps)
     }, 300)
   }
 
@@ -176,7 +190,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Re-discover when workspace folders change (handles late folder availability in browser)
   context.subscriptions.push(
-    vscode.workspace.onDidChangeWorkspaceFolders(triggerRefresh),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => triggerRefresh()),
   )
 
   // Tree view
@@ -197,6 +211,10 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.languages.registerCodeLensProvider(
         { language: "python", pattern: "**/*test*.py" },
         codeLensProvider,
+      ),
+      vscode.languages.registerCodeLensProvider(
+        { language: "python", pattern: "**/*.py" },
+        routeCodeLensProvider,
       ),
     )
   }

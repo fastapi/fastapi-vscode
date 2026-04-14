@@ -5,6 +5,7 @@ import {
   decoratorExtractor,
   extractPathFromNode,
   extractStringValue,
+  findTestClientCalls,
   getNodesByType,
   importExtractor,
   includeRouterExtractor,
@@ -968,6 +969,94 @@ FLAG = True
       const ops = nodesByType.get("binary_operator") ?? []
       const result = extractPathFromNode(ops[0])
       assert.strictEqual(result, "\uE000a - b\uE000")
+    })
+  })
+
+  suite("findTestClientCalls", () => {
+    test("extracts simple GET call", () => {
+      const code = `client.get("/users")`
+      const tree = parse(code)
+      const calls = findTestClientCalls(tree.rootNode)
+
+      assert.strictEqual(calls.length, 1)
+      assert.strictEqual(calls[0].method, "get")
+      assert.strictEqual(calls[0].path, "/users")
+    })
+
+    test("extracts POST call", () => {
+      const code = `client.post("/items", json={"name": "test"})`
+      const tree = parse(code)
+      const calls = findTestClientCalls(tree.rootNode)
+
+      assert.strictEqual(calls.length, 1)
+      assert.strictEqual(calls[0].method, "post")
+      assert.strictEqual(calls[0].path, "/items")
+    })
+
+    test("extracts url keyword argument", () => {
+      const code = `client.get(url="/users")`
+      const tree = parse(code)
+      const calls = findTestClientCalls(tree.rootNode)
+
+      assert.strictEqual(calls.length, 1)
+      assert.strictEqual(calls[0].path, "/users")
+    })
+
+    test("extracts multiple calls", () => {
+      const code = `
+client.get("/users")
+client.post("/items")
+client.delete("/items/1")
+`
+      const tree = parse(code)
+      const calls = findTestClientCalls(tree.rootNode)
+
+      assert.strictEqual(calls.length, 3)
+      assert.strictEqual(calls[0].method, "get")
+      assert.strictEqual(calls[1].method, "post")
+      assert.strictEqual(calls[2].method, "delete")
+    })
+
+    test("ignores non-HTTP method calls", () => {
+      const code = `client.connect("/ws")`
+      const tree = parse(code)
+      const calls = findTestClientCalls(tree.rootNode)
+
+      assert.strictEqual(calls.length, 0)
+    })
+
+    test("ignores plain function calls", () => {
+      const code = `get("/users")`
+      const tree = parse(code)
+      const calls = findTestClientCalls(tree.rootNode)
+
+      assert.strictEqual(calls.length, 0)
+    })
+
+    test("ignores calls with no arguments", () => {
+      const code = "client.get()"
+      const tree = parse(code)
+      const calls = findTestClientCalls(tree.rootNode)
+
+      assert.strictEqual(calls.length, 0)
+    })
+
+    test("extracts f-string path", () => {
+      const code = `client.get(f"/users/{user_id}")`
+      const tree = parse(code)
+      const calls = findTestClientCalls(tree.rootNode)
+
+      assert.strictEqual(calls.length, 1)
+      assert.strictEqual(calls[0].path, "/users/{user_id}")
+    })
+
+    test("includes line and column", () => {
+      const code = `client.get("/users")`
+      const tree = parse(code)
+      const calls = findTestClientCalls(tree.rootNode)
+
+      assert.strictEqual(calls[0].line, 0)
+      assert.strictEqual(calls[0].column, 0)
     })
   })
 

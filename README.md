@@ -20,7 +20,7 @@ Using ctrl+shift+E (cmd+shift+E on Mac), you can open the Command Palette and qu
 
 ### CodeLens for test client calls
 
-CodeLens links appear above HTTP client calls like `client.get('/items')`, letting you jump directly to the matching route definition.
+CodeLens links appear above HTTP client calls like `client.get('/items')`, letting you jump directly to the matching route definition. Route definitions also show how many tests reference each endpoint, with links to navigate to the matching test calls.
 
 ![CodeLens GIF](media/walkthrough/codelens.gif)
 
@@ -41,7 +41,7 @@ View real-time logs from your FastAPI Cloud deployed applications directly withi
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `fastapi.entryPoint` | Entry point for the main FastAPI application in module notation (e.g., `my_app.main:app`). If not set, the extension searches `pyproject.toml` and common locations. | `""` (auto-detect) |
-| `fastapi.codeLens.enabled` | Show CodeLens links above test client calls (e.g., `client.get('/items')`) to navigate to the corresponding route definition. | `true` |
+| `fastapi.codeLens.enabled` | Show CodeLens links above test client calls to navigate to route definitions, and above route definitions to navigate to matching tests. | `true` |
 | `fastapi.cloud.enabled` | Enable FastAPI Cloud integration (status bar, deploy commands). | `true` |
 | `fastapi.telemetry.enabled` | Send anonymous usage data to help improve the extension. See [TELEMETRY.md](TELEMETRY.md) for details on what is collected. | `true` |
 
