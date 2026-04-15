@@ -62,12 +62,19 @@ export class ApiService {
     })
 
     if (!response.ok) {
+      let detail = ""
+      try {
+        const body = await response.json()
+        detail = typeof body.detail === "string" ? body.detail : ""
+      } catch {}
+
       throw new Error(
-        `API request failed: ${options.method || "GET"} ${endpoint} returned ${response.status}`,
+        detail ||
+          `API request failed: ${options.method || "GET"} ${endpoint} returned ${response.status}`,
       )
     }
 
-    return response.json() as Promise<T>
+    return (await response.json()) as T
   }
 
   static async getUser(token: string): Promise<User | null> {
@@ -174,8 +181,15 @@ export class ApiService {
     )
 
     if (!response.ok || !response.body) {
+      let detail = ""
+      try {
+        const body = await response.json()
+        detail = typeof body.detail === "string" ? body.detail : ""
+      } catch {}
+
       throw new Error(
-        `Failed to stream logs: ${response.status} ${response.statusText}`,
+        detail ||
+          `Failed to stream logs: ${response.status} ${response.statusText}`,
       )
     }
 
