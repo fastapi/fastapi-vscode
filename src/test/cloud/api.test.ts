@@ -242,10 +242,49 @@ suite("cloud/api", () => {
       await assert.rejects(() => api.getTeams(), /Not authenticated/)
     })
 
-    test("throws on non-ok response", async () => {
-      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 403))
+    test("throws with detail message from API error response", async () => {
+      sinon
+        .stub(globalThis, "fetch")
+        .resolves(
+          mockResponse(
+            {
+              detail:
+                "App limit reached (3). Upgrade your plan to create more apps.",
+            },
+            false,
+            403,
+          ),
+        )
 
-      await assert.rejects(() => api.getTeams(), /API request failed/)
+      await assert.rejects(
+        () => api.createApp("team-id", "New App"),
+        /App limit reached \(3\). Upgrade your plan to create more apps\./,
+      )
+    })
+
+    test("falls back to generic message when no detail in error response", async () => {
+      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 500))
+
+      await assert.rejects(
+        () => api.createApp("team-id", "New App"),
+        /API request failed: POST \/apps\/ returned 500/,
+      )
+    })
+
+    test("falls back to generic message when response body is not JSON", async () => {
+      sinon.stub(globalThis, "fetch").resolves({
+        ok: false,
+        status: 502,
+        statusText: "Bad Gateway",
+        json: async () => {
+          throw new SyntaxError("Unexpected token")
+        },
+      } as unknown as Response)
+
+      await assert.rejects(
+        () => api.createApp("team-id", "New App"),
+        /API request failed: POST \/apps\/ returned 502/,
+      )
     })
 
     test("getApps returns app data", async () => {
@@ -270,6 +309,34 @@ suite("cloud/api", () => {
 
       const [, options] = fetchStub.firstCall.args
       assert.strictEqual(options?.method, "POST")
+    })
+
+    test("streamAppLogs throws with detail message from API error response", async () => {
+      sinon
+        .stub(globalThis, "fetch")
+        .resolves(mockResponse({ detail: "App not found" }, false, 404))
+
+      const stream = api.streamAppLogs({
+        appId: "app-id",
+        tail: 100,
+        since: "2024-01-01T00:00:00Z",
+        follow: false,
+      })
+
+      await assert.rejects(() => stream.next(), /App not found/)
+    })
+
+    test("streamAppLogs falls back to generic message when no detail", async () => {
+      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 502))
+
+      const stream = api.streamAppLogs({
+        appId: "app-id",
+        tail: 100,
+        since: "2024-01-01T00:00:00Z",
+        follow: false,
+      })
+
+      await assert.rejects(() => stream.next(), /Failed to stream logs: 502/)
     })
 
     test("request includes auth header and user-agent", async () => {
