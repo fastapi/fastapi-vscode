@@ -13,13 +13,7 @@ import {
   type TextDocument,
   Uri,
 } from "vscode"
-import type { Node } from "web-tree-sitter"
-import {
-  extractPathFromNode,
-  getNodesByType,
-  resolveArgNode,
-} from "../core/extractors"
-import { ROUTE_METHODS } from "../core/internal"
+import { findTestClientCalls } from "../core/extractors"
 import type { Parser } from "../core/parser"
 import {
   pathMatchesPathOperation,
@@ -29,14 +23,7 @@ import { collectRoutes } from "../core/treeUtils"
 import type { AppDefinition, SourceLocation } from "../core/types"
 import { trackCodeLensProvided } from "../utils/telemetry"
 
-interface TestClientCall {
-  method: string
-  path: string
-  line: number
-  column: number
-}
-
-export class TestCodeLensProvider implements CodeLensProvider {
+export class TestToRouteCodeLensProvider implements CodeLensProvider {
   private apps: AppDefinition[] = []
   private parser: Parser
 
@@ -62,7 +49,7 @@ export class TestCodeLensProvider implements CodeLensProvider {
     /* c8 ignore next */
     if (!tree) return []
 
-    const testClientCalls = this.findTestClientCalls(tree.rootNode)
+    const testClientCalls = findTestClientCalls(tree.rootNode)
 
     const codeLenses: CodeLens[] = []
 
@@ -106,55 +93,6 @@ export class TestCodeLensProvider implements CodeLensProvider {
     }
 
     return codeLenses
-  }
-
-  private findTestClientCalls(rootNode: Node): TestClientCall[] {
-    const calls: TestClientCall[] = []
-    const nodesByType = getNodesByType(rootNode)
-    const callNodes = nodesByType.get("call") ?? []
-
-    for (const callNode of callNodes) {
-      // Grammar guarantees: call nodes always have a function field
-      const functionNode = callNode.childForFieldName("function")!
-      if (functionNode.type !== "attribute") {
-        continue
-      }
-
-      // Grammar guarantees: attribute nodes always have an attribute field
-      const methodNode = functionNode.childForFieldName("attribute")!
-
-      const method = methodNode.text.toLowerCase()
-      if (!ROUTE_METHODS.has(method)) {
-        continue
-      }
-
-      // Grammar guarantees: call nodes always have an arguments field
-      const argumentsNode = callNode.childForFieldName("arguments")!
-
-      const args = argumentsNode.namedChildren.filter(
-        (child) => child.type !== "comment",
-      )
-
-      if (args.length === 0) {
-        continue
-      }
-
-      const pathArg = resolveArgNode(args, 0, "url")
-
-      if (!pathArg) {
-        continue
-      }
-      const path = extractPathFromNode(pathArg)
-
-      calls.push({
-        method,
-        path,
-        line: callNode.startPosition.row,
-        column: callNode.startPosition.column,
-      })
-    }
-
-    return calls
   }
 
   private findMatchingRoutes(

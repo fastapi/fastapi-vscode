@@ -311,7 +311,7 @@
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "description": "Show CodeLens links above test client calls (e.g., client.get('/items')) to navigate to the corresponding route definition."
+          "description": "Show CodeLens links above test client calls to navigate to route definitions, and above route definitions to navigate to matching tests."
         },
         "fastapi.cloud.enabled": {
           "type": "boolean",

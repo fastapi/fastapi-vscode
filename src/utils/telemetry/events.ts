@@ -148,8 +148,10 @@ export function trackSearchExecuted(
 export function trackCodeLensProvided(
   testCallsCount: number,
   matchedCount: number,
+  type: "test" | "route" = "test",
 ): void {
   client.capture(Events.CODELENS_PROVIDED, {
+    type,
     test_calls_count: testCallsCount,
     matched_count: matchedCount,
     match_rate: testCallsCount > 0 ? matchedCount / testCallsCount : 0,
