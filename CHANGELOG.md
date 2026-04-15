@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Features
+
+* ✨ Add support for route to test CodeLens. PR [#143](https://github.com/fastapi/fastapi-vscode/pull/143) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Internal
 
 * 🔖 Release version 0.1.6. PR [#141](https://github.com/fastapi/fastapi-vscode/pull/141) by [@savannahostrowski](https://github.com/savannahostrowski).
