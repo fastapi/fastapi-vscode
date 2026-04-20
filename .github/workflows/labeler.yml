@@ -1,6 +1,6 @@
 name: Labels
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types:
       - opened
       - synchronize
@@ -8,6 +8,8 @@ on:
       # For label-checker
       - labeled
       - unlabeled
+
+permissions: {}
 
 jobs:
   labeler:
@@ -27,7 +29,7 @@ jobs:
       pull-requests: read
     runs-on: ubuntu-latest
     steps:
-      - uses: docker://agilepathway/pull-request-label-checker:latest
+      - uses: agilepathway/label-checker@c3d16ad512e7cea5961df85ff2486bb774caf3c5 # v1.6.65
         with:
           one_of: breaking,security,feature,bug,refactor,upgrade,docs,internal
           repo_token: ${{ secrets.GITHUB_TOKEN }}

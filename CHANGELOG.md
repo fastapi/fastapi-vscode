@@ -8,6 +8,7 @@
 
 ### Internal
 
+* 🔒️ Add zizmor and fix audit findings. PR [#146](https://github.com/fastapi/fastapi-vscode/pull/146) by [@YuriiMotov](https://github.com/YuriiMotov).
 * 🔖 Release version 0.2.0. PR [#144](https://github.com/fastapi/fastapi-vscode/pull/144) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ## 0.2.0
