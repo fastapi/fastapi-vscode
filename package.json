@@ -253,11 +253,11 @@
           },
           {
             "id": "codelens",
-            "title": "Navigate from Tests to Routes",
-            "description": "CodeLens links appear above test client calls to jump directly to the route definition.",
+            "title": "Jump Between Routes and Tests",
+            "description": "CodeLens links connect your routes and their tests. Click above a route decorator to see and jump to its tests, or click above a test client call to jump to the route definition.",
             "media": {
               "image": "media/walkthrough/codelens.gif",
-              "altText": "CodeLens link above test client call"
+              "altText": "CodeLens links above a route decorator and a test client call"
             }
           },
           {
