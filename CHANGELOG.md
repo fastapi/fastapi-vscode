@@ -6,6 +6,10 @@
 
 * 🚸 Improve error handling so toasts are more descriptive. PR [#145](https://github.com/fastapi/fastapi-vscode/pull/145) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+### Docs
+
+* 🍱  Update walkthrough assets and copy for legibility. PR [#147](https://github.com/fastapi/fastapi-vscode/pull/147) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Internal
 
 * 🔒️ Add zizmor and fix audit findings. PR [#146](https://github.com/fastapi/fastapi-vscode/pull/146) by [@YuriiMotov](https://github.com/YuriiMotov).
