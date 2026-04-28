@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { DEFAULT_BASE_URL, DEFAULT_DASHBOARD_URL } from "../env"
 import { getExtensionVersion } from "../extension"
 import { log } from "../utils/logger"
 import { AUTH_PROVIDER_ID } from "./auth"
@@ -10,9 +11,6 @@ import type {
   UploadInfo,
   User,
 } from "./types"
-
-export const BASE_URL = "https://api.fastapicloud.com/api/v1"
-export const DASHBOARD_URL = "https://dashboard.fastapicloud.com"
 
 function getUserAgentHeaders(): Record<string, string> {
   if (vscode.env.uiKind === vscode.UIKind.Web) return {}
@@ -33,8 +31,13 @@ export class StreamLogError extends Error {
 }
 
 export class ApiService {
-  static getDashboardUrl(teamSlug: string, appSlug: string): string {
-    return `${DASHBOARD_URL}/${teamSlug}/apps/${appSlug}/general`
+  constructor(
+    public readonly baseUrl: string = DEFAULT_BASE_URL,
+    public readonly dashboardUrl: string = DEFAULT_DASHBOARD_URL,
+  ) {}
+
+  getDashboardUrl(teamSlug: string, appSlug: string): string {
+    return `${this.dashboardUrl}/${teamSlug}/apps/${appSlug}/general`
   }
 
   private async request<T>(
@@ -51,7 +54,7 @@ export class ApiService {
     }
     const token = session.accessToken
 
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -77,9 +80,9 @@ export class ApiService {
     return (await response.json()) as T
   }
 
-  static async getUser(token: string): Promise<User | null> {
+  async getUser(token: string): Promise<User | null> {
     try {
-      const response = await fetch(`${BASE_URL}/users/me`, {
+      const response = await fetch(`${this.baseUrl}/users/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -170,7 +173,7 @@ export class ApiService {
       follow: String(follow),
     })
     const response = await fetch(
-      `${BASE_URL}/apps/${appId}/logs/stream?${params}`,
+      `${this.baseUrl}/apps/${appId}/logs/stream?${params}`,
       {
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
@@ -236,7 +239,7 @@ export class ApiService {
     }
   }
 
-  static async requestDeviceCode(clientId: string): Promise<{
+  async requestDeviceCode(clientId: string): Promise<{
     device_code: string
     user_code: string
     verification_uri: string
@@ -244,7 +247,7 @@ export class ApiService {
     expires_in?: number
     interval?: number
   }> {
-    const response = await fetch(`${BASE_URL}/login/device/authorization`, {
+    const response = await fetch(`${this.baseUrl}/login/device/authorization`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -281,7 +284,7 @@ export class ApiService {
     }
   }
 
-  static async pollDeviceToken(
+  async pollDeviceToken(
     clientId: string,
     deviceCode: string,
     intervalMs = 5000,
@@ -292,7 +295,7 @@ export class ApiService {
         throw new Error("Sign-in cancelled")
       }
 
-      const response = await fetch(`${BASE_URL}/login/device/token`, {
+      const response = await fetch(`${this.baseUrl}/login/device/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",

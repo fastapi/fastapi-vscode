@@ -116,15 +116,23 @@ async function main() {
         // internally references these Node.js modules for environment detection
         // posthog-node uses Node.js APIs, so telemetry is disabled in browser
         // util and child_process are used for version detection but not in browser
+        // os/path/fs/promises are imported by env.ts; loadEnvironment's
+        // try/catch swallows the require() failure at runtime in vscode.dev,
+        // so the user falls back to default URLs in the browser environment
         external: [
           "vscode",
           "fs/promises",
+          "node:fs/promises",
           "module",
           "posthog-node",
           "util",
           "child_process",
+          "os",
+          "path",
           "node:util",
           "node:child_process",
+          "node:os",
+          "node:path",
         ],
       })
 

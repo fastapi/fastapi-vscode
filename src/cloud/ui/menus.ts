@@ -3,7 +3,7 @@ import {
   trackCloudAppOpened,
   trackCloudDashboardOpened,
 } from "../../utils/telemetry"
-import { ApiService } from "../api"
+import type { ApiService } from "../api"
 import { AUTH_PROVIDER_ID } from "../auth"
 import type { WorkspaceState } from "../types"
 import { ui } from "./dialogs"
@@ -24,6 +24,7 @@ export class MenuHandler {
     private getState: (uri: vscode.Uri) => WorkspaceState,
     private getActiveWorkspaceFolder: () => vscode.Uri | null,
     private actions: MenuActions,
+    private apiService: ApiService,
   ) {}
 
   async showMenu(): Promise<void> {
@@ -65,7 +66,7 @@ export class MenuHandler {
     if (state.status !== "linked") return
 
     const { app, team } = state
-    const dashboardUrl = ApiService.getDashboardUrl(team.slug, app.slug)
+    const dashboardUrl = this.apiService.getDashboardUrl(team.slug, app.slug)
     const items = [
       {
         label: "$(rocket) Deploy App",

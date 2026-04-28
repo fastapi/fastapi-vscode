@@ -187,6 +187,14 @@ export function mockResponse(body: unknown, ok = true, status = 200): Response {
 
 export function mockApiService(overrides?: Partial<ApiService>) {
   return {
+    baseUrl: "https://api.fastapicloud.com/api/v1",
+    dashboardUrl: "https://dashboard.fastapicloud.com",
+    getDashboardUrl: sinon
+      .stub()
+      .callsFake(
+        (teamSlug: string, appSlug: string) =>
+          `https://dashboard.fastapicloud.com/${teamSlug}/apps/${appSlug}/general`,
+      ),
     getUser: sinon.stub().resolves(null),
     getTeams: sinon.stub().resolves([]),
     getApps: sinon.stub().resolves([]),
@@ -197,6 +205,8 @@ export function mockApiService(overrides?: Partial<ApiService>) {
     getUploadUrl: sinon.stub(),
     completeUpload: sinon.stub(),
     getDeployment: sinon.stub(),
+    requestDeviceCode: sinon.stub(),
+    pollDeviceToken: sinon.stub(),
     ...overrides,
   } as unknown as sinon.SinonStubbedInstance<ApiService>
 }

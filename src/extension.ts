@@ -14,6 +14,7 @@ import { Parser } from "./core/parser"
 import { stripLeadingDynamicSegments } from "./core/pathUtils"
 import { collectRoutes, countRouters } from "./core/treeUtils"
 import type { AppDefinition, SourceLocation } from "./core/types"
+import { loadEnvironment } from "./env"
 import { disposeLogger, log } from "./utils/logger"
 import {
   createTimer,
@@ -227,9 +228,14 @@ export async function activate(context: vscode.ExtensionContext) {
     .get<boolean>("cloud.enabled", true)
 
   if (cloudEnabled) {
+    const env = await loadEnvironment()
+
+    const configService = new ConfigService()
+    const apiService = new ApiService(env.baseUrl, env.dashboardUrl)
+
     // Auth provider must be registered regardless of workspace,
     // so sign-in works from command palette and Accounts menu in vscode.dev
-    const authProvider = new CloudAuthenticationProvider(context)
+    const authProvider = new CloudAuthenticationProvider(context, apiService)
     authProvider.startWatching()
 
     context.subscriptions.push(
@@ -240,9 +246,6 @@ export async function activate(context: vscode.ExtensionContext) {
         })
       }),
     )
-
-    const configService = new ConfigService()
-    const apiService = new ApiService()
 
     const logsViewProvider = new LogsViewProvider(
       context.extensionUri,

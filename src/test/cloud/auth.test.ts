@@ -1,6 +1,7 @@
 import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
+import { ApiService } from "../../cloud/api"
 import {
   CloudAuthenticationProvider,
   isTokenExpired,
@@ -106,8 +107,9 @@ suite("cloud/auth", () => {
 
     function createProvider() {
       const context = createMockContext()
-      const provider = new CloudAuthenticationProvider(context)
-      return { provider, context }
+      const apiService = new ApiService()
+      const provider = new CloudAuthenticationProvider(context, apiService)
+      return { provider, context, apiService }
     }
 
     suite("getSessions", () => {
