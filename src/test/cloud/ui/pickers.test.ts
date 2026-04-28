@@ -157,9 +157,8 @@ suite("cloud/ui/pickers", () => {
 
   suite("pickTeam", () => {
     test("auto-selects when only one team", async () => {
-      const api = mockApiService({
-        getTeams: sinon.stub().resolves([team1]),
-      })
+      const api = mockApiService()
+      api.getTeams.resolves([team1])
 
       const result = await pickTeam(api)
 
@@ -167,9 +166,8 @@ suite("cloud/ui/pickers", () => {
     })
 
     test("shows quick pick when multiple teams", async () => {
-      const api = mockApiService({
-        getTeams: sinon.stub().resolves([team1, team2]),
-      })
+      const api = mockApiService()
+      api.getTeams.resolves([team1, team2])
 
       sinon
         .stub(ui, "showQuickPick")
@@ -191,9 +189,8 @@ suite("cloud/ui/pickers", () => {
     })
 
     test("returns null on fetch error", async () => {
-      const api = mockApiService({
-        getTeams: sinon.stub().rejects(new Error("Network error")),
-      })
+      const api = mockApiService()
+      api.getTeams.rejects(new Error("Network error"))
       const errorStub = sinon.stub(ui, "showErrorMessage")
 
       const result = await pickTeam(api)
@@ -203,9 +200,8 @@ suite("cloud/ui/pickers", () => {
     })
 
     test("returns null when user cancels", async () => {
-      const api = mockApiService({
-        getTeams: sinon.stub().resolves([team1, team2]),
-      })
+      const api = mockApiService()
+      api.getTeams.resolves([team1, team2])
 
       sinon.stub(ui, "showQuickPick").resolves(undefined)
 
@@ -217,9 +213,8 @@ suite("cloud/ui/pickers", () => {
 
   suite("pickExistingApp", () => {
     test("shows apps and returns selection", async () => {
-      const api = mockApiService({
-        getApps: sinon.stub().resolves([app1, app2]),
-      })
+      const api = mockApiService()
+      api.getApps.resolves([app1, app2])
 
       sinon
         .stub(vscode.window, "showQuickPick")
@@ -241,9 +236,8 @@ suite("cloud/ui/pickers", () => {
     })
 
     test("returns null on fetch error", async () => {
-      const api = mockApiService({
-        getApps: sinon.stub().rejects(new Error("Network error")),
-      })
+      const api = mockApiService()
+      api.getApps.rejects(new Error("Network error"))
       const errorStub = sinon.stub(ui, "showErrorMessage")
 
       const result = await pickExistingApp(api, team1)
@@ -253,9 +247,8 @@ suite("cloud/ui/pickers", () => {
     })
 
     test("returns null when user cancels", async () => {
-      const api = mockApiService({
-        getApps: sinon.stub().resolves([app1]),
-      })
+      const api = mockApiService()
+      api.getApps.resolves([app1])
 
       sinon.stub(ui, "showQuickPick").resolves(undefined)
 
@@ -268,9 +261,8 @@ suite("cloud/ui/pickers", () => {
   suite("createNewApp", () => {
     test("creates app with valid name", async () => {
       const createdApp = { id: "a3", slug: "my-app", url: "", team_id: "t1" }
-      const api = mockApiService({
-        createApp: sinon.stub().resolves(createdApp),
-      })
+      const api = mockApiService()
+      api.createApp.resolves(createdApp)
 
       sinon.stub(vscode.window, "showInputBox").resolves("my-app")
 
@@ -316,9 +308,8 @@ suite("cloud/ui/pickers", () => {
     })
 
     test("returns null on API error", async () => {
-      const api = mockApiService({
-        createApp: sinon.stub().rejects(new Error("Already exists")),
-      })
+      const api = mockApiService()
+      api.createApp.rejects(new Error("Already exists"))
 
       sinon.stub(vscode.window, "showInputBox").resolves("my-app")
       const errorStub = sinon.stub(ui, "showErrorMessage")
