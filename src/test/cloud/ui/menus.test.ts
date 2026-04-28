@@ -4,6 +4,7 @@ import * as vscode from "vscode"
 import type { WorkspaceState } from "../../../cloud/types"
 import { ui } from "../../../cloud/ui/dialogs"
 import { type MenuActions, MenuHandler } from "../../../cloud/ui/menus"
+import { mockApiService } from "../../testUtils"
 
 const mockSession = {
   accessToken: "test_token",
@@ -27,7 +28,12 @@ function createMenuHandler(
     viewLogs: sinon.stub().resolves(),
   }
 
-  const handler = new MenuHandler(getState, getActiveWorkspaceFolder, actions)
+  const handler = new MenuHandler(
+    getState,
+    getActiveWorkspaceFolder,
+    actions,
+    mockApiService(),
+  )
 
   return { handler, actions }
 }

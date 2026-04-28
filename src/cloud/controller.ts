@@ -66,6 +66,7 @@ export class CloudController {
         deploy: (uri) => this.deploy(uri),
         viewLogs: () => this.viewLogs(),
       },
+      this.apiService,
     )
   }
 

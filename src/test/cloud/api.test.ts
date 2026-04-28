@@ -1,7 +1,8 @@
 import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
-import { ApiService, BASE_URL } from "../../cloud/api"
+import { ApiService } from "../../cloud/api"
+import { DEFAULT_BASE_URL } from "../../env"
 import { mockResponse } from "../testUtils"
 
 suite("cloud/api", () => {
@@ -9,7 +10,7 @@ suite("cloud/api", () => {
 
   suite("getDashboardUrl", () => {
     test("returns correct URL", () => {
-      const url = ApiService.getDashboardUrl("my-team", "my-app")
+      const url = new ApiService().getDashboardUrl("my-team", "my-app")
       assert.strictEqual(
         url,
         "https://dashboard.fastapicloud.com/my-team/apps/my-app/general",
@@ -30,7 +31,7 @@ suite("cloud/api", () => {
         }),
       )
 
-      const result = await ApiService.requestDeviceCode("test-client")
+      const result = await new ApiService().requestDeviceCode("test-client")
 
       assert.deepStrictEqual(result, {
         device_code: "dc_123",
@@ -42,7 +43,7 @@ suite("cloud/api", () => {
       })
 
       const [url, options] = fetchStub.firstCall.args
-      assert.strictEqual(url, `${BASE_URL}/login/device/authorization`)
+      assert.strictEqual(url, `${DEFAULT_BASE_URL}/login/device/authorization`)
       assert.strictEqual(options?.method, "POST")
       assert.ok(
         (options?.headers as Record<string, string>)["Content-Type"]?.includes(
@@ -60,7 +61,7 @@ suite("cloud/api", () => {
         }),
       )
 
-      const result = await ApiService.requestDeviceCode("test-client")
+      const result = await new ApiService().requestDeviceCode("test-client")
 
       assert.strictEqual(result.verification_uri_complete, "")
       assert.strictEqual(result.expires_in, undefined)
@@ -71,7 +72,7 @@ suite("cloud/api", () => {
       sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 500))
 
       await assert.rejects(
-        () => ApiService.requestDeviceCode("test-client"),
+        () => new ApiService().requestDeviceCode("test-client"),
         /Device code request failed: 500/,
       )
     })
@@ -80,7 +81,7 @@ suite("cloud/api", () => {
       sinon.stub(globalThis, "fetch").resolves(mockResponse({}))
 
       await assert.rejects(
-        () => ApiService.requestDeviceCode("test-client"),
+        () => new ApiService().requestDeviceCode("test-client"),
         /Invalid response from device code endpoint/,
       )
     })
@@ -94,7 +95,7 @@ suite("cloud/api", () => {
           mockResponse({ email: "test@example.com", full_name: "Test User" }),
         )
 
-      const result = await ApiService.getUser("test_token")
+      const result = await new ApiService().getUser("test_token")
 
       assert.deepStrictEqual(result, {
         email: "test@example.com",
@@ -105,7 +106,7 @@ suite("cloud/api", () => {
     test("returns null on non-ok response", async () => {
       sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 401))
 
-      const result = await ApiService.getUser("bad_token")
+      const result = await new ApiService().getUser("bad_token")
 
       assert.strictEqual(result, null)
     })
@@ -113,7 +114,7 @@ suite("cloud/api", () => {
     test("returns null on network error", async () => {
       sinon.stub(globalThis, "fetch").rejects(new Error("fetch failed"))
 
-      const result = await ApiService.getUser("test_token")
+      const result = await new ApiService().getUser("test_token")
 
       assert.strictEqual(result, null)
     })
@@ -125,7 +126,10 @@ suite("cloud/api", () => {
         .stub(globalThis, "fetch")
         .resolves(mockResponse({ access_token: "test_token_123" }))
 
-      const result = await ApiService.pollDeviceToken("test-client", "dc_123")
+      const result = await new ApiService().pollDeviceToken(
+        "test-client",
+        "dc_123",
+      )
 
       assert.strictEqual(result, "test_token_123")
     })
@@ -141,7 +145,7 @@ suite("cloud/api", () => {
         .onSecondCall()
         .resolves(mockResponse({ access_token: "token_after_poll" }))
 
-      const resultPromise = ApiService.pollDeviceToken(
+      const resultPromise = new ApiService().pollDeviceToken(
         "test-client",
         "dc_123",
         100,
@@ -163,7 +167,7 @@ suite("cloud/api", () => {
         .resolves(mockResponse({ error: "expired_token" }, false, 400))
 
       await assert.rejects(
-        () => ApiService.pollDeviceToken("test-client", "dc_123"),
+        () => new ApiService().pollDeviceToken("test-client", "dc_123"),
         /Device code has expired/,
       )
     })
@@ -174,7 +178,7 @@ suite("cloud/api", () => {
         .resolves(mockResponse({ error: "server_error" }, false, 500))
 
       await assert.rejects(
-        () => ApiService.pollDeviceToken("test-client", "dc_123"),
+        () => new ApiService().pollDeviceToken("test-client", "dc_123"),
         /Device token request failed: server_error/,
       )
     })
@@ -189,7 +193,7 @@ suite("cloud/api", () => {
 
       await assert.rejects(
         () =>
-          ApiService.pollDeviceToken(
+          new ApiService().pollDeviceToken(
             "test-client",
             "dc_123",
             100,
@@ -243,18 +247,16 @@ suite("cloud/api", () => {
     })
 
     test("throws with detail message from API error response", async () => {
-      sinon
-        .stub(globalThis, "fetch")
-        .resolves(
-          mockResponse(
-            {
-              detail:
-                "App limit reached (3). Upgrade your plan to create more apps.",
-            },
-            false,
-            403,
-          ),
-        )
+      sinon.stub(globalThis, "fetch").resolves(
+        mockResponse(
+          {
+            detail:
+              "App limit reached (3). Upgrade your plan to create more apps.",
+          },
+          false,
+          403,
+        ),
+      )
 
       await assert.rejects(
         () => api.createApp("team-id", "New App"),

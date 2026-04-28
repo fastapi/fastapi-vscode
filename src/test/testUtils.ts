@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import sinon from "sinon"
 import * as vscode from "vscode"
-import type { ApiService } from "../cloud/api"
+import { ApiService } from "../cloud/api"
 import type { ConfigService } from "../cloud/config"
 import type { FileSystem } from "../core/filesystem"
 
@@ -185,20 +185,25 @@ export function mockResponse(body: unknown, ok = true, status = 200): Response {
   } as unknown as Response
 }
 
-export function mockApiService(overrides?: Partial<ApiService>) {
-  return {
-    getUser: sinon.stub().resolves(null),
-    getTeams: sinon.stub().resolves([]),
-    getApps: sinon.stub().resolves([]),
-    createApp: sinon.stub(),
-    getApp: sinon.stub(),
-    getTeam: sinon.stub(),
-    createDeployment: sinon.stub(),
-    getUploadUrl: sinon.stub(),
-    completeUpload: sinon.stub(),
-    getDeployment: sinon.stub(),
-    ...overrides,
-  } as unknown as sinon.SinonStubbedInstance<ApiService>
+export function mockApiService(
+  overrides: Partial<sinon.SinonStubbedInstance<ApiService>> = {},
+): sinon.SinonStubbedInstance<ApiService> {
+  const stub = sinon.createStubInstance(ApiService)
+  Object.assign(stub, {
+    baseUrl: "https://api.fastapicloud.com/api/v1",
+    dashboardUrl: "https://dashboard.fastapicloud.com",
+  })
+
+  stub.getDashboardUrl.callsFake((teamSlug: string, appSlug: string) => {
+    return `https://dashboard.fastapicloud.com/${teamSlug}/apps/${appSlug}/general`
+  })
+
+  stub.getUser.resolves(null)
+  stub.getTeams.resolves([])
+  stub.getApps.resolves([])
+
+  Object.assign(stub, overrides)
+  return stub
 }
 
 export function mockConfigService() {

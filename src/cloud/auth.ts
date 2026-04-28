@@ -15,7 +15,7 @@ import {
   workspace,
 } from "vscode"
 import { trackCloudSignIn } from "../utils/telemetry"
-import { ApiService } from "./api"
+import type { ApiService } from "./api"
 
 export const AUTH_PROVIDER_ID = "fastapi-vscode"
 export const NAME = "FastAPI Cloud"
@@ -58,7 +58,10 @@ export class CloudAuthenticationProvider
     new EventEmitter<AuthenticationProviderAuthenticationSessionsChangeEvent>()
   private _disposable: Disposable
 
-  constructor(private readonly context: ExtensionContext) {
+  constructor(
+    private readonly context: ExtensionContext,
+    private readonly apiService: ApiService,
+  ) {
     this._disposable = Disposable.from(
       authentication.registerAuthenticationProvider(
         AUTH_PROVIDER_ID,
@@ -142,7 +145,7 @@ export class CloudAuthenticationProvider
       }
 
       if (!this.cachedLabel) {
-        const info = await ApiService.getUser(token)
+        const info = await this.apiService.getUser(token)
         if (info?.email) {
           this.cachedLabel = info.email
         }
@@ -200,11 +203,10 @@ export class CloudAuthenticationProvider
       return sessions[0]
     }
 
-    let deviceCodeResponse: Awaited<
-      ReturnType<typeof ApiService.requestDeviceCode>
-    >
+    let deviceCodeResponse: Awaited<ReturnType<ApiService["requestDeviceCode"]>>
     try {
-      deviceCodeResponse = await ApiService.requestDeviceCode(AUTH_PROVIDER_ID)
+      deviceCodeResponse =
+        await this.apiService.requestDeviceCode(AUTH_PROVIDER_ID)
     } catch (error) {
       if (
         error instanceof TypeError &&
@@ -234,7 +236,7 @@ export class CloudAuthenticationProvider
         const abortController = new AbortController()
         cancellationToken.onCancellationRequested(() => abortController.abort())
 
-        return await ApiService.pollDeviceToken(
+        return await this.apiService.pollDeviceToken(
           AUTH_PROVIDER_ID,
           deviceCodeResponse.device_code,
           intervalMs,
