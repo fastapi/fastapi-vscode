@@ -6,6 +6,10 @@
 
 * 🚸 Improve error handling so toasts are more descriptive. PR [#145](https://github.com/fastapi/fastapi-vscode/pull/145) by [@savannahostrowski](https://github.com/savannahostrowski).
 
+### Upgrades
+
+* ⬆ Bump lint-staged from 16.4.0 to 17.0.2. PR [#152](https://github.com/fastapi/fastapi-vscode/pull/152) by [@dependabot[bot]](https://github.com/apps/dependabot).
+
 ### Docs
 
 * 🍱  Update walkthrough assets and copy for legibility. PR [#147](https://github.com/fastapi/fastapi-vscode/pull/147) by [@savannahostrowski](https://github.com/savannahostrowski).
