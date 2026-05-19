@@ -4,17 +4,30 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     cooldown:
       default-days: 7
     commit-message:
       prefix: ⬆
+    labels:
+      - "internal"
+      - "dependencies"
+      - "github_actions"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
   # Node.js
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     cooldown:
       default-days: 7
     commit-message:
       prefix: ⬆
+    groups:
+      npm-packages:
+        dependency-type: "development"
+        patterns:
+          - "*"
