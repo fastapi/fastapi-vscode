@@ -12,14 +12,12 @@ import {
 
 import { type AppDefinition, collectRoutes } from "../core"
 import type { RouteDefinition } from "../core/types"
-import { trackCodeLensProvided } from "../utils/telemetry"
 import type { TestCallIndex } from "./testIndex"
 
 export class RouteToTestCodeLensProvider implements CodeLensProvider {
   private cachedRoutes: RouteDefinition[] = []
   private testIndex: TestCallIndex
   private indexListener: Disposable
-  private trackedFiles = new Set<string>()
 
   private _onDidChangeCodeLenses = new EventEmitter<void>()
   readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event
@@ -34,7 +32,6 @@ export class RouteToTestCodeLensProvider implements CodeLensProvider {
 
   setApps(apps: AppDefinition[]): void {
     this.cachedRoutes = collectRoutes(apps)
-    this.trackedFiles.clear()
     this._onDidChangeCodeLenses.fire()
   }
 
@@ -75,11 +72,6 @@ export class RouteToTestCodeLensProvider implements CodeLensProvider {
           ],
         }),
       )
-    }
-
-    if (routes.length > 0 && !this.trackedFiles.has(currentFile)) {
-      this.trackedFiles.add(currentFile)
-      trackCodeLensProvided(routes.length, codeLenses.length, "route")
     }
 
     return codeLenses

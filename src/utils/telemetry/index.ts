@@ -17,7 +17,6 @@ export {
   trackCloudProjectUnlinked,
   trackCloudSignIn,
   trackCloudSignOut,
-  trackCodeLensProvided,
   trackDeactivation,
   trackEntrypointDetected,
   trackSearchExecuted,
