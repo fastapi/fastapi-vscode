@@ -568,7 +568,7 @@ suite("cloud/auth", () => {
 
         fsStub.fake.readFile.rejects(new Error("File not found"))
 
-        provider.startWatching()
+        await provider.startWatching()
 
         await clock.tickAsync(3100)
         const callCount = fsStub.fake.readFile.callCount

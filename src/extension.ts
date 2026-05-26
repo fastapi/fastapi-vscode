@@ -236,7 +236,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // Auth provider must be registered regardless of workspace,
     // so sign-in works from command palette and Accounts menu in vscode.dev
     const authProvider = new CloudAuthenticationProvider(context, apiService)
-    authProvider.startWatching()
+    await authProvider.startWatching()
 
     context.subscriptions.push(
       { dispose: () => authProvider.dispose() },

@@ -74,9 +74,10 @@ export class CloudAuthenticationProvider
     )
   }
 
-  startWatching() {
+  async startWatching() {
     // Poll for auth changes since we can't use fs.watch in browser
     // and VS Code's file watcher doesn't work for files outside workspace
+    this.lastAuthState = await this.hasValidToken()
     this.pollingInterval = setInterval(
       () => this.checkAndFireAuthState(),
       AUTH_POLL_INTERVAL_MS,
