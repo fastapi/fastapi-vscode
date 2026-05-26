@@ -3,7 +3,7 @@
  */
 
 import * as vscode from "vscode"
-import { discoverFastAPIApps } from "./appDiscovery"
+import { type DiscoveryStats, discoverFastAPIApps } from "./appDiscovery"
 import { ApiService } from "./cloud/api"
 import { AUTH_PROVIDER_ID, CloudAuthenticationProvider } from "./cloud/auth"
 import { LOGS_VIEW_ID, LogsViewProvider } from "./cloud/commands/logs"
@@ -71,7 +71,7 @@ export async function activate(context: vscode.ExtensionContext) {
   await initVSCodeTelemetry(context)
 
   let apps: AppDefinition[] = []
-  let stats: Awaited<ReturnType<typeof discoverFastAPIApps>>["stats"] = {
+  let stats: DiscoveryStats = {
     detection_method_config: 0,
     detection_method_pyproject: 0,
     detection_method_heuristic: 0,
@@ -114,7 +114,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   try {
     // Discover apps and create providers
-    ;({ apps, stats } = await discoverFastAPIApps(parserService))
+    const result = await discoverFastAPIApps(parserService)
+    apps = result.apps
+    stats = result.stats
   } catch (error) {
     success = false
     trackActivationFailed(error, "discovery")

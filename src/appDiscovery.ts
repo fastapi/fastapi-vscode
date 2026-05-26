@@ -241,7 +241,13 @@ export async function discoverFastAPIApps(
       stats.folders_with_apps++
     }
 
-    stats[`detection_method_${detectionMethod}`]++
+    if (detectionMethod === "config") {
+      stats.detection_method_config++
+    } else if (detectionMethod === "pyproject") {
+      stats.detection_method_pyproject++
+    } else {
+      stats.detection_method_heuristic++
+    }
   }
 
   if (apps.length === 0) {
