@@ -23,12 +23,8 @@ export interface ActivationEventProps {
   routers_count: number
   apps_count: number
   workspace_folder_count: number
-}
-
-export interface EntrypointDetectedEventProps {
-  duration_ms: number
-  method: "config" | "pyproject" | "heuristic"
-  success: boolean
-  routes_count: number
-  routers_count: number
+  detection_method_config: number
+  detection_method_pyproject: number
+  detection_method_heuristic: number
+  folders_with_apps: number
 }

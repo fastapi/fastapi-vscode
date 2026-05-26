@@ -10,13 +10,19 @@ import type { Parser } from "./core/parser"
 import { findProjectRoot, uriPath } from "./core/pathUtils"
 import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
-import { collectRoutes, countRouters } from "./core/treeUtils"
+import { collectRoutes } from "./core/treeUtils"
 import type { AppDefinition } from "./core/types"
 import { log } from "./utils/logger"
-import { createTimer, trackEntrypointDetected } from "./utils/telemetry"
 import { vscodeFileSystem } from "./vscode/vscodeFileSystem"
 
 export type { EntryPoint }
+
+export interface DiscoveryStats {
+  detection_method_config: number
+  detection_method_pyproject: number
+  detection_method_heuristic: number
+  folders_with_apps: number
+}
 
 /**
  * Parses an entrypoint string in module:variable notation.
@@ -137,12 +143,18 @@ async function parsePyprojectForEntryPoint(
  */
 export async function discoverFastAPIApps(
   parser: Parser,
-  trackTelemetry = false,
-): Promise<AppDefinition[]> {
+): Promise<{ apps: AppDefinition[]; stats: DiscoveryStats }> {
+  const stats: DiscoveryStats = {
+    detection_method_config: 0,
+    detection_method_pyproject: 0,
+    detection_method_heuristic: 0,
+    folders_with_apps: 0,
+  }
+
   const workspaceFolders = vscode.workspace.workspaceFolders
   if (!workspaceFolders) {
     log("No workspace folders found")
-    return []
+    return { apps: [], stats }
   }
 
   log(
@@ -152,7 +164,6 @@ export async function discoverFastAPIApps(
   const apps: AppDefinition[] = []
 
   for (const folder of workspaceFolders) {
-    const folderTimer = createTimer()
     let detectionMethod: "config" | "pyproject" | "heuristic" = "heuristic"
     const folderApps: AppDefinition[] = []
     const config = vscode.workspace.getConfiguration("fastapi", folder.uri)
@@ -222,29 +233,20 @@ export async function discoverFastAPIApps(
       }
     }
 
-    const folderRoutes = collectRoutes(folderApps)
-
     if (folderApps.length > 0) {
+      const folderRoutes = collectRoutes(folderApps)
       log(
         `Found ${folderApps.length} FastAPI app(s) with ${folderRoutes.length} route(s) in ${folder.name}`,
       )
+      stats.folders_with_apps++
     }
 
-    // Track entrypoint detection per workspace folder (initial discovery only)
-    if (trackTelemetry) {
-      trackEntrypointDetected({
-        duration_ms: folderTimer(),
-        method: detectionMethod,
-        success: folderApps.length > 0,
-        routes_count: folderRoutes.length,
-        routers_count: countRouters(folderApps),
-      })
-    }
+    stats[`detection_method_${detectionMethod}`]++
   }
 
   if (apps.length === 0) {
     log("No FastAPI apps found in workspace")
   }
 
-  return apps
+  return { apps, stats }
 }

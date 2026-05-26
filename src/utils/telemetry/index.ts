@@ -18,14 +18,12 @@ export {
   trackCloudSignIn,
   trackCloudSignOut,
   trackDeactivation,
-  trackEntrypointDetected,
   trackSearchExecuted,
   trackTreeViewVisible,
 } from "./events"
 export type {
   ActivationEventProps,
   ClientInfo,
-  EntrypointDetectedEventProps,
   TelemetryConfig,
 } from "./types"
 export {
