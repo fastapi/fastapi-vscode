@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.2.1
+
 ### Fixes
 
 * 🚸 Improve error handling so toasts are more descriptive. PR [#145](https://github.com/fastapi/fastapi-vscode/pull/145) by [@savannahostrowski](https://github.com/savannahostrowski).
