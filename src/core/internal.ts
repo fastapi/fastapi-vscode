@@ -83,6 +83,13 @@ export interface FactoryCallInfo {
   functionName: string
 }
 
+export interface TestClientCall {
+  method: string
+  path: string
+  line: number
+  column: number
+}
+
 export interface FileAnalysis {
   filePath: string
   routes: RouteInfo[]
@@ -108,4 +115,10 @@ export interface RouterNode {
 export interface EntryPoint {
   filePath: string
   variableName?: string
+}
+
+export interface DependencyDefinitionInfo {
+  variableName: string
+  line: number
+  column: number
 }

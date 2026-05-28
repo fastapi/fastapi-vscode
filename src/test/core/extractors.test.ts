@@ -1,8 +1,10 @@
 import * as assert from "node:assert"
 import {
+  collectRecognizedDependencyNames,
   collectRecognizedNames,
   collectStringVariables,
   decoratorExtractor,
+  dependencyExtractor,
   extractPathFromNode,
   extractStringValue,
   findTestClientCalls,
@@ -1142,6 +1144,131 @@ def handler():
 
       assert.strictEqual(result.length, 1)
       assert.strictEqual(result[0].deprecated, undefined)
+    })
+  })
+
+  suite("dependencyExtractor", () => {
+    test("detects a simple Depends definition", () => {
+      const code = "current_user = Depends(get_current_user)"
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const assignments = nodesByType.get("assignment") ?? []
+
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      const result = dependencyExtractor(
+        assignments[0],
+        recognizedDependencyNames,
+      )
+      assert.strictEqual(result?.variableName, "current_user")
+      assert.strictEqual(result?.line, 1)
+      assert.strictEqual(result?.column, 0)
+    })
+
+    test("detect a simple Security definition", () => {
+      const code = "current_user = Security(get_current_user)"
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const assignments = nodesByType.get("assignment") ?? []
+
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      const result = dependencyExtractor(
+        assignments[0],
+        recognizedDependencyNames,
+      )
+      assert.strictEqual(result?.variableName, "current_user")
+      assert.strictEqual(result?.line, 1)
+      assert.strictEqual(result?.column, 0)
+    })
+
+    test("detects an Annotated[..., Depends(...)] definition", () => {
+      const code = "CurrentUser = Annotated[User, Depends(get_current_user)]"
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const assignments = nodesByType.get("assignment") ?? []
+
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      const result = dependencyExtractor(
+        assignments[0],
+        recognizedDependencyNames,
+      )
+      assert.strictEqual(result?.variableName, "CurrentUser")
+      assert.strictEqual(result?.line, 1)
+      assert.strictEqual(result?.column, 0)
+    })
+
+    test("detects an a qualified Depends (fastapi.Depends)", () => {
+      const code =
+        "CurrentUser = Annotated[User, fastapi.Depends(get_current_user)]"
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const assignments = nodesByType.get("assignment") ?? []
+
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      const result = dependencyExtractor(
+        assignments[0],
+        recognizedDependencyNames,
+      )
+      assert.strictEqual(result?.variableName, "CurrentUser")
+    })
+
+    test("detects a custom module alias for Depends", () => {
+      const code = `
+import fastapi as f
+
+CurrentUser = Annotated[User, f.Depends(get_current_user)]
+`
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const assignments = nodesByType.get("assignment") ?? []
+
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      assert.ok(recognizedDependencyNames.has("f.Depends"))
+
+      const result = dependencyExtractor(
+        assignments[0],
+        recognizedDependencyNames,
+      )
+      assert.strictEqual(result?.variableName, "CurrentUser")
+    })
+
+    test("detects custom Depends alias", () => {
+      const code = `
+from fastapi import Depends as FastAPIDepends
+
+CurrentUser = Annotated[User, FastAPIDepends(get_current_user)]
+`
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const assignments = nodesByType.get("assignment") ?? []
+
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      assert.ok(recognizedDependencyNames.has("FastAPIDepends"))
+
+      const result = dependencyExtractor(
+        assignments[0],
+        recognizedDependencyNames,
+      )
+      assert.strictEqual(result?.variableName, "CurrentUser")
+    })
+
+    test("returns null for non-Depends Annotated", () => {
+      const code = "NotADependency = Annotated[User, SomeOther(get_user)]"
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const assignments = nodesByType.get("assignment") ?? []
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      const result = dependencyExtractor(
+        assignments[0],
+        recognizedDependencyNames,
+      )
+      assert.strictEqual(result, null)
     })
   })
 })

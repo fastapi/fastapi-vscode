@@ -4,6 +4,7 @@
 
 import type { Node } from "web-tree-sitter"
 import type {
+  DependencyDefinitionInfo,
   FactoryCallInfo,
   ImportedName,
   ImportInfo,
@@ -12,6 +13,7 @@ import type {
   RouteInfo,
   RouterInfo,
   RouterType,
+  TestClientCall,
 } from "./internal"
 import { ROUTE_METHODS } from "./internal"
 
@@ -639,13 +641,6 @@ export function factoryCallExtractor(
   }
 }
 
-export interface TestClientCall {
-  method: string
-  path: string
-  line: number
-  column: number
-}
-
 export function findTestClientCalls(rootNode: Node): TestClientCall[] {
   const calls: TestClientCall[] = []
   const nodesByType = getNodesByType(rootNode)
@@ -693,4 +688,96 @@ export function findTestClientCalls(rootNode: Node): TestClientCall[] {
   }
 
   return calls
+}
+
+/**
+ * Collects recognized FastAPI dependency function names from imports.
+ * This allows dependencyExtractor to handle user-defined aliases, both the
+ * "from fastapi import X as Y" form and the "import fastapi as f" module-alias form.
+ *
+ * For example, if the code has:
+ *   from fastapi import Depends as D
+ *   from fastapi import Security as S
+ *   import fastapi as f
+ *
+ * Then this function will return:
+ *   Set { "Depends", "Security", "fastapi.Depends", "fastapi.Security",
+ *         "D", "S", "f.Depends", "f.Security" }
+ */
+export function collectRecognizedDependencyNames(
+  nodesByType: Map<string, Node[]>,
+): Set<string> {
+  const names = new Set<string>([
+    "Depends",
+    "Security",
+    "fastapi.Depends",
+    "fastapi.Security",
+  ])
+
+  for (const node of nodesByType.get("import_from_statement") ?? []) {
+    const info = importExtractor(node)
+    if (!info || info.modulePath !== "fastapi") continue
+    for (const named of info.namedImports) {
+      if (named.alias === null) continue
+      if (named.name === "Depends" || named.name === "Security") {
+        names.add(named.alias)
+      }
+    }
+  }
+
+  // Module aliases: "import fastapi as f" → recognizes f.Depends, f.Security
+  for (const node of nodesByType.get("import_statement") ?? []) {
+    const info = importExtractor(node)
+    if (!info) continue
+    for (const named of info.namedImports) {
+      if (named.alias === null) continue
+      if (named.name === "fastapi") {
+        names.add(`${named.alias}.Depends`)
+        names.add(`${named.alias}.Security`)
+      }
+    }
+  }
+
+  return names
+}
+
+/**
+ * Extracts dependency definitions from variable assignments using Depends or Annotated.
+ * Examples:
+ *   CurrentUser = Depends(get_current_user)
+ *   CurrentUser = Annotated[User, Depends(get_current_user)]
+ */
+export function dependencyExtractor(
+  node: Node,
+  recognizedDependencyNames: Set<string>,
+): DependencyDefinitionInfo | null {
+  if (node.type !== "assignment") {
+    return null
+  }
+
+  const isRecognizedCall = (n: Node) =>
+    n.type === "call" &&
+    !!n.childForFieldName("function") &&
+    recognizedDependencyNames.has(n.childForFieldName("function")!.text)
+
+  const variableNameNode = node.childForFieldName("left")
+  const valueNode = node.childForFieldName("right")
+  if (!variableNameNode) {
+    return null
+  }
+
+  const isDirect = valueNode != null && isRecognizedCall(valueNode)
+  const isAnnotated =
+    valueNode?.type === "subscript" &&
+    valueNode.childForFieldName("value")?.text === "Annotated" &&
+    valueNode.namedChildren.some(isRecognizedCall)
+
+  if (isDirect || isAnnotated) {
+    return {
+      variableName: variableNameNode.text,
+      line: node.startPosition.row + 1,
+      column: node.startPosition.column,
+    }
+  }
+  return null
 }
