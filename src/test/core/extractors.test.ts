@@ -1,5 +1,6 @@
 import * as assert from "node:assert"
 import {
+  collectDependencyDefinitions,
   collectRecognizedDependencyNames,
   collectRecognizedNames,
   collectStringVariables,
@@ -1269,6 +1270,70 @@ CurrentUser = Annotated[User, FastAPIDepends(get_current_user)]
         recognizedDependencyNames,
       )
       assert.strictEqual(result, null)
+    })
+  })
+
+  suite("collectDependencyDefinitions", () => {
+    test("collects multiple dependencies", () => {
+      const code = `
+from fastapi import Depends
+
+current_user = Depends(get_current_user)
+current_admin = Depends(get_current_admin)
+`
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      const result = collectDependencyDefinitions(
+        nodesByType,
+        recognizedDependencyNames,
+      )
+
+      assert.strictEqual(result.length, 2)
+      assert.strictEqual(result[0].variableName, "current_user")
+      assert.strictEqual(result[1].variableName, "current_admin")
+    })
+
+    test("ignores non-dependency assignments", () => {
+      const code = `
+from fastapi import Depends
+
+current_user = Depends(get_current_user)
+not_a_dependency = 42
+`
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      const result = collectDependencyDefinitions(
+        nodesByType,
+        recognizedDependencyNames,
+      )
+
+      assert.strictEqual(result.length, 1)
+      assert.strictEqual(result[0].variableName, "current_user")
+    })
+
+    test("handles dependencies defined inside functions", () => {
+      const code = `
+from fastapi import Depends
+
+def create_dependencies():
+    current_user = Depends(get_current_user)
+    return current_user
+`
+      const tree = parse(code)
+      const nodesByType = getNodesByType(tree.rootNode)
+      const recognizedDependencyNames =
+        collectRecognizedDependencyNames(nodesByType)
+      const result = collectDependencyDefinitions(
+        nodesByType,
+        recognizedDependencyNames,
+      )
+
+      // Should not include the dependency defined inside the function
+      assert.strictEqual(result.length, 0)
     })
   })
 })

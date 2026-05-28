@@ -781,3 +781,23 @@ export function dependencyExtractor(
   }
   return null
 }
+
+export function collectDependencyDefinitions(
+  nodesByType: Map<string, Node[]>,
+  recognizedDependencyNames: Set<string>,
+): DependencyDefinitionInfo[] {
+  const definitions: DependencyDefinitionInfo[] = []
+  for (const node of nodesByType.get("assignment") ?? []) {
+    if (
+      hasAncestor(node, "function_definition") ||
+      hasAncestor(node, "class_definition")
+    ) {
+      continue
+    }
+    const info = dependencyExtractor(node, recognizedDependencyNames)
+    if (info) {
+      definitions.push(info)
+    }
+  }
+  return definitions
+}
