@@ -5,9 +5,6 @@
 import type { Tree } from "web-tree-sitter"
 import { logError } from "../utils/logger"
 import {
-  collectDependencyDefinitions,
-  collectIdentifierNames,
-  collectRecognizedDependencyNames,
   collectRecognizedNames,
   collectStringVariables,
   decoratorExtractor,
@@ -46,14 +43,6 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
   // Get all decorated definitions (functions and classes with decorators)
   const decoratedDefs = nodesByType.get("decorated_definition") ?? []
   const routes = decoratedDefs.flatMap(decoratorExtractor)
-
-  const recognisedDependencyNames =
-    collectRecognizedDependencyNames(nodesByType)
-  const dependencies = collectDependencyDefinitions(
-    nodesByType,
-    recognisedDependencyNames,
-  )
-  const referencedNames = collectIdentifierNames(nodesByType)
 
   // Get all router assignments
   const assignments = nodesByType.get("assignment") ?? []
@@ -101,8 +90,6 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
     mounts,
     imports,
     factoryCalls,
-    dependencies,
-    referencedNames,
   }
 }
 

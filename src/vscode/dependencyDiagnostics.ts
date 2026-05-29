@@ -2,6 +2,7 @@ import {
   Diagnostic,
   type DiagnosticCollection,
   DiagnosticSeverity,
+  DiagnosticTag,
   Range,
   Uri,
 } from "vscode"
@@ -25,6 +26,8 @@ function toDiagnostic({ definition }: LocatedDependency): Diagnostic {
     DiagnosticSeverity.Information,
   )
   diagnostic.source = SOURCE
+  // Render the alias greyed-out, the conventional "unused code" treatment.
+  diagnostic.tags = [DiagnosticTag.Unnecessary]
   return diagnostic
 }
 

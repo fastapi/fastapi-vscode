@@ -1,10 +1,15 @@
 import { EventEmitter, RelativePattern, Uri, workspace } from "vscode"
-import { analyzeFile } from "../core/analyzer"
 import {
   collectUsedNames,
   findUnusedDependencies,
   type LocatedDependency,
 } from "../core/dependencyUsage"
+import {
+  collectDependencyDefinitions,
+  collectIdentifierNames,
+  collectRecognizedDependencyNames,
+  getNodesByType,
+} from "../core/extractors"
 import type { DependencyDefinitionInfo } from "../core/internal"
 import type { Parser } from "../core/parser"
 import {
@@ -14,12 +19,14 @@ import {
 } from "../core/workspaceScan"
 import { vscodeFileSystem } from "./vscodeFileSystem"
 
+interface FileDependencyData {
+  definitions: DependencyDefinitionInfo[]
+  referencedNames: string[]
+}
+
 export class DependencyIndex {
   // Stored per-file (like TestCallIndex) so invalidation stays cheap later.
-  private index = new Map<
-    string,
-    { definitions: DependencyDefinitionInfo[]; referencedNames: string[] }
-  >()
+  private index = new Map<string, FileDependencyData>()
   private parser: Parser
 
   private _onDidChangeIndex = new EventEmitter<void>()
@@ -27,6 +34,31 @@ export class DependencyIndex {
 
   constructor(parser: Parser) {
     this.parser = parser
+  }
+
+  /**
+   * Parse a single file and extract the dependency definitions plus every
+   * referenced identifier. Self-contained (not via analyzeTree) so this lint's
+   * cost is only paid when the feature is enabled. Returns null if the file
+   * can't be read or parsed.
+   */
+  private async collectFromFile(
+    fileUri: string,
+  ): Promise<FileDependencyData | null> {
+    try {
+      const content = await vscodeFileSystem.readFile(fileUri)
+      const tree = this.parser.parse(new TextDecoder().decode(content))
+      if (!tree) return null
+
+      const nodesByType = getNodesByType(tree.rootNode)
+      const recognized = collectRecognizedDependencyNames(nodesByType)
+      return {
+        definitions: collectDependencyDefinitions(nodesByType, recognized),
+        referencedNames: collectIdentifierNames(nodesByType),
+      }
+    } catch {
+      return null
+    }
   }
 
   async build(): Promise<void> {
@@ -38,16 +70,8 @@ export class DependencyIndex {
         new RelativePattern(folder, PYTHON_SCAN_EXCLUDE_GLOB),
       )
       for (const file of files) {
-        const analysis = await analyzeFile(
-          file.toString(),
-          this.parser,
-          vscodeFileSystem,
-        )
-        if (!analysis) continue
-        this.index.set(file.toString(), {
-          definitions: analysis.dependencies,
-          referencedNames: analysis.referencedNames,
-        })
+        const data = await this.collectFromFile(file.toString())
+        if (data) this.index.set(file.toString(), data)
       }
     }
 
@@ -64,15 +88,12 @@ export class DependencyIndex {
       return
     }
 
-    const analysis = await analyzeFile(fileUri, this.parser, vscodeFileSystem)
-    if (!analysis) {
+    const data = await this.collectFromFile(fileUri)
+    if (data) {
+      this.index.set(fileUri, data)
+    } else {
       // File deleted or unparseable — drop any stale entry.
       this.index.delete(fileUri)
-    } else {
-      this.index.set(fileUri, {
-        definitions: analysis.dependencies,
-        referencedNames: analysis.referencedNames,
-      })
     }
 
     this._onDidChangeIndex.fire()
