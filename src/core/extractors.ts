@@ -782,6 +782,13 @@ export function dependencyExtractor(
   return null
 }
 
+/** Collects the text of every identifier node — used as a workspace-wide "referenced names" signal. */
+export function collectIdentifierNames(
+  nodesByType: Map<string, Node[]>,
+): string[] {
+  return (nodesByType.get("identifier") ?? []).map((node) => node.text)
+}
+
 export function collectDependencyDefinitions(
   nodesByType: Map<string, Node[]>,
   recognizedDependencyNames: Set<string>,

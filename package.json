@@ -313,6 +313,11 @@
           "scope": "resource",
           "description": "Show CodeLens links above test client calls to navigate to route definitions, and above route definitions to navigate to matching tests."
         },
+        "fastapi.lint.unusedDependencies.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Flag FastAPI dependency type aliases (e.g. CurrentUser = Annotated[User, Depends(...)]) that are defined but never referenced anywhere in the workspace."
+        },
         "fastapi.cloud.enabled": {
           "type": "boolean",
           "default": true,

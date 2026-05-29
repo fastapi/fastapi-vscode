@@ -24,6 +24,10 @@ CodeLens links appear above HTTP client calls like `client.get('/items')`, letti
 
 ![CodeLens GIF](media/walkthrough/codelens.gif)
 
+### Unused dependency detection
+
+Flags FastAPI dependency type aliases — like `CurrentUser = Annotated[User, Depends(get_current_user)]` — that are defined but never referenced anywhere in your workspace. These leftover aliases aren't caught by tools that only flag unused imports or local variables. Findings appear as informational diagnostics on the definition; verify before removing, since the extension can't distinguish dead code from an alias you're intentionally keeping. Disable with `fastapi.lint.unusedDependencies.enabled`.
+
 ### Deploy to FastAPI Cloud
 
 Deploy your application directly to [FastAPI Cloud](https://fastapicloud.com/) from the status bar with zero config or frustration.
@@ -42,6 +46,7 @@ View real-time logs from your FastAPI Cloud deployed applications directly withi
 |---------|-------------|---------|
 | `fastapi.entryPoint` | Entry point for the main FastAPI application in module notation (e.g., `my_app.main:app`). If not set, the extension searches `pyproject.toml` and common locations. | `""` (auto-detect) |
 | `fastapi.codeLens.enabled` | Show CodeLens links above test client calls to navigate to route definitions, and above route definitions to navigate to matching tests. | `true` |
+| `fastapi.lint.unusedDependencies.enabled` | Flag FastAPI dependency type aliases (e.g. `CurrentUser = Annotated[User, Depends(...)]`) that are defined but never referenced anywhere in the workspace. | `true` |
 | `fastapi.cloud.enabled` | Enable FastAPI Cloud integration (status bar, deploy commands). | `true` |
 | `fastapi.telemetry.enabled` | Send anonymous usage data to help improve the extension. See [TELEMETRY.md](TELEMETRY.md) for details on what is collected. | `true` |
 

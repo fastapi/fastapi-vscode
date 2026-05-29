@@ -32,6 +32,8 @@ import {
   trackSearchExecuted,
   trackTreeViewVisible,
 } from "./utils/telemetry"
+import { publishUnusedDependencyDiagnostics } from "./vscode/dependencyDiagnostics"
+import { DependencyIndex } from "./vscode/dependencyIndex"
 import {
   getMethodSvgIcon,
   type PathOperationTreeItem,
@@ -170,6 +172,31 @@ export async function activate(context: vscode.ExtensionContext) {
   const testIndex = new TestCallIndex(parserService)
   testIndex.build().catch((e) => log(`TestCallIndex build failed: ${e}`))
 
+  const unusedDependenciesEnabled = vscode.workspace
+    .getConfiguration("fastapi")
+    .get<boolean>("lint.unusedDependencies.enabled", true)
+
+  let dependencyIndex: DependencyIndex | undefined
+  let unusedDependencyDiagnostics: vscode.DiagnosticCollection | undefined
+  if (unusedDependenciesEnabled) {
+    dependencyIndex = new DependencyIndex(parserService)
+    unusedDependencyDiagnostics = vscode.languages.createDiagnosticCollection(
+      "fastapi-unused-dependencies",
+    )
+    context.subscriptions.push(unusedDependencyDiagnostics)
+    const index = dependencyIndex
+    const diagnostics = unusedDependencyDiagnostics
+    index
+      .build()
+      .then(() =>
+        publishUnusedDependencyDiagnostics(
+          diagnostics,
+          index.getUnusedDependencies(),
+        ),
+      )
+      .catch((e) => log(`DependencyIndex build failed: ${e}`))
+  }
+
   const testToRouteProvider = new TestToRouteCodeLensProvider(
     parserService,
     apps,
@@ -188,6 +215,20 @@ export async function activate(context: vscode.ExtensionContext) {
         await testIndex.invalidateFile(uri.toString())
       } else {
         await testIndex.build()
+      }
+
+      if (dependencyIndex && unusedDependencyDiagnostics) {
+        // Reparsing is incremental; the unused set is workspace-global, so
+        // recompute it (cheap aggregation) and republish every refresh.
+        if (uri) {
+          await dependencyIndex.invalidateFile(uri.toString())
+        } else {
+          await dependencyIndex.build()
+        }
+        publishUnusedDependencyDiagnostics(
+          unusedDependencyDiagnostics,
+          dependencyIndex.getUnusedDependencies(),
+        )
       }
 
       pathOperationProvider.setApps(newApps, groupApps(newApps))
@@ -314,6 +355,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const requiresReload =
         e.affectsConfiguration("fastapi.cloud.enabled") ||
         e.affectsConfiguration("fastapi.codeLens.enabled") ||
+        e.affectsConfiguration("fastapi.lint.unusedDependencies.enabled") ||
         e.affectsConfiguration("fastapi.entryPoint") ||
         e.affectsConfiguration("fastapi.telemetry.enabled")
 

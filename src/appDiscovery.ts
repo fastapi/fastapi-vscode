@@ -12,6 +12,10 @@ import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
 import { collectRoutes } from "./core/treeUtils"
 import type { AppDefinition } from "./core/types"
+import {
+  PYTHON_FILE_GLOB,
+  PYTHON_SCAN_EXCLUDE_GLOB,
+} from "./core/workspaceScan"
 import { log } from "./utils/logger"
 import { vscodeFileSystem } from "./vscode/vscodeFileSystem"
 
@@ -52,11 +56,8 @@ async function findAllFastAPIFiles(
   folder: vscode.WorkspaceFolder,
 ): Promise<string[]> {
   const pyFiles = await vscode.workspace.findFiles(
-    new vscode.RelativePattern(folder, "**/*.py"),
-    new vscode.RelativePattern(
-      folder,
-      "**/{.venv,venv,__pycache__,node_modules,.git,tests,test}/**",
-    ),
+    new vscode.RelativePattern(folder, PYTHON_FILE_GLOB),
+    new vscode.RelativePattern(folder, PYTHON_SCAN_EXCLUDE_GLOB),
   )
 
   const results: string[] = []
@@ -94,10 +95,7 @@ async function parsePyprojectForEntryPoint(
 ): Promise<EntryPoint | null> {
   const pyprojectTomlFiles = await vscode.workspace.findFiles(
     new vscode.RelativePattern(folderUri, "**/pyproject.toml"),
-    new vscode.RelativePattern(
-      folderUri,
-      "**/{.venv,venv,__pycache__,node_modules,.git,tests,test}/**",
-    ),
+    new vscode.RelativePattern(folderUri, PYTHON_SCAN_EXCLUDE_GLOB),
   )
 
   if (pyprojectTomlFiles.length === 0) {

@@ -1,6 +1,6 @@
 import * as assert from "node:assert"
 import {
-  collectUsedDependencies,
+  collectUsedNames,
   findUnusedDependencies,
   type LocatedDependency,
 } from "../../core/dependencyUsage"
@@ -38,30 +38,46 @@ suite("Dependency Usage", () => {
     assert.strictEqual(unused.length, 0)
   })
 
-  test("treats usage as global across files (def in one file, used in another)", () => {
-    // dep1 is defined in file1 but only imported in file2 -> still considered used
+  test("treats usage as global across files (def in one file, referenced in another)", () => {
+    // dep1's self-reference is in file1; a second reference in file2 -> used.
     const definitions: LocatedDependency[] = [
       {
         fileUri: "file1.py",
         definition: { variableName: "dep1", line: 1, column: 0 },
       },
     ]
-    const usedNames = collectUsedDependencies([[], ["dep1"]])
+    const usedNames = collectUsedNames([["dep1"], ["dep1"]])
 
     const unused = findUnusedDependencies(definitions, usedNames)
 
     assert.strictEqual(unused.length, 0)
   })
 
-  test("collects imported names across files and dedupes", () => {
-    const used = collectUsedDependencies([
+  test("flags a name referenced only once (its own definition)", () => {
+    const definitions: LocatedDependency[] = [
+      {
+        fileUri: "file1.py",
+        definition: { variableName: "dep1", line: 1, column: 0 },
+      },
+    ]
+    // dep1 appears only at its definition site -> not used.
+    const usedNames = collectUsedNames([["dep1"]])
+
+    const unused = findUnusedDependencies(definitions, usedNames)
+
+    assert.strictEqual(unused.length, 1)
+    assert.strictEqual(unused[0].definition.variableName, "dep1")
+  })
+
+  test("marks a name used only when referenced more than once", () => {
+    const used = collectUsedNames([
       ["dep1", "dep3"],
-      ["dep2", "dep1"], // dep1 repeated across files
+      ["dep2", "dep1"], // dep1 appears twice across files; dep2/dep3 once each
     ])
 
-    assert.strictEqual(used.size, 3)
+    assert.strictEqual(used.size, 1)
     assert.ok(used.has("dep1"))
-    assert.ok(used.has("dep2"))
-    assert.ok(used.has("dep3"))
+    assert.ok(!used.has("dep2"))
+    assert.ok(!used.has("dep3"))
   })
 })

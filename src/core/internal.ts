@@ -98,6 +98,8 @@ export interface FileAnalysis {
   mounts: MountInfo[]
   imports: ImportInfo[]
   factoryCalls: FactoryCallInfo[]
+  dependencies: DependencyDefinitionInfo[]
+  referencedNames: string[]
 }
 
 export interface RouterNode {
