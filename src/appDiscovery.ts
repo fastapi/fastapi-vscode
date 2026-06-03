@@ -72,7 +72,7 @@ async function findAllFastAPIFiles(
     try {
       content = await vscode.workspace.fs.readFile(uri)
     } catch {
-      log(`Skipping unreadable file: ${uri.toString()}`)
+      log(`Skiping unreadable file: ${uri.toString()}`)
       continue
     }
     if (new TextDecoder().decode(content).includes("FastAPI(")) {
