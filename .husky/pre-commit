@@ -1,2 +1,9 @@
 bun run typecheck
 bunx lint-staged
+
+# Soft typos check: run only if the CLI is installed, otherwise skip with a hint.
+if command -v typos >/dev/null 2>&1; then
+  typos
+else
+  echo "[typos] skipping check (CLI not found). Install to enable: brew install typos-cli"
+fi
