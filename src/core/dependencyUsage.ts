@@ -15,6 +15,41 @@ export function findUnusedDependencies(
   )
 }
 
+export interface ScopedFileData {
+  fileUri: string
+  // Files sharing a scopeKey have their usage computed together. Used to scope
+  // usage per workspace folder so a dead dependency in one project isn't masked
+  // by a same-named symbol in another.
+  scopeKey: string
+  definitions: DependencyDefinitionInfo[]
+  referencedNames: string[]
+}
+
+// Find unused definitions with usage computed independently within each scope.
+export function findUnusedDependenciesByScope(
+  files: ScopedFileData[],
+): LocatedDependency[] {
+  const byScope = new Map<
+    string,
+    { defs: LocatedDependency[]; refs: string[][] }
+  >()
+
+  for (const { fileUri, scopeKey, definitions, referencedNames } of files) {
+    const bucket = byScope.get(scopeKey) ?? { defs: [], refs: [] }
+    for (const definition of definitions) {
+      bucket.defs.push({ fileUri, definition })
+    }
+    bucket.refs.push(referencedNames)
+    byScope.set(scopeKey, bucket)
+  }
+
+  const unused: LocatedDependency[] = []
+  for (const { defs, refs } of byScope.values()) {
+    unused.push(...findUnusedDependencies(defs, collectUsedNames(refs)))
+  }
+  return unused
+}
+
 // Determine which names are "used" from identifier references across all files.
 // A definition contributes exactly one self-reference (its own name on the left
 // of the assignment), so a name referenced more than once is used somewhere

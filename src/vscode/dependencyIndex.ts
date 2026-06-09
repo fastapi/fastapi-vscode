@@ -1,8 +1,8 @@
 import { EventEmitter, RelativePattern, Uri, workspace } from "vscode"
 import {
-  collectUsedNames,
-  findUnusedDependencies,
+  findUnusedDependenciesByScope,
   type LocatedDependency,
+  type ScopedFileData,
 } from "../core/dependencyUsage"
 import {
   collectDependencyDefinitions,
@@ -100,28 +100,20 @@ export class DependencyIndex {
   }
 
   getUnusedDependencies(): LocatedDependency[] {
-    // Bucket by owning workspace folder so usage is scoped per project — a dead
-    // dependency in one root isn't masked by a same-named symbol in another.
-    const byFolder = new Map<
-      string,
-      { defs: LocatedDependency[]; refs: string[][] }
-    >()
-
+    // Scope usage per owning workspace folder (the empty string groups files
+    // outside any folder), so a dead dependency in one project isn't masked by
+    // a same-named symbol in another. The grouping itself lives in the pure
+    // layer; here we just resolve each file's folder.
+    const files: ScopedFileData[] = []
     for (const [fileUri, { definitions, referencedNames }] of this.index) {
       const folder = workspace.getWorkspaceFolder(Uri.parse(fileUri))
-      const key = folder?.uri.toString() ?? "" // "" = files outside any folder
-      const bucket = byFolder.get(key) ?? { defs: [], refs: [] }
-      for (const definition of definitions) {
-        bucket.defs.push({ fileUri, definition })
-      }
-      bucket.refs.push(referencedNames)
-      byFolder.set(key, bucket)
+      files.push({
+        fileUri,
+        scopeKey: folder?.uri.toString() ?? "",
+        definitions,
+        referencedNames,
+      })
     }
-
-    const unused: LocatedDependency[] = []
-    for (const { defs, refs } of byFolder.values()) {
-      unused.push(...findUnusedDependencies(defs, collectUsedNames(refs)))
-    }
-    return unused
+    return findUnusedDependenciesByScope(files)
   }
 }
