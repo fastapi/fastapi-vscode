@@ -124,10 +124,13 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // Get actual installed Python and package versions from the active interpreter
-  const installedVersions = await getInstalledVersions(TRACKED_PACKAGES)
-
-  // Set versions on telemetry client so they're included in all events
-  telemetryClient.setVersions(installedVersions)
+  getInstalledVersions(TRACKED_PACKAGES)
+    .then((versions) => {
+      telemetryClient.setVersions(versions)
+    })
+    .catch((error) => {
+      log(`Failed to get installed versions: ${error}`)
+    })
 
   trackActivation({
     duration_ms: elapsed(),
