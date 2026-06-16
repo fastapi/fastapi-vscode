@@ -4,6 +4,7 @@ import { findTestClientCalls } from "../core/extractors"
 import type { Parser } from "../core/parser"
 import { pathMatchesPathOperation } from "../core/pathUtils"
 import type { SourceLocation } from "../core/types"
+import { READ_CONCURRENCY } from "../utils/constants"
 import { log } from "../utils/logger"
 
 /**
@@ -22,9 +23,6 @@ const TEST_INDEX_EXCLUDE_DIRS = [
 ]
 
 const TEST_INDEX_EXCLUDE_GLOB = `**/{${TEST_INDEX_EXCLUDE_DIRS.join(",")}}/**`
-
-// Limit concurrent file reads so large workspaces don't fan out unbounded.
-const READ_CONCURRENCY = 50
 
 export function shouldIgnoreTestIndexFile(fileUri: string): boolean {
   const segments = fileUri.split("/")
