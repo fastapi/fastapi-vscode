@@ -4,6 +4,30 @@ import type { Parser } from "../core/parser"
 import { pathMatchesPathOperation } from "../core/pathUtils"
 import type { SourceLocation } from "../core/types"
 
+/**
+ * Folders to skip when scanning for test files. Unlike app discovery, this
+ * keeps `tests`/`test` directories (we want those) but excludes virtual envs
+ * and dependency/cache folders so we don't open vendored test suites under
+ * `.venv/site-packages` — opening those files broadcasts DidOpenTextDocument
+ * events to Python language servers. See issue #165.
+ */
+const TEST_INDEX_EXCLUDE_DIRS = [
+  ".venv",
+  "venv",
+  "__pycache__",
+  "node_modules",
+  ".git",
+  ".mypy_cache",
+  ".pytest_cache",
+]
+
+const TEST_INDEX_EXCLUDE_GLOB = `**/{${TEST_INDEX_EXCLUDE_DIRS.join(",")}}/**`
+
+export function shouldIgnoreTestIndexFile(fileUri: string): boolean {
+  const segments = fileUri.split("/")
+  return segments.some((segment) => TEST_INDEX_EXCLUDE_DIRS.includes(segment))
+}
+
 export class TestCallIndex {
   private index = new Map<
     string,
@@ -20,7 +44,10 @@ export class TestCallIndex {
 
   async build(): Promise<void> {
     this.index.clear()
-    const testFiles = await workspace.findFiles("**/*test*.py")
+    const testFiles = await workspace.findFiles(
+      "**/*test*.py",
+      TEST_INDEX_EXCLUDE_GLOB,
+    )
     for (const file of testFiles) {
       const document = await workspace.openTextDocument(file)
       const tree = this.parser.parse(document.getText())
@@ -54,7 +81,7 @@ export class TestCallIndex {
   }
 
   async invalidateFile(fileUri: string): Promise<void> {
-    if (!fileUri.includes("test")) {
+    if (!fileUri.includes("test") || shouldIgnoreTestIndexFile(fileUri)) {
       return
     }
     try {
