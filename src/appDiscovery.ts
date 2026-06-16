@@ -13,6 +13,7 @@ import { buildRouterGraph } from "./core/routerResolver"
 import { routerNodeToAppDefinition } from "./core/transformer"
 import { collectRoutes } from "./core/treeUtils"
 import type { AppDefinition } from "./core/types"
+import { READ_CONCURRENCY } from "./utils/constants"
 import { log } from "./utils/logger"
 import { vscodeFileSystem } from "./vscode/vscodeFileSystem"
 
@@ -49,8 +50,6 @@ export function parseEntrypointString(value: string): {
  * Uses a cheap text pre-filter to avoid tree-sitter parsing non-app files.
  * Returns URI strings sorted by depth (shallower first).
  */
-// Limit concurrent file reads so large workspaces don't fan out unbounded.
-const READ_CONCURRENCY = 50
 
 async function findAllFastAPIFiles(
   folder: vscode.WorkspaceFolder,

@@ -2,12 +2,17 @@
 
 ## Latest Changes
 
+### Fixes
+
+* 🐛 Exclude .venv and cache dirs from test index scan. PR [#168](https://github.com/fastapi/fastapi-vscode/pull/168) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Refactors
 
 * ⚡Speed up extension activation . PR [#164](https://github.com/fastapi/fastapi-vscode/pull/164) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ### Internal
 
+* ⬆ Bump crate-ci/typos from 1.47.1 to 1.47.2 in the github-actions group. PR [#167](https://github.com/fastapi/fastapi-vscode/pull/167) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump ovsx from 0.10.12 to 1.0.0 in the npm-packages group. PR [#162](https://github.com/fastapi/fastapi-vscode/pull/162) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump the github-actions group with 2 updates. PR [#163](https://github.com/fastapi/fastapi-vscode/pull/163) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * 👷 Setup GH actions workflow to check sources for typos. PR [#160](https://github.com/fastapi/fastapi-vscode/pull/160) by [@YuriiMotov](https://github.com/YuriiMotov).
