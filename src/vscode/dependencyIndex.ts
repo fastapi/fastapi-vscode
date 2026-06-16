@@ -92,7 +92,7 @@ export class DependencyIndex {
     if (data) {
       this.index.set(fileUri, data)
     } else {
-      // File deleted or unparseable — drop any stale entry.
+      // File deleted or unparsable — drop any stale entry.
       this.index.delete(fileUri)
     }
 

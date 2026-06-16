@@ -3,6 +3,7 @@
  * Handles finding FastAPI apps via pyproject.toml, VS Code settings, or automatic detection.
  */
 
+import pMap from "p-map"
 import * as toml from "toml"
 import * as vscode from "vscode"
 import type { EntryPoint } from "./core/internal"
@@ -16,6 +17,7 @@ import {
   PYTHON_FILE_GLOB,
   PYTHON_SCAN_EXCLUDE_GLOB,
 } from "./core/workspaceScan"
+import { READ_CONCURRENCY } from "./utils/constants"
 import { log } from "./utils/logger"
 import { vscodeFileSystem } from "./vscode/vscodeFileSystem"
 
@@ -52,6 +54,7 @@ export function parseEntrypointString(value: string): {
  * Uses a cheap text pre-filter to avoid tree-sitter parsing non-app files.
  * Returns URI strings sorted by depth (shallower first).
  */
+
 async function findAllFastAPIFiles(
   folder: vscode.WorkspaceFolder,
 ): Promise<string[]> {
@@ -60,26 +63,32 @@ async function findAllFastAPIFiles(
     new vscode.RelativePattern(folder, PYTHON_SCAN_EXCLUDE_GLOB),
   )
 
-  const results: string[] = []
-  for (const uri of pyFiles) {
+  const toScan = pyFiles.filter((uri) => {
     const fileName = uri.path.split("/").pop() ?? ""
-    if (
+    return !(
       fileName.startsWith("test_") ||
       fileName.endsWith("_test.py") ||
       fileName === "conftest.py"
     )
-      continue
-    let content: Uint8Array
-    try {
-      content = await vscode.workspace.fs.readFile(uri)
-    } catch {
-      log(`Skipping unreadable file: ${uri.toString()}`)
-      continue
-    }
-    if (new TextDecoder().decode(content).includes("FastAPI(")) {
-      results.push(uri.toString())
-    }
-  }
+  })
+
+  const matched = await pMap(
+    toScan,
+    async (uri) => {
+      let content: Uint8Array
+      try {
+        content = await vscode.workspace.fs.readFile(uri)
+      } catch {
+        log(`Skipping unreadable file: ${uri.toString()}`)
+        return null
+      }
+      return new TextDecoder().decode(content).includes("FastAPI(")
+        ? uri.toString()
+        : null
+    },
+    { concurrency: READ_CONCURRENCY },
+  )
+  const results = matched.filter((uri): uri is string => uri !== null)
 
   return results.sort(
     (a, b) => uriPath(a).split("/").length - uriPath(b).split("/").length,
