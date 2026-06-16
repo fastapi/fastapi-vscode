@@ -10,7 +10,7 @@
 
 ### Refactors
 
-* ⚡ Speed up extension activation . PR [#164](https://github.com/fastapi/fastapi-vscode/pull/164) by [@savannahostrowski](https://github.com/savannahostrowski).
+* ⚡ Speed up extension activation. PR [#164](https://github.com/fastapi/fastapi-vscode/pull/164) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ### Internal
 
