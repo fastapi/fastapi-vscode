@@ -7,9 +7,7 @@ import type { SourceLocation } from "../core/types"
 /**
  * Folders to skip when scanning for test files. Unlike app discovery, this
  * keeps `tests`/`test` directories (we want those) but excludes virtual envs
- * and dependency/cache folders so we don't open vendored test suites under
- * `.venv/site-packages` — opening those files broadcasts DidOpenTextDocument
- * events to Python language servers. See issue #165.
+ * and dependency/cache folders.
  */
 const TEST_INDEX_EXCLUDE_DIRS = [
   ".venv",
