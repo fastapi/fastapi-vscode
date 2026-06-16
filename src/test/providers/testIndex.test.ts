@@ -1,5 +1,8 @@
 import * as assert from "node:assert"
-import { shouldIgnoreTestIndexFile } from "../../vscode/testIndex"
+import {
+  isTestFileCandidate,
+  shouldIgnoreTestIndexFile,
+} from "../../vscode/testIndex"
 
 suite("shouldIgnoreTestIndexFile", () => {
   const ignored = [
@@ -40,4 +43,33 @@ suite("shouldIgnoreTestIndexFile", () => {
       false,
     )
   })
+})
+
+suite("isTestFileCandidate", () => {
+  const candidates = [
+    "file:///project/tests/test_app.py",
+    "file:///project/test/routes_test.py",
+    "file:///project/src/app/test_main.py",
+    "file:///project/conftest.py",
+  ]
+  for (const uri of candidates) {
+    test(`accepts ${uri}`, () => {
+      assert.strictEqual(isTestFileCandidate(uri), true)
+    })
+  }
+
+  const nonCandidates = [
+    // "test" appears only in a directory segment, not the file name
+    "file:///project/latest/main.py",
+    "file:///project/contest/handlers.py",
+    // file name has no "test"
+    "file:///project/src/main.py",
+    // not a Python file
+    "file:///project/tests/test_app.txt",
+  ]
+  for (const uri of nonCandidates) {
+    test(`rejects ${uri}`, () => {
+      assert.strictEqual(isTestFileCandidate(uri), false)
+    })
+  }
 })

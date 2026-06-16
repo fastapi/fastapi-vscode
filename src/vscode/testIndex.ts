@@ -1,8 +1,10 @@
-import { EventEmitter, workspace } from "vscode"
+import pMap from "p-map"
+import { EventEmitter, Uri, workspace } from "vscode"
 import { findTestClientCalls } from "../core/extractors"
 import type { Parser } from "../core/parser"
 import { pathMatchesPathOperation } from "../core/pathUtils"
 import type { SourceLocation } from "../core/types"
+import { log } from "../utils/logger"
 
 /**
  * Folders to skip when scanning for test files. Unlike app discovery, this
@@ -21,9 +23,27 @@ const TEST_INDEX_EXCLUDE_DIRS = [
 
 const TEST_INDEX_EXCLUDE_GLOB = `**/{${TEST_INDEX_EXCLUDE_DIRS.join(",")}}/**`
 
+// Limit concurrent file reads so large workspaces don't fan out unbounded.
+const READ_CONCURRENCY = 50
+
 export function shouldIgnoreTestIndexFile(fileUri: string): boolean {
   const segments = fileUri.split("/")
   return segments.some((segment) => TEST_INDEX_EXCLUDE_DIRS.includes(segment))
+}
+
+/**
+ * Mirrors the discovery glob (a ".py" file whose name contains "test"). Matching
+ * on the file name rather than the whole URI avoids false positives such as a
+ * "latest/" directory making an unrelated ".py" file look like a test.
+ */
+export function isTestFileCandidate(fileUri: string): boolean {
+  const fileName = fileUri.split("/").pop() ?? ""
+  return fileName.endsWith(".py") && fileName.includes("test")
+}
+
+async function readFileText(uri: Uri): Promise<string> {
+  const bytes = await workspace.fs.readFile(uri)
+  return new TextDecoder().decode(bytes)
 }
 
 export class TestCallIndex {
@@ -46,14 +66,24 @@ export class TestCallIndex {
       "**/*test*.py",
       TEST_INDEX_EXCLUDE_GLOB,
     )
-    for (const file of testFiles) {
-      const document = await workspace.openTextDocument(file)
-      const tree = this.parser.parse(document.getText())
-      if (!tree) continue
+    await pMap(
+      testFiles,
+      async (file) => {
+        let text: string
+        try {
+          text = await readFileText(file)
+        } catch {
+          log(`Skipping unreadable test file: ${file.toString()}`)
+          return
+        }
+        const tree = this.parser.parse(text)
+        if (!tree) return
 
-      const calls = findTestClientCalls(tree.rootNode)
-      this.index.set(file.toString(), calls)
-    }
+        const calls = findTestClientCalls(tree.rootNode)
+        this.index.set(file.toString(), calls)
+      },
+      { concurrency: READ_CONCURRENCY },
+    )
     this._onDidChangeIndex.fire()
   }
 
@@ -79,12 +109,12 @@ export class TestCallIndex {
   }
 
   async invalidateFile(fileUri: string): Promise<void> {
-    if (!fileUri.includes("test") || shouldIgnoreTestIndexFile(fileUri)) {
+    if (!isTestFileCandidate(fileUri) || shouldIgnoreTestIndexFile(fileUri)) {
       return
     }
     try {
-      const document = await workspace.openTextDocument(fileUri)
-      const tree = this.parser.parse(document.getText())
+      const text = await readFileText(Uri.parse(fileUri))
+      const tree = this.parser.parse(text)
       if (!tree) {
         this.index.delete(fileUri)
         return
