@@ -334,8 +334,9 @@
     "watch": "bun run esbuild.js --watch",
     "package": "vsce package",
     "publish:marketplace": "vsce publish",
-    "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/",
-    "test": "bun run compile && vscode-test",
+    "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/ scripts/",
+    "test": "bun run test:scripts && bun run compile && vscode-test",
+    "test:scripts": "node --test scripts/*.test.mjs",
     "test:coverage": "bash scripts/test-coverage.sh",
     "test:web": "bun run compile && bunx @vscode/test-web --extensionDevelopmentPath=. --browserType=none",
     "typecheck": "tsc --noEmit",
@@ -366,7 +367,7 @@
     "web-tree-sitter": "^0.26.3"
   },
   "lint-staged": {
-    "**/*.{ts,js,json}": [
+    "**/*.{ts,js,mjs,json}": [
       "biome check --write"
     ]
   }
