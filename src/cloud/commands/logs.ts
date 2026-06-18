@@ -36,17 +36,6 @@ const FILTER_CHIPS = [
   { level: "critical", label: "CRITICAL" },
 ]
 
-const HTML_ESCAPE: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-}
-
-function escapeHtml(text: string): string {
-  return text.replace(/[&<>"]/g, (ch) => HTML_ESCAPE[ch])
-}
-
 function formatTimestamp(ts: string): string {
   const d = new Date(ts)
   return Number.isNaN(d.getTime()) ? ts : `${d.toISOString().slice(0, 23)}Z`
@@ -71,14 +60,20 @@ function normalizeLevel(level: string, message?: string): string {
   return resolved
 }
 
-export function formatLogEntry(entry: AppLogEntry): string {
+export interface FormattedLogEntry {
+  level: string
+  timestamp: string
+  message: string
+}
+
+export function formatLogEntry(entry: AppLogEntry): FormattedLogEntry {
   const rawLevel = (entry.level ?? "info").toLowerCase()
   const level = normalizeLevel(rawLevel, entry.message)
-  const pipeColor = LEVEL_COLORS[level] ?? LEVEL_COLORS.default
-  const ts = escapeHtml(formatTimestamp(entry.timestamp))
-  const msg = escapeHtml(entry.message)
-  const escapedLevel = escapeHtml(level)
-  return `<div class="log-line" data-level="${escapedLevel}"><span class="pipe" style="color:${pipeColor}">┃</span> <span class="ts">${ts}</span> ${msg}</div>`
+  return {
+    level,
+    timestamp: formatTimestamp(entry.timestamp),
+    message: entry.message,
+  }
 }
 
 // --- Webview HTML ---
@@ -290,7 +285,7 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
         count++
         this.view.webview.postMessage({
           type: "log",
-          html: formatLogEntry(entry),
+          entry: formatLogEntry(entry),
         })
       }
       clearTimeout(connectedTimer)
