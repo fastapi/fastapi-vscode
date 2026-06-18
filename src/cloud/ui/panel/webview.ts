@@ -1,6 +1,8 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
+import type { AppLogEntry } from "../../api"
+
 declare function acquireVsCodeApi(): { postMessage(msg: unknown): void }
 
 const vscode = acquireVsCodeApi()
@@ -129,15 +131,9 @@ function setStreamingState(streaming: boolean, appLabel?: string): void {
     streaming && appLabel ? `Streaming logs for ${appLabel}...` : ""
 }
 
-interface LogEntry {
-  level: string
-  timestamp: string
-  message: string
-}
-
 // Build the log line as a DOM node. The untrusted message is set as a text
 // node, so it is never parsed as HTML — no sanitization needed.
-function buildLogLine(entry: LogEntry): HTMLElement {
+function buildLogLine(entry: AppLogEntry): HTMLElement {
   const line = document.createElement("div")
   line.className = "log-line"
   line.dataset.level = entry.level
