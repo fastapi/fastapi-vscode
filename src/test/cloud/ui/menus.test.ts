@@ -207,9 +207,8 @@ suite("cloud/ui/menus", () => {
       await handler.showMenu()
 
       assert.ok(openStub.calledOnce)
-      assert.ok(
-        openStub.firstCall.args[0].toString().includes("test-app.example.com"),
-      )
+      const openedUrl = new URL(openStub.firstCall.args[0].toString())
+      assert.strictEqual(openedUrl.host, "test-app.example.com")
     })
 
     test("opens dashboard when dashboard selected", async () => {
