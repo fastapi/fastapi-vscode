@@ -4,6 +4,7 @@
 
 ### Refactors
 
+* ✅ Assert opened URL by host instead of substring. PR [#174](https://github.com/fastapi/fastapi-vscode/pull/174) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔒️ Render cloud logs via DOM instead of HTML strings. PR [#172](https://github.com/fastapi/fastapi-vscode/pull/172) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ### Internal
