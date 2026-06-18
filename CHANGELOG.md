@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.2.3 (2026-06-18)
+
 ### Refactors
 
 * 🍱 Make walkthrough GIFs ~50% smaller. PR [#175](https://github.com/fastapi/fastapi-vscode/pull/175) by [@savannahostrowski](https://github.com/savannahostrowski).
