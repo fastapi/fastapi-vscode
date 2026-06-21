@@ -357,7 +357,7 @@
     "ovsx": "^1.0.0",
     "path-browserify": "^1.0.1",
     "sinon": "^22.0.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "p-map": "^7.0.4",
