@@ -346,7 +346,7 @@
     "@biomejs/biome": "^2.3.11",
     "@types/bun": "latest",
     "@types/mocha": "^10.0.10",
-    "@types/sinon": "^21.0.0",
+    "@types/sinon": "^21.0.1",
     "@types/vscode": "^1.95.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^3.0.0",
