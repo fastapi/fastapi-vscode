@@ -16,7 +16,7 @@
         "@types/bun": "latest",
         "@types/mocha": "^10.0.10",
         "@types/sinon": "^21.0.0",
-        "@types/vscode": "^1.95.0",
+        "@types/vscode": "^1.120.0",
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^3.0.0",
         "@vscode/vsce": "^3.7.1",
@@ -255,7 +255,7 @@
 
     "@types/sinonjs__fake-timers": ["@types/sinonjs__fake-timers@15.0.1", "", {}, "sha512-Ko2tjWJq8oozHzHV+reuvS5KYIRAokHnGbDwGh/J64LntgpbuylF74ipEL24HCyRjf9FOlBiBHWBR1RlVKsI1w=="],
 
-    "@types/vscode": ["@types/vscode@1.108.1", "", {}, "sha512-DerV0BbSzt87TbrqmZ7lRDIYaMiqvP8tmJTzW2p49ZBVtGUnGAu2RGQd1Wv4XMzEVUpaHbsemVM5nfuQJj7H6w=="],
+    "@types/vscode": ["@types/vscode@1.120.0", "", {}, "sha512-feaT4Rst+FkTch5zz/ZbNCxoIvo55YU80Be2kiL7OJcod4+CUYf2lUBPdIJzozNnSEMq1VRTGrWEcCGFB3fBmA=="],
 
     "@typespec/ts-http-runtime": ["@typespec/ts-http-runtime@0.3.2", "", { "dependencies": { "http-proxy-agent": "^7.0.0", "https-proxy-agent": "^7.0.0", "tslib": "^2.6.2" } }, "sha512-IlqQ/Gv22xUC1r/WQm4StLkYQmaaTsXAhUVsNE0+xiyf0yRFiH5++q78U3bw6bLKDCTmh0uqKB9eG9+Bt75Dkg=="],
 
