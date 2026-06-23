@@ -11,7 +11,7 @@
     "rest",
     "openapi"
   ],
-  "version": "0.3.0",
+  "version": "0.2.4",
   "publisher": "FastAPILabs",
   "license": "MIT",
   "repository": {
@@ -339,39 +339,41 @@
     "watch": "bun run esbuild.js --watch",
     "package": "vsce package",
     "publish:marketplace": "vsce publish",
-    "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/",
-    "test": "bun run compile && vscode-test",
+    "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true src/ scripts/",
+    "test": "bun run test:scripts && bun run compile && vscode-test",
+    "test:scripts": "node --test scripts/*.test.mjs",
     "test:coverage": "bash scripts/test-coverage.sh",
     "test:web": "bun run compile && bunx @vscode/test-web --extensionDevelopmentPath=. --browserType=none",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.11",
+    "@biomejs/biome": "^2.5.0",
     "@types/bun": "latest",
     "@types/mocha": "^10.0.10",
     "@types/sinon": "^21.0.0",
     "@types/vscode": "^1.95.0",
     "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.7.1",
-    "esbuild": "^0.28.0",
+    "@vscode/test-electron": "^3.0.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.1",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.2",
-    "ovsx": "^1.0.0",
+    "lint-staged": "^17.0.7",
+    "ovsx": "^1.0.1",
     "path-browserify": "^1.0.1",
     "sinon": "^22.0.0",
-    "typescript": "^6.0.2"
+    "tree-sitter-python": "^0.25.0",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "p-map": "^7.0.4",
-    "posthog-node": "^5.24.1",
+    "posthog-node": "^5.37.1",
     "tinytar": "^0.1.0",
-    "toml": "^3.0.0",
-    "web-tree-sitter": "^0.26.3"
+    "toml": "^4.1.1",
+    "web-tree-sitter": "^0.26.9"
   },
   "lint-staged": {
-    "**/*.{ts,js,json}": [
+    "**/*.{ts,js,mjs,json}": [
       "biome check --write"
     ]
   }

@@ -31,3 +31,15 @@ updates:
         dependency-type: "development"
         patterns:
           - "*"
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ⬆
+    groups:
+      bun-packages:
+        patterns:
+          - "*"

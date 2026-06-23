@@ -16,17 +16,17 @@ const SINCE_OPTIONS = [
   { label: "1 day", value: "1d" },
 ]
 
-// Roughly matches fastapi-cloud-cli LOG_LEVEL_COLORS
-const LEVEL_COLORS: Record<string, string> = {
-  debug: "#4488ff",
-  info: "#00cccc",
-  warning: "#ccaa00",
-  warn: "#ccaa00",
-  error: "#f14c4c",
-  critical: "#cc66cc",
-  fatal: "#cc66cc",
-  default: "#888",
-}
+// Levels recognized when inferring a log's level from its message prefix.
+// Pipe colors for these live in the webview stylesheet, keyed on [data-level].
+const KNOWN_LEVELS = [
+  "debug",
+  "info",
+  "warning",
+  "warn",
+  "error",
+  "critical",
+  "fatal",
+]
 
 const FILTER_CHIPS = [
   { level: "debug", label: "DEBUG" },
@@ -36,28 +36,12 @@ const FILTER_CHIPS = [
   { level: "critical", label: "CRITICAL" },
 ]
 
-const HTML_ESCAPE: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-}
-
-function escapeHtml(text: string): string {
-  return text.replace(/[&<>"]/g, (ch) => HTML_ESCAPE[ch])
-}
-
 function formatTimestamp(ts: string): string {
   const d = new Date(ts)
   return Number.isNaN(d.getTime()) ? ts : `${d.toISOString().slice(0, 23)}Z`
 }
 
-const MESSAGE_LEVEL_RE = new RegExp(
-  `^\\s*(${Object.keys(LEVEL_COLORS)
-    .filter((k) => k !== "default")
-    .join("|")})\\b`,
-  "i",
-)
+const MESSAGE_LEVEL_RE = new RegExp(`^\\s*(${KNOWN_LEVELS.join("|")})\\b`, "i")
 
 function normalizeLevel(level: string, message?: string): string {
   // The streaming API returns "unknown" for new logs (Loki limitation) so try to infer from message prefix
@@ -71,14 +55,17 @@ function normalizeLevel(level: string, message?: string): string {
   return resolved
 }
 
-export function formatLogEntry(entry: AppLogEntry): string {
+// Returns the entry with its level normalized and timestamp formatted. Same
+// shape as the raw entry, but the webview builds the DOM node itself
+// (className/dataset/textContent), so no HTML escaping is required here.
+export function formatLogEntry(entry: AppLogEntry): AppLogEntry {
   const rawLevel = (entry.level ?? "info").toLowerCase()
   const level = normalizeLevel(rawLevel, entry.message)
-  const pipeColor = LEVEL_COLORS[level] ?? LEVEL_COLORS.default
-  const ts = escapeHtml(formatTimestamp(entry.timestamp))
-  const msg = escapeHtml(entry.message)
-  const escapedLevel = escapeHtml(level)
-  return `<div class="log-line" data-level="${escapedLevel}"><span class="pipe" style="color:${pipeColor}">┃</span> <span class="ts">${ts}</span> ${msg}</div>`
+  return {
+    level,
+    timestamp: formatTimestamp(entry.timestamp),
+    message: entry.message,
+  }
 }
 
 // --- Webview HTML ---
@@ -290,7 +277,7 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
         count++
         this.view.webview.postMessage({
           type: "log",
-          html: formatLogEntry(entry),
+          entry: formatLogEntry(entry),
         })
       }
       clearTimeout(connectedTimer)

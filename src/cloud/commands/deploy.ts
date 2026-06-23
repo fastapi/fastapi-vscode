@@ -142,7 +142,6 @@ export async function deploy(context: DeployContext): Promise<boolean> {
     // Poll for deployment status
     const result = await pollDeploymentStatus(
       apiService,
-      config.app_id,
       deployment.id,
       updateStatus,
     )
@@ -244,12 +243,11 @@ async function uploadToS3(
 
 async function pollDeploymentStatus(
   apiService: ApiService,
-  appId: string,
   deploymentId: string,
   updateStatus: (text: string) => void,
 ): Promise<Deployment | null> {
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-    const deployment = await apiService.getDeployment(appId, deploymentId)
+    const deployment = await apiService.getDeployment(deploymentId)
 
     if (
       deployment.status === DeploymentStatus.success ||

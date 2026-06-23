@@ -2,16 +2,45 @@
 
 ## Latest Changes
 
+## 0.2.4 (2026-06-23)
+
+### Refactors
+
+* ♻️ Use new deployment route to fetch deployment. PR [#185](https://github.com/fastapi/fastapi-vscode/pull/185) by [@patrick91](https://github.com/patrick91).
+
+### Internal
+
+* ♻️ Stop vendoring tree-sitter-python grammar. PR [#188](https://github.com/fastapi/fastapi-vscode/pull/188) by [@savannahostrowski](https://github.com/savannahostrowski).
+* ⬆ Bump the bun-packages group across 1 directory with 9 updates. PR [#186](https://github.com/fastapi/fastapi-vscode/pull/186) by [@dependabot[bot]](https://github.com/apps/dependabot).
+* ⬆️ Group Dependabot updates. PR [#183](https://github.com/fastapi/fastapi-vscode/pull/183) by [@tiangolo](https://github.com/tiangolo).
+* ⬆️ Update Dependabot ecosystem coverage. PR [#177](https://github.com/fastapi/fastapi-vscode/pull/177) by [@tiangolo](https://github.com/tiangolo).
+
+## 0.2.3 (2026-06-18)
+
+### Refactors
+
+* 🍱 Make walkthrough GIFs ~50% smaller. PR [#175](https://github.com/fastapi/fastapi-vscode/pull/175) by [@savannahostrowski](https://github.com/savannahostrowski).
+* ✅ Assert opened URL by host instead of substring. PR [#174](https://github.com/fastapi/fastapi-vscode/pull/174) by [@savannahostrowski](https://github.com/savannahostrowski).
+* 🔒️ Render cloud logs via DOM instead of HTML strings. PR [#172](https://github.com/fastapi/fastapi-vscode/pull/172) by [@savannahostrowski](https://github.com/savannahostrowski).
+
+### Internal
+
+* 🔒️ Disable Bun dependency cache in the publish workflow. PR [#173](https://github.com/fastapi/fastapi-vscode/pull/173) by [@savannahostrowski](https://github.com/savannahostrowski).
+* 👷 Automate release process. PR [#170](https://github.com/fastapi/fastapi-vscode/pull/170) by [@savannahostrowski](https://github.com/savannahostrowski).
+
+## 0.2.2
+
 ### Fixes
 
 * 🐛 Exclude .venv and cache dirs from test index scan. PR [#168](https://github.com/fastapi/fastapi-vscode/pull/168) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ### Refactors
 
-* ⚡Speed up extension activation . PR [#164](https://github.com/fastapi/fastapi-vscode/pull/164) by [@savannahostrowski](https://github.com/savannahostrowski).
+* ⚡ Speed up extension activation. PR [#164](https://github.com/fastapi/fastapi-vscode/pull/164) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ### Internal
 
+* ⬆ Bump @vscode/test-electron from 2.5.2 to 3.0.0 in the npm-packages group. PR [#166](https://github.com/fastapi/fastapi-vscode/pull/166) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump crate-ci/typos from 1.47.1 to 1.47.2 in the github-actions group. PR [#167](https://github.com/fastapi/fastapi-vscode/pull/167) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump ovsx from 0.10.12 to 1.0.0 in the npm-packages group. PR [#162](https://github.com/fastapi/fastapi-vscode/pull/162) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump the github-actions group with 2 updates. PR [#163](https://github.com/fastapi/fastapi-vscode/pull/163) by [@dependabot[bot]](https://github.com/apps/dependabot).

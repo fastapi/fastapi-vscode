@@ -1,6 +1,8 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
+import type { AppLogEntry } from "../../api"
+
 declare function acquireVsCodeApi(): { postMessage(msg: unknown): void }
 
 const vscode = acquireVsCodeApi()
@@ -129,6 +131,22 @@ function setStreamingState(streaming: boolean, appLabel?: string): void {
     streaming && appLabel ? `Streaming logs for ${appLabel}...` : ""
 }
 
+// Build the log line as a DOM node. The untrusted message is set as a text
+// node, so it is never parsed as HTML — no sanitization needed.
+function buildLogLine(entry: AppLogEntry): HTMLElement {
+  const line = document.createElement("div")
+  line.className = "log-line"
+  line.dataset.level = entry.level
+  const pipe = document.createElement("span")
+  pipe.className = "pipe"
+  pipe.textContent = "┃"
+  const ts = document.createElement("span")
+  ts.className = "ts"
+  ts.textContent = entry.timestamp
+  line.append(pipe, " ", ts, " ", entry.message)
+  return line
+}
+
 window.addEventListener("message", (event) => {
   const msg = event.data
   if (msg.type === "log") {
@@ -137,13 +155,12 @@ window.addEventListener("message", (event) => {
       firstEntry = false
     }
     const wasAtBottom = isNearBottom()
-    logs.insertAdjacentHTML("beforeend", msg.html)
-    const last = logs.lastElementChild as HTMLElement | null
+    const line = buildLogLine(msg.entry)
+    logs.append(line)
     if (
-      last &&
-      !shouldShow(last, getSelectedLevels(), searchInput.value.toLowerCase())
+      !shouldShow(line, getSelectedLevels(), searchInput.value.toLowerCase())
     ) {
-      last.classList.add("filtered")
+      line.classList.add("filtered")
     }
     if (wasAtBottom) window.scrollTo(0, document.body.scrollHeight)
   } else if (msg.type === "status") {
