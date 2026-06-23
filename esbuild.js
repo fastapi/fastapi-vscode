@@ -22,10 +22,10 @@ function copyWasmFiles() {
   copyFileSync(coreSrc, path.join(wasmDestDir, "web-tree-sitter.wasm"))
   console.log("Copied web-tree-sitter.wasm -> dist/wasm/")
 
-  // tree-sitter-python.wasm from wasm/ directory (checked into repo)
   const pythonSrc = path.join(
     import.meta.dirname,
-    "wasm",
+    "node_modules",
+    "tree-sitter-python",
     "tree-sitter-python.wasm",
   )
   copyFileSync(pythonSrc, path.join(wasmDestDir, "tree-sitter-python.wasm"))
