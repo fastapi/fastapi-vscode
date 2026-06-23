@@ -141,13 +141,8 @@ export class ApiService {
     })
   }
 
-  async getDeployment(
-    appId: string,
-    deploymentId: string,
-  ): Promise<Deployment> {
-    return this.request<Deployment>(
-      `/apps/${appId}/deployments/${deploymentId}/`,
-    )
+  async getDeployment(deploymentId: string): Promise<Deployment> {
+    return this.request<Deployment>(`/deployments/${deploymentId}`)
   }
 
   async *streamAppLogs(options: {
