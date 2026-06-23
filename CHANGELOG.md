@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Refactors
+
+* ♻️ Use new deployment route to fetch deployment. PR [#185](https://github.com/fastapi/fastapi-vscode/pull/185) by [@patrick91](https://github.com/patrick91).
+
 ### Internal
 
 * ⬆️ Group Dependabot updates. PR [#183](https://github.com/fastapi/fastapi-vscode/pull/183) by [@tiangolo](https://github.com/tiangolo).
