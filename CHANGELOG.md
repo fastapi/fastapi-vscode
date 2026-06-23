@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.2.4 (2026-06-23)
+
 ### Refactors
 
 * ♻️ Use new deployment route to fetch deployment. PR [#185](https://github.com/fastapi/fastapi-vscode/pull/185) by [@patrick91](https://github.com/patrick91).
