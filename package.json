@@ -343,18 +343,18 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.0",
+    "@biomejs/biome": "^2.5.1",
     "@types/bun": "latest",
     "@types/mocha": "^10.0.10",
-    "@types/sinon": "^21.0.0",
-    "@types/vscode": "^1.95.0",
+    "@types/sinon": "^21.0.1",
+    "@types/vscode": "^1.125.0",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.0.0",
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.1",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.7",
-    "ovsx": "^1.0.1",
+    "lint-staged": "^17.0.8",
+    "ovsx": "^1.0.2",
     "path-browserify": "^1.0.1",
     "sinon": "^22.0.0",
     "tree-sitter-python": "^0.25.0",
@@ -362,7 +362,7 @@
   },
   "dependencies": {
     "p-map": "^7.0.4",
-    "posthog-node": "^5.37.1",
+    "posthog-node": "^5.38.3",
     "tinytar": "^0.1.0",
     "toml": "^4.1.1",
     "web-tree-sitter": "^0.26.9"
