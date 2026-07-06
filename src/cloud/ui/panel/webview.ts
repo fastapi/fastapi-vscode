@@ -10,6 +10,11 @@ interface SinceOption {
   value: string
 }
 
+type HistoryRowState =
+  | { kind: "hidden" }
+  | { kind: "button"; loading: boolean }
+  | { kind: "notice"; text: string }
+
 const vscode = acquireVsCodeApi()
 const logs = document.getElementById("logs")!
 const sinceFilter = document.getElementById("since-filter") as HTMLSelectElement
@@ -27,10 +32,6 @@ const levelList = document.getElementById("level-list")!
 const appLabelEl = document.getElementById("app-label")!
 let firstEntry = true
 let isStreaming = false
-
-function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-}
 
 function getSelectedLevels(): string[] {
   return Array.from(
@@ -64,16 +65,13 @@ filterBtn.addEventListener("click", (e) => {
 })
 
 clearBtn.addEventListener("click", () => {
-  logs.innerHTML = ""
+  logs.replaceChildren()
   firstEntry = true
 })
 
 loadOlderBtn.addEventListener("click", () => {
   loadOlderBtn.disabled = true
-  loadOlderBtn.textContent =
-    loadOlderBtn.dataset.checked === "true"
-      ? "Loading earlier logs..."
-      : "Checking earlier logs..."
+  loadOlderBtn.textContent = "Loading logs..."
   vscode.postMessage({ type: "loadOlder" })
 })
 
@@ -150,41 +148,42 @@ function setStreamingState(streaming: boolean, appLabel?: string): void {
     streaming && appLabel ? `Streaming logs for ${appLabel}...` : ""
 }
 
-function setHistoryState(
-  hasOlder: boolean,
-  loading: boolean,
-  checked: boolean,
-): void {
-  historyNote.textContent = ""
-  historyNote.classList.add("hidden")
-  loadOlderBtn.classList.remove("hidden")
-  loadOlderBtn.dataset.checked = checked ? "true" : "false"
-  historyBar.classList.toggle("hidden", !hasOlder && !loading)
-  loadOlderBtn.disabled = !hasOlder || loading
-  if (loading) {
-    loadOlderBtn.textContent = checked
-      ? "Loading earlier logs..."
-      : "Checking earlier logs..."
-  } else {
-    loadOlderBtn.textContent = checked
-      ? "Load earlier logs"
-      : "Check earlier logs"
+function renderHistoryRow(state: HistoryRowState): void {
+  historyBar.classList.toggle("hidden", state.kind === "hidden")
+  loadOlderBtn.classList.toggle("hidden", state.kind !== "button")
+  historyNote.classList.toggle("hidden", state.kind !== "notice")
+
+  if (state.kind === "hidden") {
+    historyNote.textContent = ""
+    return
   }
-  loadOlderBtn.title = checked
-    ? "Load more earlier logs in the selected range"
-    : "Check whether earlier logs exist in the selected range"
+
+  if (state.kind === "notice") {
+    historyNote.textContent = state.text
+    return
+  }
+
+  historyNote.textContent = ""
+  loadOlderBtn.disabled = state.loading
+  loadOlderBtn.textContent = state.loading
+    ? "Loading logs..."
+    : "Load earlier logs"
+  loadOlderBtn.title = "Load earlier logs in the selected range"
+}
+
+function setHistoryState(hasOlder: boolean, loading: boolean): void {
+  renderHistoryRow(
+    hasOlder || loading ? { kind: "button", loading } : { kind: "hidden" },
+  )
 }
 
 function showHistoryNotice(text: string): void {
-  historyBar.classList.remove("hidden")
-  loadOlderBtn.classList.add("hidden")
-  historyNote.textContent = text
-  historyNote.classList.remove("hidden")
+  renderHistoryRow({ kind: "notice", text })
 }
 
 function updateSinceOptions(options: SinceOption[]): void {
   const previousValue = sinceFilter.value
-  sinceFilter.innerHTML = ""
+  sinceFilter.replaceChildren()
   for (const option of options) {
     const optionEl = document.createElement("option")
     optionEl.value = option.value
@@ -213,6 +212,13 @@ function buildLogLine(entry: AppLogEntry): HTMLElement {
   return line
 }
 
+function buildStatusLine(text: string): HTMLElement {
+  const status = document.createElement("div")
+  status.className = "status"
+  status.textContent = text
+  return status
+}
+
 function applyCurrentFilters(line: HTMLElement): void {
   if (!shouldShow(line, getSelectedLevels(), searchInput.value.toLowerCase())) {
     line.classList.add("filtered")
@@ -223,7 +229,7 @@ window.addEventListener("message", (event) => {
   const msg = event.data
   if (msg.type === "log") {
     if (firstEntry) {
-      logs.innerHTML = ""
+      logs.replaceChildren()
       firstEntry = false
     }
     const wasAtBottom = isNearBottom()
@@ -233,9 +239,11 @@ window.addEventListener("message", (event) => {
     if (wasAtBottom) window.scrollTo(0, document.body.scrollHeight)
   } else if (msg.type === "olderLogs" && Array.isArray(msg.entries)) {
     if (firstEntry) {
-      logs.innerHTML = ""
+      logs.replaceChildren()
       firstEntry = false
     }
+    const previousScrollHeight = document.body.scrollHeight
+    const previousScrollY = window.scrollY
     const fragment = document.createDocumentFragment()
     for (const entry of msg.entries) {
       const line = buildLogLine(entry)
@@ -243,15 +251,19 @@ window.addEventListener("message", (event) => {
       fragment.append(line)
     }
     logs.prepend(fragment)
+    window.scrollTo(
+      0,
+      previousScrollY + document.body.scrollHeight - previousScrollHeight,
+    )
   } else if (msg.type === "status") {
-    const safe = esc(msg.text)
+    const status = buildStatusLine(String(msg.text ?? ""))
     if (firstEntry) {
-      logs.innerHTML = `<span class="status">${safe}</span>`
+      logs.replaceChildren(status)
     } else {
-      logs.insertAdjacentHTML("beforeend", `<div class="status">${safe}</div>`)
+      logs.append(status)
     }
   } else if (msg.type === "clear") {
-    logs.innerHTML = ""
+    logs.replaceChildren()
     firstEntry = true
   } else if (msg.type === "streamingState") {
     setStreamingState(msg.streaming, msg.appLabel)
@@ -260,10 +272,6 @@ window.addEventListener("message", (event) => {
   } else if (msg.type === "historyNotice") {
     showHistoryNotice(String(msg.text ?? ""))
   } else if (msg.type === "historyState") {
-    setHistoryState(
-      Boolean(msg.hasOlder),
-      Boolean(msg.loading),
-      Boolean(msg.checked),
-    )
+    setHistoryState(Boolean(msg.hasOlder), Boolean(msg.loading))
   }
 })

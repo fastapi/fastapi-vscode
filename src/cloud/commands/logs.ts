@@ -22,23 +22,18 @@ const BASE_SINCE_OPTIONS: SinceOption[] = [
   { label: "1 hour", value: "1h" },
   { label: "1 day", value: "1d" },
 ]
+const EXTRA_SINCE_OPTION_DAYS = [7, 14]
 
 function dayOption(days: number): SinceOption {
   return { label: `${days} days`, value: `${days}d` }
 }
 
 export function getSinceOptions(logRetentionDays = 1): SinceOption[] {
-  const options = [...BASE_SINCE_OPTIONS]
   const retentionDays = Math.floor(logRetentionDays)
-  const extraDays = [7, 14].filter((days) => days <= retentionDays)
-  if (retentionDays > 1 && !extraDays.includes(retentionDays)) {
-    extraDays.push(retentionDays)
-  }
-
-  for (const days of extraDays.sort((a, b) => a - b)) {
-    options.push(dayOption(days))
-  }
-  return options
+  const extraOptions = EXTRA_SINCE_OPTION_DAYS.filter(
+    (days) => days <= retentionDays,
+  ).map(dayOption)
+  return [...BASE_SINCE_OPTIONS, ...extraOptions]
 }
 
 function parseSinceMs(since: string): number {
@@ -51,6 +46,23 @@ function parseSinceMs(since: string): number {
   if (unit === "m") return value * 60 * 1000
   if (unit === "h") return value * 60 * 60 * 1000
   return value * 24 * 60 * 60 * 1000
+}
+
+function formatSinceLabel(since: string): string {
+  const match = since.match(/^(\d+)([smhd])$/)
+  if (!match) return since
+
+  const value = Number(match[1])
+  const unit = match[2]
+  const unitLabel =
+    unit === "s"
+      ? "second"
+      : unit === "m"
+        ? "minute"
+        : unit === "h"
+          ? "hour"
+          : "day"
+  return `${value} ${unitLabel}${value === 1 ? "" : "s"}`
 }
 
 // Levels recognized when inferring a log's level from its message prefix.
@@ -106,27 +118,24 @@ export function formatLogEntry(entry: AppLogEntry): AppLogEntry {
   }
 }
 
-function getTimestampMs(entry: AppLogEntry): number {
+function getTimestampEpochMs(entry: AppLogEntry): number {
   const timestampMs = new Date(entry.timestamp).getTime()
   return Number.isNaN(timestampMs) ? 0 : timestampMs
 }
 
-function getCursorNs(entry: AppLogEntry): string | undefined {
+function getPaginationCursorNs(entry: AppLogEntry): string | undefined {
   if (entry.timestamp_ns) return entry.timestamp_ns
-  const timestampMs = getTimestampMs(entry)
+  const timestampMs = getTimestampEpochMs(entry)
   return timestampMs > 0 ? `${timestampMs}000000` : undefined
-}
-
-function currentTimeNs(): string {
-  return `${Date.now()}000000`
 }
 
 interface HistoryState {
   appId: string
   beforeNs: string
-  windowStartMs: number
+  windowStartEpochMs: number
+  rangeLabel: string
   hasOlder: boolean
-  checked: boolean
+  hasLogs: boolean
 }
 
 // --- Webview HTML ---
@@ -138,12 +147,14 @@ function getLevelChipsHtml(): string {
   ).join("\n")
 }
 
+function getSinceOptionHtml(option: SinceOption, selected: boolean): string {
+  const selectedAttr = selected ? " selected" : ""
+  return `<option value="${option.value}"${selectedAttr}>${option.label}</option>`
+}
+
 function getSinceOptionsHtml(): string {
   return getSinceOptions()
-    .map(
-      (o, i) =>
-        `<option value="${o.value}"${i === 0 ? " selected" : ""}>${o.label}</option>`,
-    )
+    .map((option, index) => getSinceOptionHtml(option, index === 0))
     .join("")
 }
 
@@ -190,7 +201,7 @@ export function getWebviewHtml(
 	    <button class="icon-btn" id="clear-btn" title="Clear logs"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>Clear</button>
 	</div>
 	<div class="history-bar hidden" id="history-bar">
-	    <button class="link-btn" id="load-older-btn" title="Check whether earlier logs exist in the selected range" disabled>Check earlier logs</button>
+	    <button class="link-btn" id="load-older-btn" title="Load earlier logs in the selected range" disabled>Load earlier logs</button>
 	    <span class="history-note hidden" id="history-note"></span>
 	</div>
 	<div id="logs"><span class="status">Click "Start" to stream logs.</span></div>
@@ -297,21 +308,20 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
     await this.updateSinceOptionsForConfig(config)
   }
 
-  private postHistoryState(
-    hasOlder: boolean,
-    loading: boolean,
-    checked = this.historyState?.checked ?? false,
-  ): void {
+  private postHistoryState(options?: {
+    hasOlder?: boolean
+    loading?: boolean
+  }): void {
+    const state = this.historyState
     this.view?.webview.postMessage({
       type: "historyState",
-      hasOlder,
-      loading,
-      checked,
+      hasOlder: options?.hasOlder ?? state?.hasOlder ?? false,
+      loading: options?.loading ?? false,
     })
   }
 
   private updateHistoryCursor(entry: AppLogEntry): void {
-    const cursor = getCursorNs(entry)
+    const cursor = getPaginationCursorNs(entry)
     if (!cursor || !this.historyState) return
     if (BigInt(cursor) < BigInt(this.historyState.beforeNs)) {
       this.historyState.beforeNs = cursor
@@ -322,22 +332,29 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
     logs: AppLogEntry[]
     reachedWindowStart: boolean
   } {
-    const windowStartMs = this.historyState?.windowStartMs ?? 0
+    const windowStartEpochMs = this.historyState?.windowStartEpochMs ?? 0
     let reachedWindowStart = false
     const filteredLogs = logs.filter((entry) => {
-      const timestampMs = getTimestampMs(entry)
-      const inWindow = timestampMs >= windowStartMs
+      const timestampMs = getTimestampEpochMs(entry)
+      const inWindow = timestampMs >= windowStartEpochMs
       if (!inWindow) reachedWindowStart = true
       return inWindow
     })
     return { logs: filteredLogs, reachedWindowStart }
   }
 
+  private getNoOlderLogsText(state: HistoryState): string {
+    if (state.hasLogs) {
+      return `No earlier logs in the last ${state.rangeLabel}.`
+    }
+    return `No logs found in the last ${state.rangeLabel}. Choose a longer range to see older logs.`
+  }
+
   async loadOlderLogs(): Promise<void> {
     if (!this.historyState?.hasOlder) return
     const state = this.historyState
 
-    this.postHistoryState(true, true)
+    this.postHistoryState({ loading: true })
     try {
       const response = await this.apiService.getAppLogs({
         appId: state.appId,
@@ -350,20 +367,20 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
         response.logs,
       )
       if (logs.length > 0) {
-        state.beforeNs = getCursorNs(logs[0]) ?? state.beforeNs
+        state.hasLogs = true
+        state.beforeNs = getPaginationCursorNs(logs[0]) ?? state.beforeNs
         this.view?.webview.postMessage({
           type: "olderLogs",
           entries: logs.map(formatLogEntry),
         })
       }
 
-      state.checked = true
       state.hasOlder = response.has_more && !reachedWindowStart
-      this.postHistoryState(state.hasOlder, false, state.checked)
+      this.postHistoryState()
       if (logs.length === 0 && !state.hasOlder) {
         this.view?.webview.postMessage({
           type: "historyNotice",
-          text: "No earlier logs in this range.",
+          text: this.getNoOlderLogsText(state),
         })
       }
     } catch (error) {
@@ -371,7 +388,7 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
 
       const message = error instanceof Error ? error.message : String(error)
       log(`Failed to load older logs: ${message}`)
-      this.postHistoryState(state.hasOlder, false, state.checked)
+      this.postHistoryState()
       this.view?.webview.postMessage({
         type: "historyNotice",
         text: `Failed to load earlier logs: ${message}`,
@@ -414,17 +431,19 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
 
     const appLabel =
       config.app_slug ?? workspaceRoot.path.split("/").pop() ?? ""
+    const nowEpochMs = Date.now()
     this.historyState = {
       appId,
-      beforeNs: currentTimeNs(),
-      windowStartMs: Date.now() - parseSinceMs(since),
+      beforeNs: `${nowEpochMs}000000`,
+      windowStartEpochMs: nowEpochMs - parseSinceMs(since),
+      rangeLabel: formatSinceLabel(since),
       hasOlder: true,
-      checked: false,
+      hasLogs: false,
     }
 
     if (this.view) {
       this.view.webview.postMessage({ type: "clear" })
-      this.postHistoryState(false, false)
+      this.postHistoryState({ hasOlder: false })
       this.view.webview.postMessage({
         type: "status",
         text: "Connecting to log stream...",
@@ -446,24 +465,24 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
         signal,
       })
 
-      // If no entries arrive quickly, update status so user knows we're connected
       const connectedTimer = setTimeout(() => {
         if (count === 0 && this.view && !signal.aborted) {
           this.view.webview.postMessage({
             type: "status",
             text: "Connected. Waiting for new logs...",
           })
-          this.postHistoryState(this.historyState?.hasOlder ?? false, false)
+          this.postHistoryState()
         }
-      }, 2000)
+      }, 1000)
 
       for await (const entry of logStream) {
         if (count === 0) clearTimeout(connectedTimer)
         if (!this.view) return
         count++
+        if (this.historyState) this.historyState.hasLogs = true
         this.updateHistoryCursor(entry)
         if (count === 1) {
-          this.postHistoryState(this.historyState?.hasOlder ?? false, false)
+          this.postHistoryState()
         }
         this.view.webview.postMessage({
           type: "log",
@@ -482,7 +501,7 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
           text: "Stream ended.",
         })
       }
-      this.postHistoryState(this.historyState?.hasOlder ?? false, false)
+      this.postHistoryState()
     } catch (error) {
       if (signal.aborted) return
       if (error instanceof StreamLogError) {
