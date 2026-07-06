@@ -5,11 +5,21 @@ import type { AppLogEntry } from "../../api"
 
 declare function acquireVsCodeApi(): { postMessage(msg: unknown): void }
 
+interface SinceOption {
+  label: string
+  value: string
+}
+
 const vscode = acquireVsCodeApi()
 const logs = document.getElementById("logs")!
 const sinceFilter = document.getElementById("since-filter") as HTMLSelectElement
 const searchInput = document.getElementById("search-input") as HTMLInputElement
 const streamBtn = document.getElementById("stream-btn")!
+const historyBar = document.getElementById("history-bar")!
+const loadOlderBtn = document.getElementById(
+  "load-older-btn",
+) as HTMLButtonElement
+const historyNote = document.getElementById("history-note")!
 const clearBtn = document.getElementById("clear-btn")!
 const filterBtn = document.getElementById("filter-btn")!
 const filterPopup = document.getElementById("filter-popup")!
@@ -56,6 +66,15 @@ filterBtn.addEventListener("click", (e) => {
 clearBtn.addEventListener("click", () => {
   logs.innerHTML = ""
   firstEntry = true
+})
+
+loadOlderBtn.addEventListener("click", () => {
+  loadOlderBtn.disabled = true
+  loadOlderBtn.textContent =
+    loadOlderBtn.dataset.checked === "true"
+      ? "Loading earlier logs..."
+      : "Checking earlier logs..."
+  vscode.postMessage({ type: "loadOlder" })
 })
 
 function isNearBottom(): boolean {
@@ -131,6 +150,53 @@ function setStreamingState(streaming: boolean, appLabel?: string): void {
     streaming && appLabel ? `Streaming logs for ${appLabel}...` : ""
 }
 
+function setHistoryState(
+  hasOlder: boolean,
+  loading: boolean,
+  checked: boolean,
+): void {
+  historyNote.textContent = ""
+  historyNote.classList.add("hidden")
+  loadOlderBtn.classList.remove("hidden")
+  loadOlderBtn.dataset.checked = checked ? "true" : "false"
+  historyBar.classList.toggle("hidden", !hasOlder && !loading)
+  loadOlderBtn.disabled = !hasOlder || loading
+  if (loading) {
+    loadOlderBtn.textContent = checked
+      ? "Loading earlier logs..."
+      : "Checking earlier logs..."
+  } else {
+    loadOlderBtn.textContent = checked
+      ? "Load earlier logs"
+      : "Check earlier logs"
+  }
+  loadOlderBtn.title = checked
+    ? "Load more earlier logs in the selected range"
+    : "Check whether earlier logs exist in the selected range"
+}
+
+function showHistoryNotice(text: string): void {
+  historyBar.classList.remove("hidden")
+  loadOlderBtn.classList.add("hidden")
+  historyNote.textContent = text
+  historyNote.classList.remove("hidden")
+}
+
+function updateSinceOptions(options: SinceOption[]): void {
+  const previousValue = sinceFilter.value
+  sinceFilter.innerHTML = ""
+  for (const option of options) {
+    const optionEl = document.createElement("option")
+    optionEl.value = option.value
+    optionEl.textContent = option.label
+    sinceFilter.append(optionEl)
+  }
+
+  if (options.some((option) => option.value === previousValue)) {
+    sinceFilter.value = previousValue
+  }
+}
+
 // Build the log line as a DOM node. The untrusted message is set as a text
 // node, so it is never parsed as HTML — no sanitization needed.
 function buildLogLine(entry: AppLogEntry): HTMLElement {
@@ -147,6 +213,12 @@ function buildLogLine(entry: AppLogEntry): HTMLElement {
   return line
 }
 
+function applyCurrentFilters(line: HTMLElement): void {
+  if (!shouldShow(line, getSelectedLevels(), searchInput.value.toLowerCase())) {
+    line.classList.add("filtered")
+  }
+}
+
 window.addEventListener("message", (event) => {
   const msg = event.data
   if (msg.type === "log") {
@@ -157,12 +229,20 @@ window.addEventListener("message", (event) => {
     const wasAtBottom = isNearBottom()
     const line = buildLogLine(msg.entry)
     logs.append(line)
-    if (
-      !shouldShow(line, getSelectedLevels(), searchInput.value.toLowerCase())
-    ) {
-      line.classList.add("filtered")
-    }
+    applyCurrentFilters(line)
     if (wasAtBottom) window.scrollTo(0, document.body.scrollHeight)
+  } else if (msg.type === "olderLogs" && Array.isArray(msg.entries)) {
+    if (firstEntry) {
+      logs.innerHTML = ""
+      firstEntry = false
+    }
+    const fragment = document.createDocumentFragment()
+    for (const entry of msg.entries) {
+      const line = buildLogLine(entry)
+      applyCurrentFilters(line)
+      fragment.append(line)
+    }
+    logs.prepend(fragment)
   } else if (msg.type === "status") {
     const safe = esc(msg.text)
     if (firstEntry) {
@@ -175,5 +255,15 @@ window.addEventListener("message", (event) => {
     firstEntry = true
   } else if (msg.type === "streamingState") {
     setStreamingState(msg.streaming, msg.appLabel)
+  } else if (msg.type === "sinceOptions" && Array.isArray(msg.options)) {
+    updateSinceOptions(msg.options)
+  } else if (msg.type === "historyNotice") {
+    showHistoryNotice(String(msg.text ?? ""))
+  } else if (msg.type === "historyState") {
+    setHistoryState(
+      Boolean(msg.hasOlder),
+      Boolean(msg.loading),
+      Boolean(msg.checked),
+    )
   }
 })

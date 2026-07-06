@@ -8,6 +8,7 @@ import type {
   Deployment,
   ListResponse,
   Team,
+  TeamAccess,
   UploadInfo,
   User,
 } from "./types"
@@ -21,6 +22,12 @@ export interface AppLogEntry {
   timestamp: string
   message: string
   level: string
+  timestamp_ns?: string
+}
+
+export interface AppLogsResponse {
+  logs: AppLogEntry[]
+  has_more: boolean
 }
 
 export class StreamLogError extends Error {
@@ -105,6 +112,10 @@ export class ApiService {
     return this.request<Team>(`/teams/${teamId}/`)
   }
 
+  async getTeamAccess(teamId: string): Promise<TeamAccess> {
+    return this.request<TeamAccess>(`/teams/${teamId}/access`)
+  }
+
   async getApps(teamId: string): Promise<App[]> {
     const data = await this.request<ListResponse<App>>(
       `/apps/?team_id=${teamId}`,
@@ -143,6 +154,18 @@ export class ApiService {
 
   async getDeployment(deploymentId: string): Promise<Deployment> {
     return this.request<Deployment>(`/deployments/${deploymentId}`)
+  }
+
+  async getAppLogs(options: {
+    appId: string
+    beforeNs?: string
+    limit?: number
+  }): Promise<AppLogsResponse> {
+    const params = new URLSearchParams()
+    if (options.beforeNs) params.set("before_ns", options.beforeNs)
+    if (options.limit) params.set("limit", String(options.limit))
+    const query = params.size > 0 ? `?${params}` : ""
+    return this.request<AppLogsResponse>(`/apps/${options.appId}/logs${query}`)
   }
 
   async *streamAppLogs(options: {

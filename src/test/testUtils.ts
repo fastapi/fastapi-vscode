@@ -201,6 +201,21 @@ export function mockApiService(
   stub.getUser.resolves(null)
   stub.getTeams.resolves([])
   stub.getApps.resolves([])
+  stub.getAppLogs.resolves({ logs: [], has_more: false })
+  stub.getTeamAccess.resolves({
+    role: "owner",
+    is_owner: true,
+    permissions: [],
+    entitlements: {
+      max_apps: 3,
+      max_replicas: 3,
+      max_custom_domains: 1,
+      max_seats: 1,
+      log_retention_days: 1,
+      metrics_retention_days: 1,
+      advanced_metrics_enabled: false,
+    },
+  })
 
   Object.assign(stub, overrides)
   return stub

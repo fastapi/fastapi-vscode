@@ -3,18 +3,55 @@ import { log } from "../../utils/logger"
 import { trackCloudLogsOpened } from "../../utils/telemetry"
 import { type ApiService, type AppLogEntry, StreamLogError } from "../api"
 import type { ConfigService } from "../config"
+import type { Config } from "../types"
 
 const DEFAULT_TAIL = 100
+const HISTORY_PAGE_SIZE = 500
 export const LOGS_VIEW_ID = "fastapi-cloud-logs"
 
 // --- Log formatting ---
 
-const SINCE_OPTIONS = [
+export interface SinceOption {
+  label: string
+  value: string
+}
+
+const BASE_SINCE_OPTIONS: SinceOption[] = [
   { label: "5 minutes", value: "5m" },
   { label: "30 minutes", value: "30m" },
   { label: "1 hour", value: "1h" },
   { label: "1 day", value: "1d" },
 ]
+
+function dayOption(days: number): SinceOption {
+  return { label: `${days} days`, value: `${days}d` }
+}
+
+export function getSinceOptions(logRetentionDays = 1): SinceOption[] {
+  const options = [...BASE_SINCE_OPTIONS]
+  const retentionDays = Math.floor(logRetentionDays)
+  const extraDays = [7, 14].filter((days) => days <= retentionDays)
+  if (retentionDays > 1 && !extraDays.includes(retentionDays)) {
+    extraDays.push(retentionDays)
+  }
+
+  for (const days of extraDays.sort((a, b) => a - b)) {
+    options.push(dayOption(days))
+  }
+  return options
+}
+
+function parseSinceMs(since: string): number {
+  const match = since.match(/^(\d+)([smhd])$/)
+  if (!match) return 5 * 60 * 1000
+
+  const value = Number(match[1])
+  const unit = match[2]
+  if (unit === "s") return value * 1000
+  if (unit === "m") return value * 60 * 1000
+  if (unit === "h") return value * 60 * 60 * 1000
+  return value * 24 * 60 * 60 * 1000
+}
 
 // Levels recognized when inferring a log's level from its message prefix.
 // Pipe colors for these live in the webview stylesheet, keyed on [data-level].
@@ -64,8 +101,32 @@ export function formatLogEntry(entry: AppLogEntry): AppLogEntry {
   return {
     level,
     timestamp: formatTimestamp(entry.timestamp),
+    timestamp_ns: entry.timestamp_ns,
     message: entry.message,
   }
+}
+
+function getTimestampMs(entry: AppLogEntry): number {
+  const timestampMs = new Date(entry.timestamp).getTime()
+  return Number.isNaN(timestampMs) ? 0 : timestampMs
+}
+
+function getCursorNs(entry: AppLogEntry): string | undefined {
+  if (entry.timestamp_ns) return entry.timestamp_ns
+  const timestampMs = getTimestampMs(entry)
+  return timestampMs > 0 ? `${timestampMs}000000` : undefined
+}
+
+function currentTimeNs(): string {
+  return `${Date.now()}000000`
+}
+
+interface HistoryState {
+  appId: string
+  beforeNs: string
+  windowStartMs: number
+  hasOlder: boolean
+  checked: boolean
 }
 
 // --- Webview HTML ---
@@ -78,10 +139,12 @@ function getLevelChipsHtml(): string {
 }
 
 function getSinceOptionsHtml(): string {
-  return SINCE_OPTIONS.map(
-    (o, i) =>
-      `<option value="${o.value}"${i === 0 ? " selected" : ""}>${o.label}</option>`,
-  ).join("")
+  return getSinceOptions()
+    .map(
+      (o, i) =>
+        `<option value="${o.value}"${i === 0 ? " selected" : ""}>${o.label}</option>`,
+    )
+    .join("")
 }
 
 export function getWebviewHtml(
@@ -102,11 +165,11 @@ export function getWebviewHtml(
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' ${webview.cspSource}; script-src ${webview.cspSource};">
 <link rel="stylesheet" href="${stylesUri}">
 </head>
-<body>
-<div class="toolbar">
-    <select id="since-filter">${getSinceOptionsHtml()}</select>
-    <div class="filter-wrapper">
-        <button class="secondary-btn" id="filter-btn" title="Filter displayed logs">Filter <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M4 6l4 4 4-4z"/></svg></button>
+	<body>
+	<div class="toolbar">
+	    <select id="since-filter">${getSinceOptionsHtml()}</select>
+	    <div class="filter-wrapper">
+	        <button class="secondary-btn" id="filter-btn" title="Filter displayed logs">Filter <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M4 6l4 4 4-4z"/></svg></button>
         <div class="filter-popup" id="filter-popup">
             <div class="filter-row">
                 <label for="level-list">Log Level</label>
@@ -123,10 +186,14 @@ export function getWebviewHtml(
     </div>
     <button id="stream-btn" title="Start streaming"><span id="stream-label">Start</span></button>
     <span id="app-label"></span>
-    <div class="spacer"></div>
-    <button class="icon-btn" id="clear-btn" title="Clear logs"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>Clear</button>
-</div>
-<div id="logs"><span class="status">Click "Start" to stream logs.</span></div>
+	    <div class="spacer"></div>
+	    <button class="icon-btn" id="clear-btn" title="Clear logs"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>Clear</button>
+	</div>
+	<div class="history-bar hidden" id="history-bar">
+	    <button class="link-btn" id="load-older-btn" title="Check whether earlier logs exist in the selected range" disabled>Check earlier logs</button>
+	    <span class="history-note hidden" id="history-note"></span>
+	</div>
+	<div id="logs"><span class="status">Click "Start" to stream logs.</span></div>
 <script src="${scriptUri}"></script>
 </body>
 </html>`
@@ -135,6 +202,7 @@ export function getWebviewHtml(
 export class LogsViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined
   private activeAbortController: AbortController | undefined
+  private historyState: HistoryState | undefined
 
   constructor(
     private extensionUri: vscode.Uri,
@@ -156,6 +224,7 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
       webviewView.webview,
       this.extensionUri,
     )
+    void this.updateSinceOptions()
 
     webviewView.webview.onDidReceiveMessage(async (msg) => {
       if (msg.type === "startStream") {
@@ -163,6 +232,8 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
         await this.streamLogs({ since, tail: DEFAULT_TAIL })
       } else if (msg.type === "stopStream") {
         this.stopStreaming()
+      } else if (msg.type === "loadOlder") {
+        await this.loadOlderLogs()
       }
     })
 
@@ -204,6 +275,110 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
     return activeFolder
   }
 
+  private async updateSinceOptionsForConfig(config: Config): Promise<void> {
+    try {
+      const access = await this.apiService.getTeamAccess(config.team_id)
+      this.view?.webview.postMessage({
+        type: "sinceOptions",
+        options: getSinceOptions(access.entitlements.log_retention_days),
+      })
+    } catch (err) {
+      log(`Failed to fetch team entitlements: ${err}`)
+    }
+  }
+
+  private async updateSinceOptions(): Promise<void> {
+    const workspaceRoot = await this.resolveWorkspaceFolder()
+    if (!workspaceRoot) return
+
+    const config = await this.configService.getConfig(workspaceRoot)
+    if (!config?.app_id) return
+
+    await this.updateSinceOptionsForConfig(config)
+  }
+
+  private postHistoryState(
+    hasOlder: boolean,
+    loading: boolean,
+    checked = this.historyState?.checked ?? false,
+  ): void {
+    this.view?.webview.postMessage({
+      type: "historyState",
+      hasOlder,
+      loading,
+      checked,
+    })
+  }
+
+  private updateHistoryCursor(entry: AppLogEntry): void {
+    const cursor = getCursorNs(entry)
+    if (!cursor || !this.historyState) return
+    if (BigInt(cursor) < BigInt(this.historyState.beforeNs)) {
+      this.historyState.beforeNs = cursor
+    }
+  }
+
+  private filterLogsWithinWindow(logs: AppLogEntry[]): {
+    logs: AppLogEntry[]
+    reachedWindowStart: boolean
+  } {
+    const windowStartMs = this.historyState?.windowStartMs ?? 0
+    let reachedWindowStart = false
+    const filteredLogs = logs.filter((entry) => {
+      const timestampMs = getTimestampMs(entry)
+      const inWindow = timestampMs >= windowStartMs
+      if (!inWindow) reachedWindowStart = true
+      return inWindow
+    })
+    return { logs: filteredLogs, reachedWindowStart }
+  }
+
+  async loadOlderLogs(): Promise<void> {
+    if (!this.historyState?.hasOlder) return
+    const state = this.historyState
+
+    this.postHistoryState(true, true)
+    try {
+      const response = await this.apiService.getAppLogs({
+        appId: state.appId,
+        beforeNs: state.beforeNs,
+        limit: HISTORY_PAGE_SIZE,
+      })
+      if (this.historyState !== state) return
+
+      const { logs, reachedWindowStart } = this.filterLogsWithinWindow(
+        response.logs,
+      )
+      if (logs.length > 0) {
+        state.beforeNs = getCursorNs(logs[0]) ?? state.beforeNs
+        this.view?.webview.postMessage({
+          type: "olderLogs",
+          entries: logs.map(formatLogEntry),
+        })
+      }
+
+      state.checked = true
+      state.hasOlder = response.has_more && !reachedWindowStart
+      this.postHistoryState(state.hasOlder, false, state.checked)
+      if (logs.length === 0 && !state.hasOlder) {
+        this.view?.webview.postMessage({
+          type: "historyNotice",
+          text: "No earlier logs in this range.",
+        })
+      }
+    } catch (error) {
+      if (this.historyState !== state) return
+
+      const message = error instanceof Error ? error.message : String(error)
+      log(`Failed to load older logs: ${message}`)
+      this.postHistoryState(state.hasOlder, false, state.checked)
+      this.view?.webview.postMessage({
+        type: "historyNotice",
+        text: `Failed to load earlier logs: ${message}`,
+      })
+    }
+  }
+
   async streamLogs(options?: { since?: string; tail?: number }): Promise<void> {
     const workspaceRoot = await this.resolveWorkspaceFolder()
 
@@ -221,6 +396,8 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
       return
     }
 
+    await this.updateSinceOptionsForConfig(config)
+
     const since = options?.since ?? "5m"
     const tail = options?.tail ?? 100
 
@@ -237,9 +414,17 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
 
     const appLabel =
       config.app_slug ?? workspaceRoot.path.split("/").pop() ?? ""
+    this.historyState = {
+      appId,
+      beforeNs: currentTimeNs(),
+      windowStartMs: Date.now() - parseSinceMs(since),
+      hasOlder: true,
+      checked: false,
+    }
 
     if (this.view) {
       this.view.webview.postMessage({ type: "clear" })
+      this.postHistoryState(false, false)
       this.view.webview.postMessage({
         type: "status",
         text: "Connecting to log stream...",
@@ -268,6 +453,7 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
             type: "status",
             text: "Connected. Waiting for new logs...",
           })
+          this.postHistoryState(this.historyState?.hasOlder ?? false, false)
         }
       }, 2000)
 
@@ -275,6 +461,10 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
         if (count === 0) clearTimeout(connectedTimer)
         if (!this.view) return
         count++
+        this.updateHistoryCursor(entry)
+        if (count === 1) {
+          this.postHistoryState(this.historyState?.hasOlder ?? false, false)
+        }
         this.view.webview.postMessage({
           type: "log",
           entry: formatLogEntry(entry),
@@ -292,6 +482,7 @@ export class LogsViewProvider implements vscode.WebviewViewProvider {
           text: "Stream ended.",
         })
       }
+      this.postHistoryState(this.historyState?.hasOlder ?? false, false)
     } catch (error) {
       if (signal.aborted) return
       if (error instanceof StreamLogError) {

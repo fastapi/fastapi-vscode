@@ -4,6 +4,7 @@ import * as vscode from "vscode"
 import { StreamLogError } from "../../../cloud/api"
 import {
   formatLogEntry,
+  getSinceOptions,
   getWebviewHtml,
   LogsViewProvider,
 } from "../../../cloud/commands/logs"
@@ -69,6 +70,22 @@ function createProvider(
 
 suite("cloud/commands/logs", () => {
   teardown(() => sinon.restore())
+
+  suite("getSinceOptions", () => {
+    test("limits hobby teams to the base retention options", () => {
+      assert.deepStrictEqual(
+        getSinceOptions(1).map((option) => option.value),
+        ["5m", "30m", "1h", "1d"],
+      )
+    })
+
+    test("includes weekly and full-retention options for pro teams", () => {
+      assert.deepStrictEqual(
+        getSinceOptions(14).map((option) => option.value),
+        ["5m", "30m", "1h", "1d", "7d", "14d"],
+      )
+    })
+  })
 
   suite("resolveWebviewView", () => {
     test("sets up webview options and html", () => {
@@ -267,6 +284,299 @@ suite("cloud/commands/logs", () => {
       assert.strictEqual(opts.since, "1d")
       assert.strictEqual(opts.tail, 200)
       assert.strictEqual(opts.follow, true)
+    })
+
+    test("enables older log loading after stream cursor is available", async () => {
+      sinon.useFakeTimers(new Date("2025-01-15T10:40:00Z"))
+      const { provider, configService, apiService } = createProvider()
+      const { view, messages } = createWebviewView()
+      provider.resolveWebviewView(view)
+      configService.getConfig.resolves({ app_id: "a1", team_id: "t1" })
+
+      async function* fakeStream() {
+        yield {
+          timestamp: "2025-01-15T10:30:00Z",
+          timestamp_ns: "1736937000000000000",
+          message: "line 1",
+          level: "info",
+        }
+      }
+      apiService.streamAppLogs.returns(fakeStream())
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs({ since: "1h" })
+
+      assert.ok(
+        messages.some(
+          (m) =>
+            m.type === "historyState" &&
+            m.hasOlder === true &&
+            m.loading === false &&
+            m.checked === false,
+        ),
+      )
+    })
+
+    test("loads older logs before the oldest current cursor", async () => {
+      sinon.useFakeTimers(new Date("2025-01-15T10:40:00Z"))
+      const { provider, configService, apiService } = createProvider()
+      const { view, messages } = createWebviewView()
+      provider.resolveWebviewView(view)
+      configService.getConfig.resolves({ app_id: "a1", team_id: "t1" })
+
+      async function* fakeStream() {
+        yield {
+          timestamp: "2025-01-15T10:30:00Z",
+          timestamp_ns: "1736937000000000000",
+          message: "newer",
+          level: "info",
+        }
+      }
+      apiService.streamAppLogs.returns(fakeStream())
+      apiService.getAppLogs.resolves({
+        logs: [
+          {
+            timestamp: "2025-01-15T10:20:00Z",
+            timestamp_ns: "1736936400000000000",
+            message: "older",
+            level: "info",
+          },
+        ],
+        has_more: false,
+      })
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs({ since: "1h" })
+      await provider.loadOlderLogs()
+
+      assert.deepStrictEqual(apiService.getAppLogs.firstCall.args[0], {
+        appId: "a1",
+        beforeNs: "1736937000000000000",
+        limit: 500,
+      })
+      const olderMessages = messages.filter((m) => m.type === "olderLogs")
+      assert.strictEqual(olderMessages.length, 1)
+      assert.strictEqual(olderMessages[0].entries[0].message, "older")
+      assert.ok(
+        messages.some(
+          (m) =>
+            m.type === "historyState" &&
+            m.hasOlder === false &&
+            m.loading === false &&
+            m.checked === true,
+        ),
+      )
+    })
+
+    test("keeps loading available as a load action after history confirms more pages", async () => {
+      sinon.useFakeTimers(new Date("2025-01-15T10:40:00Z"))
+      const { provider, configService, apiService } = createProvider()
+      const { view, messages } = createWebviewView()
+      provider.resolveWebviewView(view)
+      configService.getConfig.resolves({ app_id: "a1", team_id: "t1" })
+
+      async function* fakeStream() {
+        yield {
+          timestamp: "2025-01-15T10:30:00Z",
+          timestamp_ns: "1736937000000000000",
+          message: "newer",
+          level: "info",
+        }
+      }
+      apiService.streamAppLogs.returns(fakeStream())
+      apiService.getAppLogs.resolves({
+        logs: [
+          {
+            timestamp: "2025-01-15T10:20:00Z",
+            timestamp_ns: "1736936400000000000",
+            message: "older",
+            level: "info",
+          },
+        ],
+        has_more: true,
+      })
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs({ since: "1h" })
+      await provider.loadOlderLogs()
+
+      assert.ok(
+        messages.some(
+          (m) =>
+            m.type === "historyState" &&
+            m.hasOlder === true &&
+            m.loading === false &&
+            m.checked === true,
+        ),
+      )
+    })
+
+    test("does not render older logs outside selected range", async () => {
+      sinon.useFakeTimers(new Date("2025-01-15T10:40:00Z"))
+      const { provider, configService, apiService } = createProvider()
+      const { view, messages } = createWebviewView()
+      provider.resolveWebviewView(view)
+      configService.getConfig.resolves({ app_id: "a1", team_id: "t1" })
+
+      async function* fakeStream() {
+        yield {
+          timestamp: "2025-01-15T10:30:00Z",
+          timestamp_ns: "1736937000000000000",
+          message: "newer",
+          level: "info",
+        }
+      }
+      apiService.streamAppLogs.returns(fakeStream())
+      apiService.getAppLogs.resolves({
+        logs: [
+          {
+            timestamp: "2025-01-15T10:00:00Z",
+            timestamp_ns: "1736935200000000000",
+            message: "too old",
+            level: "info",
+          },
+        ],
+        has_more: true,
+      })
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs({ since: "30m" })
+      await provider.loadOlderLogs()
+
+      assert.ok(!messages.some((m) => m.type === "olderLogs"))
+      assert.ok(
+        messages.some(
+          (m) =>
+            m.type === "historyNotice" &&
+            m.text === "No earlier logs in this range.",
+        ),
+      )
+      assert.ok(
+        !messages.some(
+          (m) =>
+            m.type === "status" && m.text === "No older logs in this range.",
+        ),
+      )
+      assert.ok(
+        messages.some(
+          (m) =>
+            m.type === "historyState" &&
+            m.hasOlder === false &&
+            m.loading === false,
+        ),
+      )
+    })
+
+    test("ignores older log responses after a new stream starts", async () => {
+      sinon.useFakeTimers(new Date("2025-01-15T10:40:00Z"))
+      const { provider, configService, apiService } = createProvider()
+      const { view, messages } = createWebviewView()
+      provider.resolveWebviewView(view)
+      configService.getConfig.resolves({ app_id: "a1", team_id: "t1" })
+
+      async function* firstStream() {
+        yield {
+          timestamp: "2025-01-15T10:30:00Z",
+          timestamp_ns: "1736937000000000000",
+          message: "first stream",
+          level: "info",
+        }
+      }
+
+      async function* secondStream() {
+        yield {
+          timestamp: "2025-01-15T10:35:00Z",
+          timestamp_ns: "1736937300000000000",
+          message: "second stream",
+          level: "info",
+        }
+      }
+
+      let resolveOlderLogs:
+        | ((response: {
+            logs: {
+              timestamp: string
+              timestamp_ns: string
+              message: string
+              level: string
+            }[]
+            has_more: boolean
+          }) => void)
+        | undefined
+      const olderLogsPromise = new Promise<{
+        logs: {
+          timestamp: string
+          timestamp_ns: string
+          message: string
+          level: string
+        }[]
+        has_more: boolean
+      }>((resolve) => {
+        resolveOlderLogs = resolve
+      })
+
+      apiService.streamAppLogs.onFirstCall().returns(firstStream())
+      apiService.streamAppLogs.onSecondCall().returns(secondStream())
+      apiService.getAppLogs.returns(olderLogsPromise)
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs({ since: "1h" })
+      const loadPromise = provider.loadOlderLogs()
+      await provider.streamLogs({ since: "5m" })
+
+      resolveOlderLogs?.({
+        logs: [
+          {
+            timestamp: "2025-01-15T10:20:00Z",
+            timestamp_ns: "1736936400000000000",
+            message: "stale older",
+            level: "info",
+          },
+        ],
+        has_more: false,
+      })
+      await loadPromise
+
+      assert.ok(
+        !messages.some(
+          (m) =>
+            m.type === "olderLogs" &&
+            m.entries.some((entry: { message: string }) =>
+              entry.message.includes("stale older"),
+            ),
+        ),
+      )
+    })
+
+    test("keeps older log fetch errors visible after restoring history state", async () => {
+      sinon.useFakeTimers(new Date("2025-01-15T10:40:00Z"))
+      const { provider, configService, apiService } = createProvider()
+      const { view, messages } = createWebviewView()
+      provider.resolveWebviewView(view)
+      configService.getConfig.resolves({ app_id: "a1", team_id: "t1" })
+
+      async function* fakeStream() {
+        yield {
+          timestamp: "2025-01-15T10:30:00Z",
+          timestamp_ns: "1736937000000000000",
+          message: "newer",
+          level: "info",
+        }
+      }
+
+      apiService.streamAppLogs.returns(fakeStream())
+      apiService.getAppLogs.rejects(new Error("network failed"))
+      sinon.stub(vscode.commands, "executeCommand").resolves()
+
+      await provider.streamLogs({ since: "1h" })
+      await provider.loadOlderLogs()
+
+      const historyMessages = messages.filter(
+        (m) => m.type === "historyState" || m.type === "historyNotice",
+      )
+      const lastHistoryMessage = historyMessages.at(-1)
+      assert.strictEqual(lastHistoryMessage?.type, "historyNotice")
+      assert.ok(lastHistoryMessage?.text.includes("network failed"))
     })
   })
 
@@ -548,9 +858,12 @@ suite("cloud/commands/logs", () => {
       assert.ok(html.includes("https://test-csp-source"))
     })
 
-    test("includes toolbar controls", () => {
+    test("includes log controls", () => {
       const html = getWebviewHtml(createMockWebview(), testExtensionUri)
       assert.ok(html.includes('id="since-filter"'))
+      assert.ok(html.includes('id="load-older-btn"'))
+      assert.ok(html.includes('id="history-note"'))
+      assert.ok(html.includes("Check earlier logs"))
       assert.ok(html.includes('id="stream-btn"'))
       assert.ok(html.includes('id="filter-btn"'))
       assert.ok(html.includes('id="clear-btn"'))

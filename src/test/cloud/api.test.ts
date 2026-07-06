@@ -240,6 +240,34 @@ suite("cloud/api", () => {
       assert.strictEqual(teams[0].slug, "team-1")
     })
 
+    test("getTeamAccess returns entitlements", async () => {
+      const fetchStub = sinon.stub(globalThis, "fetch").resolves(
+        mockResponse({
+          role: "owner",
+          is_owner: true,
+          permissions: ["app:write"],
+          entitlements: {
+            max_apps: 25,
+            max_replicas: 100,
+            max_custom_domains: 20,
+            max_seats: 10,
+            log_retention_days: 14,
+            metrics_retention_days: 14,
+            advanced_metrics_enabled: true,
+          },
+        }),
+      )
+
+      const access = await api.getTeamAccess("team-id")
+
+      assert.strictEqual(
+        fetchStub.firstCall.args[0],
+        `${DEFAULT_BASE_URL}/teams/team-id/access`,
+      )
+      assert.strictEqual(access.entitlements.log_retention_days, 14)
+      assert.strictEqual(access.entitlements.advanced_metrics_enabled, true)
+    })
+
     test("throws when not authenticated", async () => {
       mockSession(null)
 
@@ -300,6 +328,35 @@ suite("cloud/api", () => {
 
       assert.strictEqual(apps.length, 1)
       assert.strictEqual(apps[0].slug, "app-1")
+    })
+
+    test("getAppLogs requests paginated logs", async () => {
+      const fetchStub = sinon.stub(globalThis, "fetch").resolves(
+        mockResponse({
+          logs: [
+            {
+              timestamp: "2025-01-15T10:30:00Z",
+              timestamp_ns: "1736937000000000000",
+              message: "line 1",
+              level: "info",
+            },
+          ],
+          has_more: true,
+        }),
+      )
+
+      const response = await api.getAppLogs({
+        appId: "app-id",
+        beforeNs: "1736937001000000000",
+        limit: 500,
+      })
+
+      assert.strictEqual(
+        fetchStub.firstCall.args[0],
+        `${DEFAULT_BASE_URL}/apps/app-id/logs?before_ns=1736937001000000000&limit=500`,
+      )
+      assert.strictEqual(response.logs.length, 1)
+      assert.strictEqual(response.has_more, true)
     })
 
     test("createApp sends POST", async () => {

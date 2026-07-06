@@ -4,6 +4,24 @@ export interface Team {
   slug: string
 }
 
+export interface Entitlements {
+  max_apps: number
+  max_replicas: number
+  max_custom_domains: number
+  max_seats: number
+  log_retention_days: number
+  metrics_retention_days: number
+  advanced_metrics_enabled: boolean
+}
+
+export interface TeamAccess {
+  role: string
+  is_owner: boolean
+  permissions: string[]
+  assignable_roles?: string[]
+  entitlements: Entitlements
+}
+
 export interface App {
   id: string
   slug: string
