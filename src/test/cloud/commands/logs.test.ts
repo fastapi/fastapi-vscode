@@ -201,7 +201,10 @@ suite("cloud/commands/logs", () => {
     })
 
     test("enables manual older log loading when the initial stream stays empty", async () => {
-      const clock = sinon.useFakeTimers(new Date("2025-01-15T10:40:00Z"))
+      const clock = sinon.useFakeTimers({
+        now: new Date("2025-01-15T10:40:00Z"),
+        shouldClearNativeTimers: true,
+      })
       const { provider, configService, apiService } = createProvider()
       const { view, messages } = createWebviewView()
       provider.resolveWebviewView(view)
