@@ -15,7 +15,7 @@
         "@biomejs/biome": "^2.5.1",
         "@types/bun": "latest",
         "@types/mocha": "^10.0.10",
-        "@types/sinon": "^21.0.1",
+        "@types/sinon": "^22.0.0",
         "@types/vscode": "^1.125.0",
         "@vscode/test-cli": "^0.0.15",
         "@vscode/test-electron": "^3.0.0",
@@ -250,7 +250,7 @@
 
     "@types/sarif": ["@types/sarif@2.1.7", "", {}, "sha512-kRz0VEkJqWLf1LLVN4pT1cg1Z9wAuvI6L97V3m2f5B76Tg8d413ddvLBPTEHAZJlnn4XSvu0FkZtViCQGVyrXQ=="],
 
-    "@types/sinon": ["@types/sinon@21.0.1", "", { "dependencies": { "@types/sinonjs__fake-timers": "*" } }, "sha512-5yoJSqLbjH8T9V2bksgRayuhpZy+723/z6wBOR+Soe4ZlXC0eW8Na71TeaZPUWDQvM7LYKa9UGFc6LRqxiR5fQ=="],
+    "@types/sinon": ["@types/sinon@22.0.0", "", { "dependencies": { "@types/sinonjs__fake-timers": "*" } }, "sha512-TDbVpbccc2HfiqHR09Argj3mHV1KMW7sCCKj52fsl8lbRLkEn7fB1966EWhOKWUBcqfBueZuPoA7/OK1CKiy3g=="],
 
     "@types/sinonjs__fake-timers": ["@types/sinonjs__fake-timers@15.0.1", "", {}, "sha512-Ko2tjWJq8oozHzHV+reuvS5KYIRAokHnGbDwGh/J64LntgpbuylF74ipEL24HCyRjf9FOlBiBHWBR1RlVKsI1w=="],
 
