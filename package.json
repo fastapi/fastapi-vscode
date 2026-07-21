@@ -362,7 +362,7 @@
   },
   "dependencies": {
     "p-map": "^7.0.5",
-    "posthog-node": "^5.41.0",
+    "posthog-node": "^5.42.0",
     "tinytar": "^0.1.0",
     "toml": "^4.3.0",
     "web-tree-sitter": "^0.26.11"
