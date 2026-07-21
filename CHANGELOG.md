@@ -4,18 +4,13 @@
 
 ## 0.3.1 (2026-07-21)
 
-### Internal
-
-* 🐛 Keep @types/vscode at the engines.vscode floor. PR [#206](https://github.com/fastapi/fastapi-vscode/pull/206) by [@savannahostrowski](https://github.com/savannahostrowski).
-
-## 0.3.0 (2026-07-21)
-
 ### Refactors
 
 * ♻️  Make logs entitlements aware. PR [#196](https://github.com/fastapi/fastapi-vscode/pull/196) by [@savannahostrowski](https://github.com/savannahostrowski).
 
 ### Internal
 
+* 🐛 Keep @types/vscode at the engines.vscode floor. PR [#206](https://github.com/fastapi/fastapi-vscode/pull/206) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ⬆ Bump the bun-packages group across 1 directory with 4 updates. PR [#204](https://github.com/fastapi/fastapi-vscode/pull/204) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump typescript from 6.0.3 to 7.0.2 in the npm-packages group. PR [#202](https://github.com/fastapi/fastapi-vscode/pull/202) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump the bun-packages group with 4 updates. PR [#201](https://github.com/fastapi/fastapi-vscode/pull/201) by [@dependabot[bot]](https://github.com/apps/dependabot).
