@@ -343,7 +343,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.2",
+    "@biomejs/biome": "^2.5.3",
     "@types/bun": "latest",
     "@types/mocha": "^10.0.10",
     "@types/sinon": "^22.0.0",
@@ -358,14 +358,14 @@
     "path-browserify": "^1.0.1",
     "sinon": "^22.0.0",
     "tree-sitter-python": "^0.25.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "p-map": "^7.0.5",
-    "posthog-node": "^5.39.4",
+    "posthog-node": "^5.41.0",
     "tinytar": "^0.1.0",
-    "toml": "^4.1.2",
-    "web-tree-sitter": "^0.26.10"
+    "toml": "^4.3.0",
+    "web-tree-sitter": "^0.26.11"
   },
   "lint-staged": {
     "**/*.{ts,js,mjs,json}": [
