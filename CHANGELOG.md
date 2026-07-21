@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.3.1 (2026-07-21)
+
 ### Internal
 
 * 🐛 Keep @types/vscode at the engines.vscode floor. PR [#206](https://github.com/fastapi/fastapi-vscode/pull/206) by [@savannahostrowski](https://github.com/savannahostrowski).
