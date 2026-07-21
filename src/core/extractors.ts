@@ -460,7 +460,7 @@ export function collectRecognizedNames(nodesByType: Map<string, Node[]>): {
   // Add aliases from "from fastapi import X as Y" imports
   for (const node of nodesByType.get("import_from_statement") ?? []) {
     const info = importExtractor(node)
-    if (!info || info.modulePath !== "fastapi") continue
+    if (info?.modulePath !== "fastapi") continue
     for (const named of info.namedImports) {
       if (named.alias === null) continue
       if (named.name === "FastAPI") fastAPINames.add(named.alias)

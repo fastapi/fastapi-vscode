@@ -174,11 +174,11 @@ if (
 }
 
 export {
-  parseVersion,
   bumpVersion,
   getCurrentVersion,
-  updateVersionFile,
-  updateChangelog,
   getReleaseNotesBody,
+  parseVersion,
   resolveDate,
+  updateChangelog,
+  updateVersionFile,
 }

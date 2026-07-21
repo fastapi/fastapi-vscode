@@ -46,9 +46,9 @@ suite("cloud/api", () => {
       assert.strictEqual(url, `${DEFAULT_BASE_URL}/login/device/authorization`)
       assert.strictEqual(options?.method, "POST")
       assert.ok(
-        (options?.headers as Record<string, string>)["Content-Type"]?.includes(
-          "x-www-form-urlencoded",
-        ),
+        (options?.headers as Record<string, string> | undefined)?.[
+          "Content-Type"
+        ]?.includes("x-www-form-urlencoded"),
       )
     })
 

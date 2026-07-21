@@ -150,7 +150,7 @@ export async function getInstalledVersions(
     const pythonExtension = vscode.extensions.getExtension("ms-python.python")
 
     // Don't activate the extension just for telemetry - only use it if already active
-    if (!pythonExtension || !pythonExtension.isActive) {
+    if (!pythonExtension?.isActive) {
       return {}
     }
 
