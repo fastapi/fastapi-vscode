@@ -347,7 +347,7 @@
     "@types/bun": "latest",
     "@types/mocha": "^10.0.10",
     "@types/sinon": "^22.0.0",
-    "@types/vscode": "^1.125.0",
+    "@types/vscode": "^1.95.0",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.0.0",
     "@vscode/vsce": "^3.9.2",

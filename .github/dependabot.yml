@@ -26,6 +26,10 @@ updates:
       default-days: 7
     commit-message:
       prefix: ⬆
+    # @types/vscode must stay at or below engines.vscode, otherwise vsce
+    # refuses to package the extension.
+    ignore:
+      - dependency-name: "@types/vscode"
     groups:
       npm-packages:
         dependency-type: "development"
@@ -39,6 +43,10 @@ updates:
       default-days: 7
     commit-message:
       prefix: ⬆
+    # @types/vscode must stay at or below engines.vscode, otherwise vsce
+    # refuses to package the extension.
+    ignore:
+      - dependency-name: "@types/vscode"
     groups:
       bun-packages:
         patterns:
