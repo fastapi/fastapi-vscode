@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.3.0 (2026-07-21)
+
 ### Refactors
 
 * ♻️  Make logs entitlements aware. PR [#196](https://github.com/fastapi/fastapi-vscode/pull/196) by [@savannahostrowski](https://github.com/savannahostrowski).
