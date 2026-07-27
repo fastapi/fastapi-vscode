@@ -2,7 +2,7 @@ import type { PostHog } from "posthog-node"
 import type { TelemetryConfig } from "./types"
 
 const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY || ""
-const POSTHOG_HOST = "https://eu.i.posthog.com"
+const POSTHOG_HOST = process.env.POSTHOG_HOST || ""
 
 /** Flush after this many events are queued */
 const FLUSH_AT = 10

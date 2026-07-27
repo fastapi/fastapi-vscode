@@ -6,7 +6,8 @@ const production = process.argv.includes("--production")
 const watch = process.argv.includes("--watch")
 const noBundleForCoverage = process.argv.includes("--no-bundle")
 
-const POSTHOG_API_KEY = "phc_s0Qx8NxueJvnqe4YE7NEKYNosJr8aZ81tIByuzm464X"
+const POSTHOG_API_KEY = "phc_AjjAbYjTCwQgMVp5J5fG2a4Ab6XUoq2bjjVk8jwzZeJd"
+const POSTHOG_HOST = "https://us.i.posthog.com"
 
 function copyWasmFiles() {
   const wasmDestDir = path.join(import.meta.dirname, "dist", "wasm")
@@ -65,6 +66,9 @@ async function main() {
       "process.env.NODE_ENV": production ? '"production"' : '"development"',
       "process.env.POSTHOG_API_KEY": production
         ? JSON.stringify(POSTHOG_API_KEY)
+        : '""',
+      "process.env.POSTHOG_HOST": production
+        ? JSON.stringify(POSTHOG_HOST)
         : '""',
       __DIST_ROOT__: JSON.stringify(path.join(import.meta.dirname, "dist")),
     },
