@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.3.2 (2026-07-27)
+
 ### Internal
 
 * 📈 Point extension telemetry to new production PostHog. PR [#209](https://github.com/fastapi/fastapi-vscode/pull/209) by [@savannahostrowski](https://github.com/savannahostrowski).
