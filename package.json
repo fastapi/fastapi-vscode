@@ -353,8 +353,8 @@
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.1",
     "husky": "^9.1.7",
-    "lint-staged": "^17.2.0",
-    "ovsx": "^1.0.2",
+    "lint-staged": "^17.3.0",
+    "ovsx": "^1.1.0",
     "path-browserify": "^1.0.1",
     "sinon": "^22.1.0",
     "tree-sitter-python": "^0.25.0",
@@ -362,7 +362,7 @@
   },
   "dependencies": {
     "p-map": "^7.0.6",
-    "posthog-node": "^5.46.1",
+    "posthog-node": "^5.47.3",
     "tinytar": "^0.1.0",
     "toml": "^5.0.0",
     "web-tree-sitter": "^0.26.11"
