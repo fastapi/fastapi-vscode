@@ -4,6 +4,7 @@
 
 ### Internal
 
+* ⬆ Bump zizmorcore/zizmor-action from 0.6.1 to 0.6.2 in the github-actions group. PR [#222](https://github.com/fastapi/fastapi-vscode/pull/222) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * 🔧 Set Dependabot schedule interval to "monthly". PR [#220](https://github.com/fastapi/fastapi-vscode/pull/220) by [@tiangolo](https://github.com/tiangolo).
 * 🔐 Use PR Submit for pull requests. PR [#219](https://github.com/fastapi/fastapi-vscode/pull/219) by [@tiangolo](https://github.com/tiangolo).
 * 🔥 Remove the old Latest Changes workflow. PR [#218](https://github.com/fastapi/fastapi-vscode/pull/218) by [@tiangolo](https://github.com/tiangolo).
