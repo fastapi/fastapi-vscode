@@ -1,0 +1,15 @@
+auto-labels:
+  docs:
+    - README.md
+    - SUPPORT.md
+  internal:
+    - .github/**
+    - .vscode/**
+    - .husky/**
+    - .gitignore
+    - .vscode-test.mjs
+    - .vscodeignore
+    - biome.json
+    - bun.lock
+    - esbuild.js
+    - tsconfig.json
