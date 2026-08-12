@@ -4,6 +4,7 @@
 
 ### Internal
 
+* 👷 Migrate automatic labels to Latest Changes. PR [#224](https://github.com/fastapi/fastapi-vscode/pull/224) by [@tiangolo](https://github.com/tiangolo).
 * 👷 Remove legacy label check. PR [#223](https://github.com/fastapi/fastapi-vscode/pull/223) by [@tiangolo](https://github.com/tiangolo).
 * ⬆ Bump the bun-packages group with 3 updates. PR [#221](https://github.com/fastapi/fastapi-vscode/pull/221) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump zizmorcore/zizmor-action from 0.6.1 to 0.6.2 in the github-actions group. PR [#222](https://github.com/fastapi/fastapi-vscode/pull/222) by [@dependabot[bot]](https://github.com/apps/dependabot).
