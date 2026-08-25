@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.3.3 (2026-08-25)
+
 ### Fixes
 
 * 🐛 Discover routes from imported custom APIRouter instances. PR [#225](https://github.com/fastapi/fastapi-vscode/pull/225) by [@savannahostrowski](https://github.com/savannahostrowski).
