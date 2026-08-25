@@ -63,6 +63,31 @@ router = APIRouter(prefix="/api")
       assert.strictEqual(result.routers[1].prefix, "/api")
     })
 
+    test("records module-level direct call assignments as neutral facts", () => {
+      const code = `
+from auth.testing_router import ProtectedRouter
+
+def build_router():
+    local_router = ProtectedRouter()
+
+router = ProtectedRouter(prefix="/protected", tags=["protected"])
+`
+      const tree = parse(code)
+      const result = analyzeTree(tree, "/test/file.py")
+
+      assert.strictEqual(result.routers.length, 0)
+      assert.deepStrictEqual(result.callAssignments, [
+        {
+          variableName: "router",
+          callee: "ProtectedRouter",
+          prefix: "/protected",
+          tags: ["protected"],
+          line: 7,
+          column: 0,
+        },
+      ])
+    })
+
     test("extracts include_router calls", () => {
       const code = `
 app.include_router(users.router, prefix="/users")

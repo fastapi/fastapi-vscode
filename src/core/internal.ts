@@ -78,9 +78,13 @@ export interface MountInfo {
   app: string
 }
 
-export interface FactoryCallInfo {
+export interface CallAssignmentInfo {
   variableName: string
-  functionName: string
+  callee: string
+  prefix: string
+  tags: string[]
+  line: number
+  column: number
 }
 
 export interface FileAnalysis {
@@ -90,7 +94,7 @@ export interface FileAnalysis {
   includeRouters: IncludeRouterInfo[]
   mounts: MountInfo[]
   imports: ImportInfo[]
-  factoryCalls: FactoryCallInfo[]
+  callAssignments: CallAssignmentInfo[]
 }
 
 export interface RouterNode {

@@ -19,6 +19,17 @@ interface ResolutionContext {
   visited: Set<string>
 }
 
+interface ResolveReferenceOptions {
+  reference: string
+  analysis: FileAnalysis
+  currentFileUri: string
+  ctx: ResolutionContext
+}
+
+interface InternalResolveReferenceOptions extends ResolveReferenceOptions {
+  kind: "includedRouter" | "mountedApp"
+}
+
 /**
  * Finds the main FastAPI app or APIRouter in the list of routers.
  * If targetVariable is specified, only returns the router with that variable name.
@@ -35,6 +46,27 @@ function findAppRouter(
     routers.find((r) => r.type === "FastAPI") ??
     routers.find((r) => r.type === "APIRouter")
   )
+}
+
+function inferIncludedRouter(
+  analysis: FileAnalysis,
+  variableName: string,
+): RouterInfo | undefined {
+  const assignment = analysis.callAssignments.find(
+    (candidate) => candidate.variableName === variableName,
+  )
+  if (!assignment) {
+    return undefined
+  }
+
+  return {
+    variableName: assignment.variableName,
+    type: "APIRouter",
+    prefix: assignment.prefix,
+    tags: assignment.tags,
+    line: assignment.line,
+    column: assignment.column,
+  }
 }
 
 function createRouterNode(
@@ -55,6 +87,14 @@ function createRouterNode(
   }
 }
 
+function resolveIncludedRouter(options: ResolveReferenceOptions) {
+  return resolveReference({ ...options, kind: "includedRouter" })
+}
+
+function resolveMountedApp(options: ResolveReferenceOptions) {
+  return resolveReference({ ...options, kind: "mountedApp" })
+}
+
 async function processIncludeRouters(
   analysis: FileAnalysis,
   ownerRouter: RouterNode,
@@ -68,12 +108,12 @@ async function processIncludeRouters(
     log(
       `Resolving include_router: ${include.router} (prefix: ${include.prefix || "none"})`,
     )
-    const childRouter = await resolveRouterReference(
-      include.router,
+    const childRouter = await resolveIncludedRouter({
+      reference: include.router,
       analysis,
       currentFileUri,
       ctx,
-    )
+    })
     if (childRouter) {
       // Merge tags from include_router call with the router's own tags
       if (include.tags.length > 0) {
@@ -198,18 +238,18 @@ async function buildRouterGraphInternal(
   // `app = FastAPI()` and `app.include_router(...)` inside `create_app` are visible
   // when analyzing the factory file directly.
   if (!appRouter && targetVariable) {
-    const factoryCall = analysis.factoryCalls.find(
-      (fc) => fc.variableName === targetVariable,
+    const callAssignment = analysis.callAssignments.find(
+      (assignment) => assignment.variableName === targetVariable,
     )
-    if (factoryCall) {
+    if (callAssignment) {
       const matchingImport = analysis.imports.find((imp) =>
-        imp.names.includes(factoryCall.functionName),
+        imp.names.includes(callAssignment.callee),
       )
       if (matchingImport) {
         const namedImport = matchingImport.namedImports.find(
-          (ni) => (ni.alias ?? ni.name) === factoryCall.functionName,
+          (ni) => (ni.alias ?? ni.name) === callAssignment.callee,
         )
-        const originalName = namedImport?.name ?? factoryCall.functionName
+        const originalName = namedImport?.name ?? callAssignment.callee
         const factoryFileUri = await resolveNamedImport(
           {
             modulePath: matchingImport.modulePath,
@@ -252,12 +292,12 @@ async function buildRouterGraphInternal(
 
   // Process mount() calls for subapps
   for (const mount of analysis.mounts) {
-    const childRouter = await resolveRouterReference(
-      mount.app,
+    const childRouter = await resolveMountedApp({
+      reference: mount.app,
       analysis,
-      resolvedEntryUri,
+      currentFileUri: resolvedEntryUri,
       ctx,
-    )
+    })
     if (childRouter) {
       rootRouter.children.push({
         router: childRouter,
@@ -277,12 +317,13 @@ async function buildRouterGraphInternal(
  * Handles both simple references (e.g., "router") and dotted references
  * (e.g., "api_routes.router" where api_routes is an imported module).
  */
-async function resolveRouterReference(
-  reference: string,
-  analysis: FileAnalysis,
-  currentFileUri: string,
-  ctx: ResolutionContext,
-): Promise<RouterNode | null> {
+async function resolveReference({
+  reference,
+  analysis,
+  currentFileUri,
+  ctx,
+  kind,
+}: InternalResolveReferenceOptions): Promise<RouterNode | null> {
   const { projectRootUri, parser, fs, visited } = ctx
   const parts = reference.split(".")
   const moduleName = parts[0]
@@ -358,9 +399,13 @@ async function resolveRouterReference(
     }
 
     // Find the router with the matching variable name
-    const targetRouter = importedAnalysis.routers.find(
-      (r) => r.variableName === attributeName,
-    )
+    const targetRouter =
+      importedAnalysis.routers.find(
+        (router) => router.variableName === attributeName,
+      ) ??
+      (kind === "includedRouter"
+        ? inferIncludedRouter(importedAnalysis, attributeName)
+        : undefined)
     if (targetRouter) {
       const visitedKey = `${importedFileUri}#${attributeName}`
 

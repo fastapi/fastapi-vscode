@@ -5,10 +5,10 @@
 import type { Tree } from "web-tree-sitter"
 import { logError } from "../utils/logger"
 import {
+  callAssignmentExtractor,
   collectRecognizedNames,
   collectStringVariables,
   decoratorExtractor,
-  factoryCallExtractor,
   getNodesByType,
   importExtractor,
   includeRouterExtractor,
@@ -44,12 +44,11 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
   const decoratedDefs = nodesByType.get("decorated_definition") ?? []
   const routes = decoratedDefs.flatMap(decoratorExtractor)
 
-  // Get all router assignments
+  // Get module-level call assignments and recognized router assignments
   const assignments = nodesByType.get("assignment") ?? []
   const { fastAPINames, apiRouterNames } = collectRecognizedNames(nodesByType)
-  const knownConstructors = new Set([...fastAPINames, ...apiRouterNames])
-  const factoryCalls = assignments
-    .map((node) => factoryCallExtractor(node, knownConstructors))
+  const callAssignments = assignments
+    .map(callAssignmentExtractor)
     .filter(notNull)
   const routers = assignments
     .map((node) => routerExtractor(node, apiRouterNames, fastAPINames))
@@ -69,17 +68,11 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
 
   const stringVariables = collectStringVariables(nodesByType)
 
-  for (const route of routes) {
-    route.path = resolveVariables(route.path, stringVariables)
+  for (const item of [...routes, ...mounts]) {
+    item.path = resolveVariables(item.path, stringVariables)
   }
-  for (const router of routers) {
-    router.prefix = resolveVariables(router.prefix, stringVariables)
-  }
-  for (const ir of includeRouters) {
-    ir.prefix = resolveVariables(ir.prefix, stringVariables)
-  }
-  for (const mount of mounts) {
-    mount.path = resolveVariables(mount.path, stringVariables)
+  for (const item of [...routers, ...callAssignments, ...includeRouters]) {
+    item.prefix = resolveVariables(item.prefix, stringVariables)
   }
 
   return {
@@ -89,7 +82,7 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
     includeRouters,
     mounts,
     imports,
-    factoryCalls,
+    callAssignments,
   }
 }
 

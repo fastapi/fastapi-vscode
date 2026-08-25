@@ -4,7 +4,7 @@
 
 import type { Node } from "web-tree-sitter"
 import type {
-  FactoryCallInfo,
+  CallAssignmentInfo,
   ImportedName,
   ImportInfo,
   IncludeRouterInfo,
@@ -265,6 +265,30 @@ function extractTags(listNode: Node): string[] {
     .filter((v): v is string => v !== null)
 }
 
+function extractRouterCallMetadata(callNode: Node): {
+  prefix: string
+  tags: string[]
+} {
+  let prefix = ""
+  let tags: string[] = []
+  const argumentsNode = callNode.childForFieldName("arguments")
+  for (const child of argumentsNode?.namedChildren ?? []) {
+    if (child.type !== "keyword_argument") {
+      continue
+    }
+    const argName = child.childForFieldName("name")?.text
+    const argValue = child.childForFieldName("value")
+
+    if (argName === "prefix" && argValue) {
+      prefix = extractPathFromNode(argValue)
+    } else if (argName === "tags" && argValue?.type === "list") {
+      tags = extractTags(argValue)
+    }
+  }
+
+  return { prefix, tags }
+}
+
 export function routerExtractor(
   node: Node,
   apiRouterNames?: Set<string>,
@@ -298,22 +322,7 @@ export function routerExtractor(
     return null
   }
 
-  let prefix = ""
-  let tags: string[] = []
-  const argumentsNode = valueNode.childForFieldName("arguments")
-  for (const child of argumentsNode?.namedChildren ?? []) {
-    if (child.type !== "keyword_argument") {
-      continue
-    }
-    const argName = child.childForFieldName("name")?.text
-    const argValue = child.childForFieldName("value")
-
-    if (argName === "prefix" && argValue) {
-      prefix = extractPathFromNode(argValue)
-    } else if (argName === "tags" && argValue?.type === "list") {
-      tags = extractTags(argValue)
-    }
-  }
+  const { prefix, tags } = extractRouterCallMetadata(valueNode)
 
   return {
     variableName: variableNameNode.text,
@@ -601,10 +610,7 @@ export function mountExtractor(node: Node): MountInfo | null {
   }
 }
 
-export function factoryCallExtractor(
-  node: Node,
-  knownConstructors: Set<string>,
-): FactoryCallInfo | null {
+export function callAssignmentExtractor(node: Node): CallAssignmentInfo | null {
   if (node.type !== "assignment") {
     return null
   }
@@ -620,11 +626,6 @@ export function factoryCallExtractor(
     return null
   }
 
-  const functionName = functionNode.text
-  if (knownConstructors.has(functionName)) {
-    return null
-  }
-
   // Skip function and class-local variables to avoid false positives
   if (
     hasAncestor(node, "function_definition") ||
@@ -633,9 +634,15 @@ export function factoryCallExtractor(
     return null
   }
 
+  const { prefix, tags } = extractRouterCallMetadata(valueNode)
+
   return {
     variableName: variableNameNode.text,
-    functionName: functionName,
+    callee: functionNode.text,
+    prefix,
+    tags,
+    line: node.startPosition.row + 1,
+    column: node.startPosition.column,
   }
 }
 
