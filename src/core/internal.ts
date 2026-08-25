@@ -81,6 +81,8 @@ export interface MountInfo {
 export interface CallAssignmentInfo {
   variableName: string
   callee: string
+  prefix: string
+  tags: string[]
   line: number
   column: number
 }

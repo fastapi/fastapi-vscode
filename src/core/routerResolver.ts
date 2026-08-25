@@ -62,8 +62,8 @@ function inferIncludedRouter(
   return {
     variableName: assignment.variableName,
     type: "APIRouter",
-    prefix: "",
-    tags: [],
+    prefix: assignment.prefix,
+    tags: assignment.tags,
     line: assignment.line,
     column: assignment.column,
   }

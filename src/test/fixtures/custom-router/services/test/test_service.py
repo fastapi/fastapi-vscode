@@ -1,6 +1,6 @@
 from auth.testing_router import ProtectedRouter
 
-router = ProtectedRouter()
+router = ProtectedRouter(prefix="/service", tags=["service"])
 
 
 @router.get("/items")

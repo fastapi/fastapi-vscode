@@ -68,17 +68,11 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
 
   const stringVariables = collectStringVariables(nodesByType)
 
-  for (const route of routes) {
-    route.path = resolveVariables(route.path, stringVariables)
+  for (const item of [...routes, ...mounts]) {
+    item.path = resolveVariables(item.path, stringVariables)
   }
-  for (const router of routers) {
-    router.prefix = resolveVariables(router.prefix, stringVariables)
-  }
-  for (const ir of includeRouters) {
-    ir.prefix = resolveVariables(ir.prefix, stringVariables)
-  }
-  for (const mount of mounts) {
-    mount.path = resolveVariables(mount.path, stringVariables)
+  for (const item of [...routers, ...callAssignments, ...includeRouters]) {
+    item.prefix = resolveVariables(item.prefix, stringVariables)
   }
 
   return {

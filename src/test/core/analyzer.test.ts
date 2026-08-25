@@ -70,7 +70,7 @@ from auth.testing_router import ProtectedRouter
 def build_router():
     local_router = ProtectedRouter()
 
-router = ProtectedRouter()
+router = ProtectedRouter(prefix="/protected", tags=["protected"])
 `
       const tree = parse(code)
       const result = analyzeTree(tree, "/test/file.py")
@@ -80,6 +80,8 @@ router = ProtectedRouter()
         {
           variableName: "router",
           callee: "ProtectedRouter",
+          prefix: "/protected",
+          tags: ["protected"],
           line: 7,
           column: 0,
         },
