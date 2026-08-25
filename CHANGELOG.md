@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Fixes
+
+* 🐛 Discover routes from imported custom APIRouter instances. PR [#225](https://github.com/fastapi/fastapi-vscode/pull/225) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Internal
 
 * 👷 Migrate automatic labels to Latest Changes. PR [#224](https://github.com/fastapi/fastapi-vscode/pull/224) by [@tiangolo](https://github.com/tiangolo).
