@@ -43,6 +43,10 @@ export const fixtures = {
     root: uri(join(fixturesPath, "custom-subclass")),
     mainPy: uri(join(fixturesPath, "custom-subclass", "main.py")),
   },
+  customRouter: {
+    root: uri(join(fixturesPath, "custom-router")),
+    mainPy: uri(join(fixturesPath, "custom-router", "main.py")),
+  },
   errorCases: {
     root: uri(join(fixturesPath, "error-cases")),
     mainPy: uri(join(fixturesPath, "error-cases", "main.py")),
@@ -55,6 +59,10 @@ export const fixtures = {
   flat: {
     root: uri(join(fixturesPath, "flat")),
     mainPy: uri(join(fixturesPath, "flat", "main.py")),
+  },
+  inferenceBoundaries: {
+    root: uri(join(fixturesPath, "inference-boundaries")),
+    mainPy: uri(join(fixturesPath, "inference-boundaries", "main.py")),
   },
   monorepo: {
     workspaceRoot: uri(join(fixturesPath, "monorepo")),

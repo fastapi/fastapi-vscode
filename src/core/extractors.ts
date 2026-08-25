@@ -4,7 +4,7 @@
 
 import type { Node } from "web-tree-sitter"
 import type {
-  FactoryCallInfo,
+  CallAssignmentInfo,
   ImportedName,
   ImportInfo,
   IncludeRouterInfo,
@@ -601,10 +601,7 @@ export function mountExtractor(node: Node): MountInfo | null {
   }
 }
 
-export function factoryCallExtractor(
-  node: Node,
-  knownConstructors: Set<string>,
-): FactoryCallInfo | null {
+export function callAssignmentExtractor(node: Node): CallAssignmentInfo | null {
   if (node.type !== "assignment") {
     return null
   }
@@ -620,11 +617,6 @@ export function factoryCallExtractor(
     return null
   }
 
-  const functionName = functionNode.text
-  if (knownConstructors.has(functionName)) {
-    return null
-  }
-
   // Skip function and class-local variables to avoid false positives
   if (
     hasAncestor(node, "function_definition") ||
@@ -635,7 +627,9 @@ export function factoryCallExtractor(
 
   return {
     variableName: variableNameNode.text,
-    functionName: functionName,
+    callee: functionNode.text,
+    line: node.startPosition.row + 1,
+    column: node.startPosition.column,
   }
 }
 

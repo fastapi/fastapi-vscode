@@ -5,10 +5,10 @@
 import type { Tree } from "web-tree-sitter"
 import { logError } from "../utils/logger"
 import {
+  callAssignmentExtractor,
   collectRecognizedNames,
   collectStringVariables,
   decoratorExtractor,
-  factoryCallExtractor,
   getNodesByType,
   importExtractor,
   includeRouterExtractor,
@@ -44,12 +44,11 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
   const decoratedDefs = nodesByType.get("decorated_definition") ?? []
   const routes = decoratedDefs.flatMap(decoratorExtractor)
 
-  // Get all router assignments
+  // Get module-level call assignments and recognized router assignments
   const assignments = nodesByType.get("assignment") ?? []
   const { fastAPINames, apiRouterNames } = collectRecognizedNames(nodesByType)
-  const knownConstructors = new Set([...fastAPINames, ...apiRouterNames])
-  const factoryCalls = assignments
-    .map((node) => factoryCallExtractor(node, knownConstructors))
+  const callAssignments = assignments
+    .map(callAssignmentExtractor)
     .filter(notNull)
   const routers = assignments
     .map((node) => routerExtractor(node, apiRouterNames, fastAPINames))
@@ -89,7 +88,7 @@ export function analyzeTree(tree: Tree, filePath: string): FileAnalysis {
     includeRouters,
     mounts,
     imports,
-    factoryCalls,
+    callAssignments,
   }
 }
 

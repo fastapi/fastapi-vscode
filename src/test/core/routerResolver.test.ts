@@ -441,6 +441,21 @@ suite("routerResolver", () => {
       assert.strictEqual(mountChild.router.type, "FastAPI")
     })
 
+    test("does not infer an APIRouter for a mounted call assignment", async () => {
+      const result = await buildRouterGraph(
+        fixtures.inferenceBoundaries.mainPy,
+        parser,
+        fixtures.inferenceBoundaries.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      const mountedChild = result.children.find(
+        (child) => child.prefix === "/mounted",
+      )
+      assert.ok(mountedChild?.router.type !== "APIRouter")
+    })
+
     test("merges tags from include_router call with router tags", async () => {
       const result = await buildRouterGraph(
         fixtures.standard.mainPy,
@@ -674,6 +689,22 @@ suite("routerResolver", () => {
       const methods = adminRouter.routes.map((r) => r.method.toLowerCase())
       assert.ok(methods.includes("get"))
       assert.ok(methods.includes("post"))
+    })
+
+    test("resolves a router instantiated from an imported APIRouter subclass", async () => {
+      const result = await buildRouterGraph(
+        fixtures.customRouter.mainPy,
+        parser,
+        fixtures.customRouter.root,
+        nodeFileSystem,
+      )
+
+      assert.ok(result)
+      const router = result.children.find(
+        (child) => child.router.variableName === "router",
+      )?.router
+      assert.ok(router)
+      assert.ok(router.routes.some((route) => route.path === "/items"))
     })
 
     test("resolves aliased FastAPI and APIRouter class imports", async () => {
