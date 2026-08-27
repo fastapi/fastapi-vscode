@@ -114,13 +114,6 @@
         "category": "FastAPI Cloud"
       }
     ],
-    "keybindings": [
-      {
-        "command": "fastapi-vscode.searchPathOperations",
-        "key": "ctrl+shift+e",
-        "mac": "cmd+shift+e"
-      }
-    ],
     "menus": {
       "commandPalette": [
         {
@@ -158,14 +151,19 @@
       ],
       "view/title": [
         {
-          "command": "fastapi-vscode.refreshPathOperations",
+          "command": "fastapi-vscode.searchPathOperations",
           "when": "view == path-operation-explorer",
           "group": "navigation@1"
         },
         {
-          "command": "fastapi-vscode.toggleRouters",
+          "command": "fastapi-vscode.refreshPathOperations",
           "when": "view == path-operation-explorer",
           "group": "navigation@2"
+        },
+        {
+          "command": "fastapi-vscode.toggleRouters",
+          "when": "view == path-operation-explorer",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
@@ -242,7 +240,7 @@
           {
             "id": "search-path-operations",
             "title": "Quickly Find Path Operations",
-            "description": "Instantly filter and navigate to any path operation in your application.\n[Search Path Operations](command:fastapi-vscode.searchPathOperations)",
+            "description": "Use the search button in the Path Operation Explorer to instantly filter and navigate to any path operation in your application.\n[Search Path Operations](command:fastapi-vscode.searchPathOperations)",
             "media": {
               "image": "media/walkthrough/search.gif",
               "altText": "Search path operations quick pick showing filtered results"
