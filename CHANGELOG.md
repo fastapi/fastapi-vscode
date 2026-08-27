@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Fixes
+
+* 🐛 Stop overriding the default Explorer shortcut. PR [#228](https://github.com/fastapi/fastapi-vscode/pull/228) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## 0.3.3 (2026-08-25)
 
 ### Fixes
