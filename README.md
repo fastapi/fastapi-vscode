@@ -14,7 +14,7 @@ The Path Operation Explorer provides a hierarchical tree view of all FastAPI rou
 
 ### Search for routes
 
-Using ctrl+shift+E (cmd+shift+E on Mac), you can open the Command Palette and quickly search for routes by path, method, or name.
+Use the search button in the Path Operation Explorer, or run **FastAPI: Search Path Operations...** from the Command Palette, to quickly search for routes by path, method, or name.
 
 ![Search Routes GIF](media/walkthrough/search.gif)
 
@@ -53,4 +53,3 @@ The FastAPI extension collects anonymous usage data and sends it to FastAPI to h
 
 ## License 
 MIT
-
