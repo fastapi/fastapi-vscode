@@ -2,6 +2,17 @@
 
 ## Latest Changes
 
+### Internal
+
+* ⬆ Bump the bun-packages group with 6 updates. PR [#231](https://github.com/fastapi/fastapi-vscode/pull/231) by [@dependabot[bot]](https://github.com/apps/dependabot).
+* ⬆ Bump crate-ci/typos from 1.48.0 to 1.49.0 in the github-actions group. PR [#230](https://github.com/fastapi/fastapi-vscode/pull/230) by [@dependabot[bot]](https://github.com/apps/dependabot).
+
+## 0.3.4 (2026-08-27)
+
+### Fixes
+
+* 🐛 Stop overriding the default Explorer shortcut. PR [#228](https://github.com/fastapi/fastapi-vscode/pull/228) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ## 0.3.3 (2026-08-25)
 
 ### Fixes
