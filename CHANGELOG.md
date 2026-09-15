@@ -2,6 +2,10 @@
 
 ## Latest Changes
 
+### Fixes
+
+* 🐛 Decode file URIs in Path Operations labels. PR [#233](https://github.com/fastapi/fastapi-vscode/pull/233) by [@savannahostrowski](https://github.com/savannahostrowski).
+
 ### Internal
 
 * ⬆ Bump the bun-packages group with 6 updates. PR [#231](https://github.com/fastapi/fastapi-vscode/pull/231) by [@dependabot[bot]](https://github.com/apps/dependabot).
