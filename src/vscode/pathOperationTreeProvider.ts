@@ -45,7 +45,7 @@ const METHOD_ORDER: Record<RouteMethod, number> = {
 
 export function getAppLabel(app: AppDefinition): string {
   if (app.name !== "app") return app.name
-  const pathParts = app.filePath.split("/")
+  const pathParts = Uri.parse(app.filePath).path.split("/")
   const fileName = pathParts.pop() ?? ""
   const parentDir = pathParts.pop() ?? ""
   const grandParentDir = pathParts.pop() ?? ""
@@ -73,7 +73,7 @@ export function getRouterLabel(
   if (label !== "/") return label
 
   if (router.tags.length > 0) return `/${router.tags[0]}`
-  const parts = router.location.filePath.split("/")
+  const parts = Uri.parse(router.location.filePath).path.split("/")
   const fileName = parts.pop()?.replace(/\.py$/, "") ?? ""
   if (fileName === "router" || fileName === "routes")
     return parts.pop() ?? fileName

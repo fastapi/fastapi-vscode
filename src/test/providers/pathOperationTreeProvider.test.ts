@@ -81,6 +81,18 @@ suite("getAppLabel", () => {
   test("falls back to filename when no parent dirs", () => {
     assert.strictEqual(getAppLabel(makeApp("app", "main.py")), "main")
   })
+
+  test("decodes a URI path before using the parent directory", () => {
+    assert.strictEqual(
+      getAppLabel(
+        makeApp(
+          "app",
+          "file:///c%3A/project/day01_FastAPI%E5%9F%BA%E7%A1%80/%E4%BB%A3%E7%A0%81/01-%E8%B7%AF%E7%94%B1.py",
+        ),
+      ),
+      "代码",
+    )
+  })
 })
 
 suite("getRouterLabel", () => {
@@ -120,6 +132,31 @@ suite("getRouterLabel", () => {
     assert.strictEqual(
       getRouterLabel(makeRouter("/", { filePath: "src/items/routes.py" }), "/"),
       "items",
+    )
+  })
+
+  test("decodes a URI path before using the filename", () => {
+    assert.strictEqual(
+      getRouterLabel(
+        makeRouter("/", {
+          filePath:
+            "file:///project/%E4%BB%A3%E7%A0%81/01-%E8%B7%AF%E7%94%B1.py",
+        }),
+        "/",
+      ),
+      "01-路由",
+    )
+  })
+
+  test("decodes a URI path before using a generic filename's parent", () => {
+    assert.strictEqual(
+      getRouterLabel(
+        makeRouter("/", {
+          filePath: "file:///project/%E4%BB%A3%E7%A0%81/routes.py",
+        }),
+        "/",
+      ),
+      "代码",
     )
   })
 })
