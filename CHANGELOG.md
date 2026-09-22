@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.3.5 (2026-09-22)
+
 ### Fixes
 
 * 🐛 Decode file URIs in Path Operations labels. PR [#233](https://github.com/fastapi/fastapi-vscode/pull/233) by [@savannahostrowski](https://github.com/savannahostrowski).
