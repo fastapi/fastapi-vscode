@@ -158,20 +158,21 @@ export const nodeFileSystem: FileSystem = {
 export function stubFs() {
   const original = vscode.workspace.fs
   const fake = {
+    stat: sinon.stub().rejects(vscode.FileSystemError.FileNotFound()),
+    readDirectory: sinon.stub().resolves([]),
     readFile: sinon.stub(),
     writeFile: sinon.stub(),
     delete: sinon.stub(),
     createDirectory: sinon.stub(),
   } as unknown as typeof vscode.workspace.fs & {
+    stat: sinon.SinonStub
+    readDirectory: sinon.SinonStub
     readFile: sinon.SinonStub
     writeFile: sinon.SinonStub
     delete: sinon.SinonStub
     createDirectory: sinon.SinonStub
   }
-  Object.defineProperty(vscode.workspace, "fs", {
-    value: fake,
-    configurable: true,
-  })
+  sinon.stub(vscode.workspace, "fs").value(fake)
   return {
     fake,
     restore: () =>

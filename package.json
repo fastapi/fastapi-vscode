@@ -359,6 +359,7 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "minimatch": "^10.2.5",
     "p-map": "^7.0.8",
     "posthog-node": "^5.53.0",
     "tinytar": "^0.1.0",

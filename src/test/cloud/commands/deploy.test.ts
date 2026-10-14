@@ -38,6 +38,8 @@ suite("cloud/commands/deploy", () => {
     }
 
     const inclusions = [
+      ".pyc",
+      "nested/.pyc",
       "main.py",
       "app/__init__.py",
       "requirements.txt",
@@ -81,7 +83,7 @@ suite("cloud/commands/deploy", () => {
       .stub(vscode.commands, "executeCommand")
       .resolves()
     const statusBarItem = { text: "" } as vscode.StatusBarItem
-    const workspaceRoot = vscode.Uri.file("/test/workspace")
+    const workspaceRoot = vscode.Uri.parse("archive-test:/test/workspace")
 
     const result = await deploy({
       workspaceRoot,
@@ -115,7 +117,7 @@ suite("cloud/commands/deploy", () => {
       .stub(vscode.authentication, "getSession")
       .resolves(mockSession)
     const statusBarItem = { text: "" } as vscode.StatusBarItem
-    const workspaceRoot = vscode.Uri.file("/test/workspace")
+    const workspaceRoot = vscode.Uri.parse("archive-test:/test/workspace")
     const configService = mockConfigService()
 
     const apiService = mockApiService()
@@ -151,7 +153,7 @@ suite("cloud/commands/deploy", () => {
       .stub(vscode.authentication, "getSession")
       .resolves(mockSession)
     const statusBarItem = { text: "" } as vscode.StatusBarItem
-    const workspaceRoot = vscode.Uri.file("/test/workspace")
+    const workspaceRoot = vscode.Uri.parse("archive-test:/test/workspace")
 
     const configService = mockConfigService()
     configService.getConfig.resolves({ app_id: "app123", team_id: "team123" })
@@ -178,11 +180,15 @@ suite("cloud/commands/deploy", () => {
     apiService.getDeployment.resolves(mockSuccessDeployment)
 
     // Mock file system
-    sinon
-      .stub(vscode.workspace, "findFiles")
-      .resolves([vscode.Uri.file("/test/workspace/main.py")])
     const fs = stubFs()
-    fs.fake.readFile.resolves(new Uint8Array([1, 2, 3]))
+    fs.fake.readDirectory.resolves([["main.py", vscode.FileType.File]])
+    fs.fake.stat
+      .withArgs(vscode.Uri.joinPath(workspaceRoot, "main.py"))
+      .resolves({ type: vscode.FileType.File, mtime: 0, ctime: 0, size: 3 })
+    fs.fake.readFile.rejects(vscode.FileSystemError.FileNotFound())
+    fs.fake.readFile
+      .withArgs(vscode.Uri.parse("archive-test:/test/workspace/main.py"))
+      .resolves(new Uint8Array([1, 2, 3]))
 
     // Mock fetch for S3 upload
     const fetchStub = sinon.stub(global, "fetch").resolves({
@@ -222,7 +228,7 @@ suite("cloud/commands/deploy", () => {
       scopes: [],
     })
     const statusBarItem = { text: "" } as vscode.StatusBarItem
-    const workspaceRoot = vscode.Uri.file("/test/workspace")
+    const workspaceRoot = vscode.Uri.parse("archive-test:/test/workspace")
 
     const configService = mockConfigService()
     configService.getConfig.resolves({ app_id: "app123", team_id: "team123" })
@@ -249,11 +255,15 @@ suite("cloud/commands/deploy", () => {
     apiService.completeUpload.resolves()
     apiService.getDeployment.resolves(mockFailedDeployment)
 
-    sinon
-      .stub(vscode.workspace, "findFiles")
-      .resolves([vscode.Uri.file("/test/workspace/main.py")])
     const fs = stubFs()
-    fs.fake.readFile.resolves(new Uint8Array([1, 2, 3]))
+    fs.fake.readDirectory.resolves([["main.py", vscode.FileType.File]])
+    fs.fake.stat
+      .withArgs(vscode.Uri.joinPath(workspaceRoot, "main.py"))
+      .resolves({ type: vscode.FileType.File, mtime: 0, ctime: 0, size: 3 })
+    fs.fake.readFile.rejects(vscode.FileSystemError.FileNotFound())
+    fs.fake.readFile
+      .withArgs(vscode.Uri.parse("archive-test:/test/workspace/main.py"))
+      .resolves(new Uint8Array([1, 2, 3]))
     sinon.stub(global, "fetch").resolves({ ok: true, status: 200 } as Response)
 
     const openExternalStub = sinon
@@ -289,7 +299,7 @@ suite("cloud/commands/deploy", () => {
       scopes: [],
     })
     const statusBarItem = { text: "" } as vscode.StatusBarItem
-    const workspaceRoot = vscode.Uri.file("/test/workspace")
+    const workspaceRoot = vscode.Uri.parse("archive-test:/test/workspace")
 
     const configService = mockConfigService()
     configService.getConfig.resolves({ app_id: "app123", team_id: "team123" })
@@ -315,11 +325,15 @@ suite("cloud/commands/deploy", () => {
       status: DeploymentStatus.building_image_failed,
     })
 
-    sinon
-      .stub(vscode.workspace, "findFiles")
-      .resolves([vscode.Uri.file("/test/workspace/main.py")])
     const fs = stubFs()
-    fs.fake.readFile.resolves(new Uint8Array([1, 2, 3]))
+    fs.fake.readDirectory.resolves([["main.py", vscode.FileType.File]])
+    fs.fake.stat
+      .withArgs(vscode.Uri.joinPath(workspaceRoot, "main.py"))
+      .resolves({ type: vscode.FileType.File, mtime: 0, ctime: 0, size: 3 })
+    fs.fake.readFile.rejects(vscode.FileSystemError.FileNotFound())
+    fs.fake.readFile
+      .withArgs(vscode.Uri.parse("archive-test:/test/workspace/main.py"))
+      .resolves(new Uint8Array([1, 2, 3]))
     sinon.stub(global, "fetch").resolves({ ok: true, status: 200 } as Response)
 
     const openExternalStub = sinon
@@ -339,7 +353,11 @@ suite("cloud/commands/deploy", () => {
   })
 
   test("does not open dashboard on poll timeout", async () => {
-    const clock = sinon.useFakeTimers({ shouldClearNativeTimers: true })
+    let clock: sinon.SinonFakeTimers | undefined
+    let pollingStarted!: () => void
+    const polling = new Promise<void>((resolve) => {
+      pollingStarted = resolve
+    })
 
     sinon.stub(vscode.authentication, "getSession").resolves({
       accessToken: "test-token",
@@ -348,7 +366,7 @@ suite("cloud/commands/deploy", () => {
       scopes: [],
     })
     const statusBarItem = { text: "" } as vscode.StatusBarItem
-    const workspaceRoot = vscode.Uri.file("/test/workspace")
+    const workspaceRoot = vscode.Uri.parse("archive-test:/test/workspace")
 
     const configService = mockConfigService()
     configService.getConfig.resolves({ app_id: "app123", team_id: "team123" })
@@ -369,16 +387,23 @@ suite("cloud/commands/deploy", () => {
       fields: {},
     })
     apiService.completeUpload.resolves()
-    apiService.getDeployment.resolves({
-      ...mockDeployment,
-      status: DeploymentStatus.building,
+    apiService.getDeployment.callsFake(async () => {
+      if (!clock) {
+        clock = sinon.useFakeTimers({ shouldClearNativeTimers: true })
+        pollingStarted()
+      }
+      return { ...mockDeployment, status: DeploymentStatus.building }
     })
 
-    sinon
-      .stub(vscode.workspace, "findFiles")
-      .resolves([vscode.Uri.file("/test/workspace/main.py")])
     const fs = stubFs()
-    fs.fake.readFile.resolves(new Uint8Array([1, 2, 3]))
+    fs.fake.readDirectory.resolves([["main.py", vscode.FileType.File]])
+    fs.fake.stat
+      .withArgs(vscode.Uri.joinPath(workspaceRoot, "main.py"))
+      .resolves({ type: vscode.FileType.File, mtime: 0, ctime: 0, size: 3 })
+    fs.fake.readFile.rejects(vscode.FileSystemError.FileNotFound())
+    fs.fake.readFile
+      .withArgs(vscode.Uri.parse("archive-test:/test/workspace/main.py"))
+      .resolves(new Uint8Array([1, 2, 3]))
     sinon.stub(global, "fetch").resolves({ ok: true, status: 200 } as Response)
 
     const openExternalStub = sinon
@@ -395,6 +420,9 @@ suite("cloud/commands/deploy", () => {
       statusBarItem,
     })
 
+    // Start the clock after archive preparation, when polling begins.
+    await polling
+    assert.ok(clock)
     // 300 polls x 2000ms = 600000ms
     await clock.tickAsync(600_000)
 

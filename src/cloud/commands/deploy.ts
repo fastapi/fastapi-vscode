@@ -1,3 +1,4 @@
+import { Minimatch } from "minimatch"
 // @ts-expect-error - tinytar has no type definitions
 import { tar } from "tinytar"
 import * as vscode from "vscode"
@@ -20,7 +21,7 @@ import { ui } from "../ui/dialogs"
 import { createNewApp, pickExistingApp, pickTeam } from "../ui/pickers"
 
 // Exclusion patterns - aligned with fastapi-cloud-cli
-// See: https://github.com/fastapilabs/fastapi-cloud-cli/blob/main/src/fastapi_cloud_cli/commands/deploy.py
+// See: https://github.com/fastapilabs/fastapi-cloud-cli/blob/main/src/fastapi_cloud_cli/commands/deploy/archive.py
 const EXCLUDE_PARTS = [
   ".venv",
   "__pycache__",
@@ -42,11 +43,10 @@ export function shouldExclude(relativePath: string): boolean {
     return true
   }
 
-  if (relativePath.endsWith(".pyc")) {
+  const fileName = parts[parts.length - 1]
+  if (fileName.endsWith(".pyc") && fileName.lastIndexOf(".") > 0) {
     return true
   }
-
-  const fileName = parts[parts.length - 1]
   if (fileName === ".env" || fileName.startsWith(".env.")) {
     return true
   }
@@ -191,31 +191,270 @@ export async function deploy(context: DeployContext): Promise<boolean> {
   }
 }
 
-async function createArchive(workspaceRoot: vscode.Uri): Promise<Uint8Array> {
-  const files = await vscode.workspace.findFiles(
-    new vscode.RelativePattern(workspaceRoot, "**/*"),
-    "{**/.venv/**,**/__pycache__/**,**/.git/**}",
-  )
+// Match each entry directly, as rignore does while walking. Directory rules
+// decide whether to descend; they must not override separate rules for files.
+const IGNORE_FILES = [
+  ".fastapicloudignore",
+  ".ignore",
+  ".gitignore",
+  "info/exclude",
+] as const
+type IgnoreFile = (typeof IGNORE_FILES)[number]
+interface IgnoreRule {
+  matcher: Minimatch
+  directoryOnly: boolean
+  exclude: boolean
+}
+interface DirectoryRules {
+  directory: vscode.Uri
+  matchers: Partial<Record<IgnoreFile, IgnoreRule[]>>
+  gitRoot: boolean
+}
 
-  const tarFiles: Array<{ name: string; data: Uint8Array }> = []
+// Tests supply an isolated home and working directory. In production these
+// come from the extension host, including when it runs on a remote machine.
+export interface ArchiveEnvironment {
+  home?: vscode.Uri
+  configHome?: vscode.Uri
+  cwd: vscode.Uri
+}
 
-  for (const file of files) {
-    const relativePath = file.path.replace(`${workspaceRoot.path}/`, "")
+function utf8Bytes(value: string): string {
+  // Rust globset matches UTF-8 bytes, including for ? and character classes.
+  return Array.from(new TextEncoder().encode(value), (byte) =>
+    String.fromCharCode(byte),
+  ).join("")
+}
 
-    if (shouldExclude(relativePath)) continue
+function parseIgnore(contents: string): IgnoreRule[] {
+  const rules: IgnoreRule[] = []
+  for (let pattern of contents.split(/\r?\n/)) {
+    if (pattern.startsWith("#")) continue
+    if (!pattern.endsWith("\\ ")) pattern = pattern.trimEnd()
+    if (!pattern) continue
+    const exclude = !pattern.startsWith("!")
+    if (!exclude || pattern.startsWith("\\!") || pattern.startsWith("\\#")) {
+      pattern = pattern.slice(1)
+    }
+    const anchored = pattern.startsWith("/")
+    if (anchored) pattern = pattern.slice(1)
+    const directoryOnly = pattern.endsWith("/")
+    if (directoryOnly) pattern = pattern.slice(0, -1).replace(/\\$/, "")
+    if (!anchored && !pattern.includes("/")) pattern = `**/${pattern}`
+    if (pattern.endsWith("/**")) pattern += "/*"
+    // globset has brace alternatives, but no numeric brace ranges or POSIX
+    // character classes. Normalize those before using the glob matcher.
+    pattern = pattern.replace(
+      /(?<!\\)\{([^{}]*?)\}/g,
+      (whole, inner: string) => (inner.includes(",") ? whole : inner),
+    )
+    pattern = pattern.replace(/\[\[:/g, "[\\[:")
+    rules.push({
+      matcher: new Minimatch(utf8Bytes(pattern), {
+        dot: true,
+        noext: true,
+        nonegate: true,
+        nocomment: true,
+        platform: "linux",
+      }),
+      directoryOnly,
+      exclude,
+    })
+  }
+  return rules
+}
 
-    try {
-      const content = await vscode.workspace.fs.readFile(file)
-      tarFiles.push({
-        name: relativePath,
-        data: new Uint8Array(content),
-      })
-    } catch {
-      // Skip files we can't read
+async function readOptional(uri: vscode.Uri): Promise<string | undefined> {
+  try {
+    return new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
+  } catch {
+    // rignore skips ignore/config files it cannot read.
+    return undefined
+  }
+}
+
+function resolvePath(base: vscode.Uri, path: string): vscode.Uri {
+  return /^(\/|[A-Za-z]:[\\/])/.test(path)
+    ? base.with({ path: vscode.Uri.file(path).path })
+    : vscode.Uri.joinPath(base, path)
+}
+
+async function archiveEnvironment(
+  workspaceRoot: vscode.Uri,
+): Promise<ArchiveEnvironment> {
+  try {
+    const os = await import("node:os")
+    return {
+      home: vscode.Uri.file(os.homedir()),
+      configHome: process.env.XDG_CONFIG_HOME
+        ? vscode.Uri.file(process.env.XDG_CONFIG_HOME)
+        : undefined,
+      cwd: workspaceRoot,
+    }
+  } catch {
+    // Browser workspaces have no host home directory or global Git config.
+    return { cwd: workspaceRoot }
+  }
+}
+
+async function globalIgnore(
+  environment: ArchiveEnvironment,
+): Promise<IgnoreRule[]> {
+  const { home, cwd } = environment
+  if (!home) return []
+  const configHome =
+    environment.configHome ?? vscode.Uri.joinPath(home, ".config")
+  let path: string | undefined
+  for (const config of [
+    vscode.Uri.joinPath(home, ".gitconfig"),
+    vscode.Uri.joinPath(configHome, "git/config"),
+  ]) {
+    const contents = await readOptional(config)
+    // Match the excludesFile lookup in the CLI's ignore crate, including its
+    // home-config precedence and quoted/tilde paths.
+    path = contents?.match(/^\s*excludesfile\s*=\s*"?\s*(\S+?)\s*"?\s*$/im)?.[1]
+    if (path) break
+  }
+  const uri = path
+    ? resolvePath(cwd, path.replace(/~/g, home.fsPath))
+    : vscode.Uri.joinPath(configHome, "git/ignore")
+  return parseIgnore((await readOptional(uri)) ?? "")
+}
+
+async function loadRules(
+  directory: vscode.Uri,
+  cwd: vscode.Uri,
+): Promise<DirectoryRules> {
+  const matchers: DirectoryRules["matchers"] = {}
+  for (const name of IGNORE_FILES.slice(0, 3)) {
+    const contents = await readOptional(vscode.Uri.joinPath(directory, name))
+    if (contents !== undefined) matchers[name] = parseIgnore(contents)
+  }
+  const git = vscode.Uri.joinPath(directory, ".git")
+  let type: vscode.FileType
+  try {
+    type = (await vscode.workspace.fs.stat(git)).type
+  } catch {
+    return { directory, matchers, gitRoot: false }
+  }
+  let gitDirectory: vscode.Uri | undefined = git
+  if (type & vscode.FileType.File) {
+    const target = (await readOptional(git))
+      ?.split(/\r?\n/)[0]
+      .match(/^gitdir: (.+)$/)?.[1]
+    const actual = target ? resolvePath(cwd, target) : undefined
+    const common = actual
+      ? (await readOptional(vscode.Uri.joinPath(actual, "commondir")))?.split(
+          /\r?\n/,
+        )[0]
+      : undefined
+    gitDirectory =
+      actual && common
+        ? resolvePath(common.startsWith(".") ? actual : cwd, common)
+        : undefined
+  }
+  if (gitDirectory) {
+    const contents = await readOptional(
+      vscode.Uri.joinPath(gitDirectory, "info/exclude"),
+    )
+    if (contents !== undefined) matchers["info/exclude"] = parseIgnore(contents)
+  }
+  return { directory, matchers, gitRoot: true }
+}
+
+function matchRules(
+  rules: IgnoreRule[] | undefined,
+  path: string,
+  isDirectory: boolean,
+): boolean | undefined {
+  const bytes = utf8Bytes(path)
+  if (rules) {
+    for (let i = rules.length - 1; i >= 0; i--) {
+      const rule = rules[i]
+      if ((!rule.directoryOnly || isDirectory) && rule.matcher.match(bytes))
+        return rule.exclude
     }
   }
+  return undefined
+}
 
-  return tar(tarFiles) as Uint8Array
+function isIgnored(
+  uri: vscode.Uri,
+  isDirectory: boolean,
+  rules: DirectoryRules[],
+  global: IgnoreRule[],
+  cwd: vscode.Uri,
+): boolean {
+  let gitRoot = -1
+  for (let i = 0; i < rules.length; i++) if (rules[i].gitRoot) gitRoot = i
+  for (const name of IGNORE_FILES) {
+    const gitRelated = name === ".gitignore" || name === "info/exclude"
+    if (gitRelated && gitRoot === -1) continue
+    for (let i = rules.length - 1; i >= (gitRelated ? gitRoot : 0); i--) {
+      const { directory, matchers } = rules[i]
+      const path = uri.path.slice(directory.path.replace(/\/$/, "").length + 1)
+      const result = matchRules(matchers[name], path, isDirectory)
+      if (result !== undefined) return result
+    }
+  }
+  const path = uri.path.startsWith(`${cwd.path.replace(/\/$/, "")}/`)
+    ? uri.path.slice(cwd.path.replace(/\/$/, "").length + 1)
+    : uri.path
+  return gitRoot !== -1 && (matchRules(global, path, isDirectory) ?? false)
+}
+
+export async function createArchive(
+  workspaceRoot: vscode.Uri,
+  environment?: ArchiveEnvironment,
+): Promise<Uint8Array> {
+  const context = environment ?? (await archiveEnvironment(workspaceRoot))
+  const global = await globalIgnore(context)
+  const ancestors: vscode.Uri[] = []
+  let directory = workspaceRoot
+  while (true) {
+    ancestors.unshift(directory)
+    const parent = vscode.Uri.joinPath(directory, "..")
+    if (parent.path === directory.path) break
+    directory = parent
+  }
+  const rules: DirectoryRules[] = []
+  for (const ancestor of ancestors)
+    rules.push(await loadRules(ancestor, context.cwd))
+
+  const files: Array<{ name: string; data: Uint8Array }> = []
+  async function walk(
+    directory: vscode.Uri,
+    prefix: string,
+    rules: DirectoryRules[],
+  ): Promise<void> {
+    let entries: [string, vscode.FileType][]
+    try {
+      entries = await vscode.workspace.fs.readDirectory(directory)
+    } catch {
+      return
+    }
+    for (const [name, type] of entries) {
+      const relativePath = `${prefix}${name}`
+      const uri = vscode.Uri.joinPath(directory, name)
+      if (shouldExclude(uri.path)) continue
+      const isDirectory = (type & vscode.FileType.Directory) !== 0
+      if (isIgnored(uri, isDirectory, rules, global, context.cwd)) continue
+      if (isDirectory) {
+        if (type & vscode.FileType.SymbolicLink) continue
+        await walk(uri, `${relativePath}/`, [
+          ...rules,
+          await loadRules(uri, context.cwd),
+        ])
+      } else if (type & (vscode.FileType.File | vscode.FileType.SymbolicLink)) {
+        files.push({
+          name: relativePath,
+          data: await vscode.workspace.fs.readFile(uri),
+        })
+      }
+    }
+  }
+  if (!shouldExclude(workspaceRoot.path)) await walk(workspaceRoot, "", rules)
+  return tar(files) as Uint8Array
 }
 
 async function uploadToS3(
