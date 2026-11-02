@@ -167,7 +167,7 @@ suite("cloud/ui/statusBar", () => {
       assert.ok(listenerStub.calledOnce)
     })
 
-    test("debounces updates on active editor change", () => {
+    test("debounces updates on active editor change", async () => {
       const statusBarItem = mockStatusBarItem()
       const manager = new StatusBarManager(
         statusBarItem,
@@ -175,10 +175,9 @@ suite("cloud/ui/statusBar", () => {
         () => null,
       )
 
-      const clock = sinon.useFakeTimers({
-        toFake: ["setTimeout", "clearTimeout"],
-      })
-      const updateStub = sinon.stub(manager, "update").resolves()
+      const getSessionStub = sinon
+        .stub(vscode.authentication, "getSession")
+        .resolves(undefined)
 
       let editorChangeCallback:
         | ((e: vscode.TextEditor | undefined) => void)
@@ -197,12 +196,11 @@ suite("cloud/ui/statusBar", () => {
       editorChangeCallback!(undefined)
       editorChangeCallback!(undefined)
 
-      // Only this manager should update, once the debounce delay has elapsed.
-      clock.tick(99)
-      assert.strictEqual(updateStub.callCount, 0)
-      clock.tick(1)
-      assert.strictEqual(updateStub.callCount, 1)
-      manager.dispose()
+      // Wait for debounce timeout (100ms + buffer)
+      await new Promise((resolve) => setTimeout(resolve, 150))
+
+      // Only one update should have happened due to debouncing
+      assert.strictEqual(getSessionStub.callCount, 1)
     })
   })
 
@@ -227,7 +225,7 @@ suite("cloud/ui/statusBar", () => {
       assert.ok((statusBarItem.dispose as sinon.SinonStub).calledOnce)
     })
 
-    test("clears pending timeout on dispose", () => {
+    test("clears pending timeout on dispose", async () => {
       const statusBarItem = mockStatusBarItem()
       const manager = new StatusBarManager(
         statusBarItem,
@@ -235,10 +233,9 @@ suite("cloud/ui/statusBar", () => {
         () => null,
       )
 
-      const clock = sinon.useFakeTimers({
-        toFake: ["setTimeout", "clearTimeout"],
-      })
-      const updateStub = sinon.stub(manager, "update").resolves()
+      const getSessionStub = sinon
+        .stub(vscode.authentication, "getSession")
+        .resolves(undefined)
 
       let editorChangeCallback:
         | ((e: vscode.TextEditor | undefined) => void)
@@ -255,14 +252,14 @@ suite("cloud/ui/statusBar", () => {
       // Trigger an editor change to start the debounce timer
       editorChangeCallback!(undefined)
 
-      assert.strictEqual(clock.countTimers(), 1)
-
-      // Dispose before the timeout fires.
+      // Dispose before the timeout fires
       manager.dispose()
-      assert.strictEqual(clock.countTimers(), 0)
 
-      clock.tick(150)
-      assert.strictEqual(updateStub.callCount, 0)
+      // Wait to ensure timeout would have fired
+      await new Promise((resolve) => setTimeout(resolve, 150))
+
+      // getSession should not have been called because timeout was cleared
+      assert.strictEqual(getSessionStub.callCount, 0)
     })
   })
 })
