@@ -4,6 +4,7 @@
 
 ### Internal
 
+* ⬆ Bump the github-actions group with 4 updates. PR [#237](https://github.com/fastapi/fastapi-vscode/pull/237) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump the bun-packages group with 8 updates. PR [#236](https://github.com/fastapi/fastapi-vscode/pull/236) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump the github-actions group with 2 updates. PR [#235](https://github.com/fastapi/fastapi-vscode/pull/235) by [@dependabot[bot]](https://github.com/apps/dependabot).
 
