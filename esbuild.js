@@ -83,7 +83,10 @@ async function main() {
     target: "node20",
     outdir: "dist",
     outbase: "src",
-    ...(noBundleForCoverage ? {} : { external: ["vscode", "web-tree-sitter"] }),
+    // PostHog catches a missing optional OpenTelemetry API at runtime.
+    ...(noBundleForCoverage
+      ? {}
+      : { external: ["vscode", "web-tree-sitter", "@opentelemetry/api"] }),
   })
 
   // Webview script (runs inside VS Code logs panel webview)
