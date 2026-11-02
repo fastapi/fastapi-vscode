@@ -4,6 +4,7 @@
 
 ### Internal
 
+* ⬆ Bump the bun-packages group with 9 updates. PR [#238](https://github.com/fastapi/fastapi-vscode/pull/238) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ✅ Make status bar debounce tests deterministic. PR [#239](https://github.com/fastapi/fastapi-vscode/pull/239) by [@savannahostrowski](https://github.com/savannahostrowski).
 * ⬆ Bump the github-actions group with 4 updates. PR [#237](https://github.com/fastapi/fastapi-vscode/pull/237) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * ⬆ Bump the bun-packages group with 8 updates. PR [#236](https://github.com/fastapi/fastapi-vscode/pull/236) by [@dependabot[bot]](https://github.com/apps/dependabot).
