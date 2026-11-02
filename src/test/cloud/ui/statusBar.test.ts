@@ -192,15 +192,23 @@ suite("cloud/ui/statusBar", () => {
 
       manager.show()
 
-      // Trigger multiple editor changes rapidly
       editorChangeCallback!(undefined)
-      editorChangeCallback!(undefined)
+      clock.tick(60)
       editorChangeCallback!(undefined)
 
-      // Only this manager should update, once the debounce delay has elapsed.
+      // The first change's deadline passes, but the second change reset it.
+      clock.tick(60)
+      assert.strictEqual(updateStub.callCount, 0)
+      editorChangeCallback!(undefined)
+
+      // Wait until 100ms after the most recent change, not the first one.
       clock.tick(99)
       assert.strictEqual(updateStub.callCount, 0)
       clock.tick(1)
+      assert.strictEqual(updateStub.callCount, 1)
+
+      // No additional updates should follow once editor changes stop.
+      clock.tick(1000)
       assert.strictEqual(updateStub.callCount, 1)
       manager.dispose()
     })
@@ -227,7 +235,7 @@ suite("cloud/ui/statusBar", () => {
       assert.ok((statusBarItem.dispose as sinon.SinonStub).calledOnce)
     })
 
-    test("clears pending timeout on dispose", () => {
+    test("does not update after disposal with an editor change pending", () => {
       const statusBarItem = mockStatusBarItem()
       const manager = new StatusBarManager(
         statusBarItem,
@@ -252,16 +260,13 @@ suite("cloud/ui/statusBar", () => {
 
       manager.show()
 
-      // Trigger an editor change to start the debounce timer
       editorChangeCallback!(undefined)
+      clock.tick(50)
+      assert.strictEqual(updateStub.callCount, 0)
 
-      assert.strictEqual(clock.countTimers(), 1)
-
-      // Dispose before the timeout fires.
+      // Disposal must prevent the pending update, even after its deadline.
       manager.dispose()
-      assert.strictEqual(clock.countTimers(), 0)
-
-      clock.tick(150)
+      clock.tick(1000)
       assert.strictEqual(updateStub.callCount, 0)
     })
   })
