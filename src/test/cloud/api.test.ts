@@ -118,6 +118,28 @@ suite("cloud/api", () => {
 
       assert.strictEqual(result, null)
     })
+
+    test("reports the token as rejected on 401", async () => {
+      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 401))
+      const api = new ApiService()
+      const rejected = sinon.stub()
+      api.onDidRejectToken(rejected)
+
+      await api.getUser("bad_token")
+
+      assert.ok(rejected.calledOnceWith("bad_token"))
+    })
+
+    test("does not report the token as rejected on other errors", async () => {
+      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 500))
+      const api = new ApiService()
+      const rejected = sinon.stub()
+      api.onDidRejectToken(rejected)
+
+      await api.getUser("test_token")
+
+      assert.ok(rejected.notCalled)
+    })
   })
 
   suite("pollDeviceToken", () => {
@@ -396,6 +418,36 @@ suite("cloud/api", () => {
       })
 
       await assert.rejects(() => stream.next(), /Failed to stream logs: 502/)
+    })
+
+    test("reports the token as rejected on 401", async () => {
+      mockSession("revoked_token")
+      sinon
+        .stub(globalThis, "fetch")
+        .resolves(mockResponse({ detail: "Invalid credentials" }, false, 401))
+      const rejected = sinon.stub()
+      api.onDidRejectToken(rejected)
+
+      await assert.rejects(() => api.getTeams(), /Invalid credentials/)
+
+      assert.ok(rejected.calledOnceWith("revoked_token"))
+    })
+
+    test("streamAppLogs reports the token as rejected on 401", async () => {
+      mockSession("revoked_token")
+      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 401))
+      const rejected = sinon.stub()
+      api.onDidRejectToken(rejected)
+
+      const stream = api.streamAppLogs({
+        appId: "app-id",
+        tail: 100,
+        since: "2024-01-01T00:00:00Z",
+        follow: false,
+      })
+
+      await assert.rejects(() => stream.next())
+      assert.ok(rejected.calledOnceWith("revoked_token"))
     })
 
     test("request includes auth header and user-agent", async () => {
