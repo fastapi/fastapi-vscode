@@ -5,7 +5,7 @@ import { ApiService } from "../../cloud/api"
 import { CloudAuthenticationProvider, SESSION_ID } from "../../cloud/auth"
 import { mockResponse, stubFs } from "../testUtils"
 
-const SESSION_TOKEN = "fcs_9mXqT2vLw8RkYb4NcJ7pZd1HsF6gUe3a"
+const SESSION_TOKEN = "fcs_test_token"
 
 // FastAPI Cloud issued JWTs before session tokens.
 function createJwtToken(payload: Record<string, unknown>): string {
