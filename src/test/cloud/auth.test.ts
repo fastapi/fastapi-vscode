@@ -20,6 +20,10 @@ function createJwtToken(payload: Record<string, unknown>): string {
   return `${headerEncoded}.${payloadEncoded}.${signature}`
 }
 
+function validToken(): string {
+  return SESSION_TOKEN
+}
+
 function authFile(token: string): Buffer {
   return Buffer.from(JSON.stringify({ access_token: token }))
 }
@@ -66,8 +70,10 @@ suite("cloud/auth", () => {
 
     suite("getSessions", () => {
       test("returns session when valid token exists on filesystem", async () => {
-        const token = SESSION_TOKEN
-        fsStub.fake.readFile.resolves(authFile(token))
+        const token = validToken()
+        fsStub.fake.readFile.resolves(
+          Buffer.from(JSON.stringify({ access_token: token })),
+        )
 
         const fetchStub = sinon
           .stub(globalThis, "fetch")
@@ -107,9 +113,8 @@ suite("cloud/auth", () => {
         await provider.dispose()
       })
 
-      test("signs out when FastAPI Cloud rejects the token", async () => {
+      test("rejects the token without deleting shared credentials", async () => {
         fsStub.fake.readFile.resolves(authFile(SESSION_TOKEN))
-        fsStub.fake.delete.resolves()
         sinon
           .stub(globalThis, "fetch")
           .resolves(mockResponse({ detail: "Invalid credentials" }, false, 401))
@@ -123,26 +128,9 @@ suite("cloud/auth", () => {
         await changed
 
         assert.strictEqual(sessions.length, 0)
-        assert.ok(fsStub.fake.delete.calledOnce)
-
-        await provider.dispose()
-      })
-
-      test("doesn't offer a rejected token it couldn't delete", async () => {
-        fsStub.fake.readFile.resolves(authFile(SESSION_TOKEN))
-        fsStub.fake.delete.rejects(new Error("Permission denied"))
-        sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 401))
-
-        const { provider } = createProvider()
-        const changed = new Promise((resolve) =>
-          provider.onDidChangeSessions(resolve),
-        )
-
-        await provider.getSessions()
-        await changed
-
+        assert.ok(fsStub.fake.delete.notCalled)
         assert.deepStrictEqual(await provider.getSessions(), [])
-        assert.ok(!(await (provider as any).hasValidToken()))
+        assert.ok(!(await (provider as any).hasToken()))
 
         await provider.dispose()
       })
@@ -173,6 +161,21 @@ suite("cloud/auth", () => {
         await provider.dispose()
       })
 
+      test("a late rejection of an old token doesn't revive the current token", async () => {
+        fsStub.fake.readFile.resolves(authFile(SESSION_TOKEN))
+        sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 401))
+        const { provider, apiService } = createProvider()
+
+        await provider.getSessions()
+        await apiService.getUser("fcs_old")
+
+        assert.deepStrictEqual(await provider.getSessions(), [])
+        assert.ok(!(await (provider as any).hasToken()))
+        assert.ok(fsStub.fake.delete.notCalled)
+
+        await provider.dispose()
+      })
+
       test("returns empty when file does not exist", async () => {
         fsStub.fake.readFile.rejects(new Error("File not found"))
 
@@ -185,8 +188,10 @@ suite("cloud/auth", () => {
       })
 
       test("uses cached label on subsequent calls", async () => {
-        const token = SESSION_TOKEN
-        fsStub.fake.readFile.resolves(authFile(token))
+        const token = validToken()
+        fsStub.fake.readFile.resolves(
+          Buffer.from(JSON.stringify({ access_token: token })),
+        )
 
         const fetchStub = sinon
           .stub(globalThis, "fetch")
@@ -209,9 +214,32 @@ suite("cloud/auth", () => {
         await provider.dispose()
       })
 
+      test("doesn't reuse the cached label for a different token", async () => {
+        fsStub.fake.readFile.resolves(authFile("fcs_old"))
+        const fetchStub = sinon
+          .stub(globalThis, "fetch")
+          .resolves(mockResponse({ email: "old@example.com" }))
+        const { provider } = createProvider()
+        await provider.getSessions()
+
+        fsStub.fake.readFile.resolves(authFile(SESSION_TOKEN))
+        fetchStub.resolves(mockResponse({ email: "new@example.com" }))
+        const [session] = await provider.getSessions()
+        assert.strictEqual(session.account.label, "new@example.com")
+
+        fsStub.fake.readFile.resolves(authFile("fcs_other"))
+        fetchStub.resolves(mockResponse({}, false, 500))
+        const [fallbackSession] = await provider.getSessions()
+        assert.strictEqual(fallbackSession.account.label, "FastAPI Cloud")
+
+        await provider.dispose()
+      })
+
       test("falls back to default label when getUser fails", async () => {
-        const token = SESSION_TOKEN
-        fsStub.fake.readFile.resolves(authFile(token))
+        const token = validToken()
+        fsStub.fake.readFile.resolves(
+          Buffer.from(JSON.stringify({ access_token: token })),
+        )
 
         sinon.stub(globalThis, "fetch").rejects(new Error("network error"))
 
@@ -225,8 +253,10 @@ suite("cloud/auth", () => {
       })
 
       test("falls back to default label when getUser returns non-ok", async () => {
-        const token = SESSION_TOKEN
-        fsStub.fake.readFile.resolves(authFile(token))
+        const token = validToken()
+        fsStub.fake.readFile.resolves(
+          Buffer.from(JSON.stringify({ access_token: token })),
+        )
 
         sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 500))
 
@@ -261,8 +291,10 @@ suite("cloud/auth", () => {
 
     suite("removeSession", () => {
       test("deletes auth file and fires event", async () => {
-        const token = SESSION_TOKEN
-        fsStub.fake.readFile.resolves(authFile(token))
+        const token = validToken()
+        fsStub.fake.readFile.resolves(
+          Buffer.from(JSON.stringify({ access_token: token })),
+        )
         sinon
           .stub(globalThis, "fetch")
           .resolves(
@@ -292,8 +324,10 @@ suite("cloud/auth", () => {
 
     suite("signOut", () => {
       test("clears cached label and removes sessions", async () => {
-        const token = SESSION_TOKEN
-        fsStub.fake.readFile.resolves(authFile(token))
+        const token = validToken()
+        fsStub.fake.readFile.resolves(
+          Buffer.from(JSON.stringify({ access_token: token })),
+        )
         const fetchStub = sinon
           .stub(globalThis, "fetch")
           .resolves(
@@ -327,8 +361,10 @@ suite("cloud/auth", () => {
 
     suite("createSession", () => {
       test("returns existing session when already logged in", async () => {
-        const token = SESSION_TOKEN
-        fsStub.fake.readFile.resolves(authFile(token))
+        const token = validToken()
+        fsStub.fake.readFile.resolves(
+          Buffer.from(JSON.stringify({ access_token: token })),
+        )
         sinon
           .stub(globalThis, "fetch")
           .resolves(
@@ -344,14 +380,14 @@ suite("cloud/auth", () => {
         await provider.dispose()
       })
 
-      test("performs device code flow when not logged in", async () => {
-        // Not logged in initially
-        fsStub.fake.readFile.rejects(new Error("File not found"))
+      test("performs device code flow when the stored token is rejected", async () => {
+        fsStub.fake.readFile.resolves(authFile("fcs_old"))
 
         const token = SESSION_TOKEN
         const fetchStub = sinon.stub(globalThis, "fetch")
+        fetchStub.onFirstCall().resolves(mockResponse({}, false, 401))
         // requestDeviceCode call
-        fetchStub.onFirstCall().resolves(
+        fetchStub.onSecondCall().resolves(
           mockResponse({
             device_code: "dev123",
             user_code: "USER-CODE",
@@ -362,10 +398,10 @@ suite("cloud/auth", () => {
           }),
         )
         // pollDeviceToken call
-        fetchStub.onSecondCall().resolves(mockResponse({ access_token: token }))
+        fetchStub.onThirdCall().resolves(mockResponse({ access_token: token }))
         // getUser call (after saveToken, getSessions is called)
         fetchStub
-          .onThirdCall()
+          .onCall(3)
           .resolves(
             mockResponse({ email: "new@example.com", full_name: "New" }),
           )
@@ -401,7 +437,7 @@ suite("cloud/auth", () => {
       test("shows notification after device code sign-in", async () => {
         fsStub.fake.readFile.rejects(new Error("File not found"))
 
-        const token = SESSION_TOKEN
+        const token = validToken()
         const fetchStub = sinon.stub(globalThis, "fetch")
         fetchStub.onFirstCall().resolves(
           mockResponse({
@@ -447,6 +483,27 @@ suite("cloud/auth", () => {
         await provider.dispose()
       })
 
+      test("reports a sign-in failure when no session can be created", async () => {
+        const { provider, apiService } = createProvider()
+        sinon.stub(provider, "getSessions").resolves([])
+        sinon.stub(apiService, "requestDeviceCode").resolves({
+          device_code: "dev123",
+          user_code: "USER-CODE",
+          verification_uri: "https://auth.example.com/device",
+        })
+        sinon.stub(vscode.env, "openExternal")
+        sinon.stub(vscode.window, "withProgress").resolves(SESSION_TOKEN)
+        sinon.stub(provider, "saveToken").resolves()
+        const infoStub = sinon.stub(vscode.window, "showInformationMessage")
+
+        await assert.rejects(() => provider.createSession(), {
+          message: "Unable to sign in to FastAPI Cloud. Please try again.",
+        })
+        assert.ok(infoStub.notCalled)
+
+        await provider.dispose()
+      })
+
       test("wraps network error with friendly message", async () => {
         fsStub.fake.readFile.rejects(new Error("File not found"))
 
@@ -481,7 +538,7 @@ suite("cloud/auth", () => {
       test("uses verification_uri with user_code when no complete URI", async () => {
         fsStub.fake.readFile.rejects(new Error("File not found"))
 
-        const token = SESSION_TOKEN
+        const token = validToken()
         const fetchStub = sinon.stub(globalThis, "fetch")
         fetchStub.onFirstCall().resolves(
           mockResponse({
@@ -546,8 +603,10 @@ suite("cloud/auth", () => {
         )
 
         // Now become logged in
-        const token = SESSION_TOKEN
-        fsStub.fake.readFile.resolves(authFile(token))
+        const token = validToken()
+        fsStub.fake.readFile.resolves(
+          Buffer.from(JSON.stringify({ access_token: token })),
+        )
         sinon
           .stub(globalThis, "fetch")
           .resolves(

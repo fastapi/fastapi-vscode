@@ -32,11 +32,9 @@ export class CloudAuthenticationProvider
   implements AuthenticationProvider, Disposable
 {
   private lastAuthState = false
-  private cachedLabel: string | null = null
-  // Tokens are opaque, so only FastAPI Cloud can tell that one expired or was
-  // revoked, with a 401. Such a token is never offered again, also if deleting
-  // it fails.
-  private rejectedToken: string | null = null
+  private cachedLabel: { token: string; label: string } | null = null
+  // Treat all tokens as opaque; only FastAPI Cloud can reject them.
+  private rejectedTokens = new Set<string>()
 
   private pollingInterval?: ReturnType<typeof setInterval>
 
@@ -57,14 +55,14 @@ export class CloudAuthenticationProvider
           supportsMultipleAccounts: false,
         },
       ),
-      apiService.onDidRejectToken((token) => this.discardToken(token)),
+      apiService.onDidRejectToken((token) => this.rejectToken(token)),
     )
   }
 
   async startWatching() {
     // Poll for auth changes since we can't use fs.watch in browser
     // and VS Code's file watcher doesn't work for files outside workspace
-    this.lastAuthState = await this.hasValidToken()
+    this.lastAuthState = await this.hasToken()
     this.pollingInterval = setInterval(
       () => this.checkAndFireAuthState(),
       AUTH_POLL_INTERVAL_MS,
@@ -72,7 +70,7 @@ export class CloudAuthenticationProvider
   }
 
   private async checkAndFireAuthState() {
-    const loggedIn = await this.hasValidToken()
+    const loggedIn = await this.hasToken()
     if (loggedIn !== this.lastAuthState) {
       if (loggedIn && !this.lastAuthState) {
         trackCloudSignIn()
@@ -128,20 +126,21 @@ export class CloudAuthenticationProvider
     try {
       const token = await this.getToken()
 
-      if (!token || token === this.rejectedToken) {
+      if (!token || this.rejectedTokens.has(token)) {
         return []
       }
 
-      if (!this.cachedLabel) {
+      if (this.cachedLabel?.token !== token) {
         const info = await this.apiService.getUser(token)
-        if (token === this.rejectedToken) {
+        if (this.rejectedTokens.has(token)) {
           return []
         }
         if (info?.email) {
-          this.cachedLabel = info.email
+          this.cachedLabel = { token, label: info.email }
         }
       }
-      const label = this.cachedLabel ?? NAME
+      const label =
+        this.cachedLabel?.token === token ? this.cachedLabel.label : NAME
 
       return [
         {
@@ -159,41 +158,26 @@ export class CloudAuthenticationProvider
     }
   }
 
-  private async hasValidToken(): Promise<boolean> {
+  private async hasToken(): Promise<boolean> {
     try {
       const token = await this.getToken()
-      return !!token && token !== this.rejectedToken
+      return !!token && !this.rejectedTokens.has(token)
     } catch {
       return false
     }
   }
 
-  // FastAPI Cloud rejected the token, so it expired or was revoked: sign out,
-  // unless a new sign-in replaced the token meanwhile.
-  private async discardToken(token: string): Promise<void> {
-    this.rejectedToken = token
+  private async rejectToken(token: string): Promise<void> {
+    if (this.rejectedTokens.has(token)) return
+    this.rejectedTokens.add(token)
     try {
       if ((await this.getToken()) !== token) return
-      await this.deleteToken()
     } catch {
-      /* file doesn't exist */
+      return
     }
     this.cachedLabel = null
     this.lastAuthState = false
     this._onDidChangeSessions.fire({ added: [], removed: [], changed: [] })
-  }
-
-  private async deleteToken(): Promise<void> {
-    // In browsers envs like vscode.dev, we use SecretStorage instead of filesystem
-    if (env.uiKind === UIKind.Web) {
-      const secretStorage: SecretStorage = this.context.secrets
-      await secretStorage.delete(SECRET_STORAGE_KEY)
-      return
-    }
-
-    // Otherwise, we need to delete the auth file from filesystem if it exists
-    const authUri = this.getAuthUri()
-    if (authUri) await workspace.fs.delete(authUri)
   }
 
   async saveToken(token: string): Promise<void> {
@@ -217,10 +201,8 @@ export class CloudAuthenticationProvider
 
   public async createSession(): Promise<AuthenticationSession> {
     // Return existing session if already logged in (e.g. via CLI)
-    if (await this.hasValidToken()) {
-      const sessions = await this.getSessions()
-      return sessions[0]
-    }
+    const [existingSession] = await this.getSessions()
+    if (existingSession) return existingSession
 
     let deviceCodeResponse: Awaited<ReturnType<ApiService["requestDeviceCode"]>>
     try {
@@ -266,8 +248,10 @@ export class CloudAuthenticationProvider
 
     await this.saveToken(token)
 
-    const sessions = await this.getSessions()
-    const session = sessions[0]
+    const [session] = await this.getSessions()
+    if (!session) {
+      throw new Error("Unable to sign in to FastAPI Cloud. Please try again.")
+    }
 
     window.showInformationMessage(
       `Signed in to FastAPI Cloud as ${session.account.label}`,
@@ -282,10 +266,19 @@ export class CloudAuthenticationProvider
   }
 
   public async removeSession(sessionId: string): Promise<void> {
+    const authUri = this.getAuthUri()
+
     const sessions = await this.getSessions()
     const session = sessions.find((s) => s.id === sessionId)
     try {
-      await this.deleteToken()
+      // In browsers envs like vscode.dev, we use SecretStorage instead of filesystem
+      if (env.uiKind === UIKind.Web) {
+        const secretStorage: SecretStorage = this.context.secrets
+        await secretStorage.delete(SECRET_STORAGE_KEY)
+        // Otherwise, we need to delete the auth file from filesystem if it exists
+      } else if (authUri) {
+        await workspace.fs.delete(authUri)
+      }
 
       if (session) {
         this._onDidChangeSessions.fire({
