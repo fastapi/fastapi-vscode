@@ -38,6 +38,10 @@ export class StreamLogError extends Error {
 }
 
 export class ApiService {
+  private _onDidRejectToken = new vscode.EventEmitter<string>()
+  /** Fires with a token FastAPI Cloud answered 401 to: it expired or was revoked. */
+  readonly onDidRejectToken = this._onDidRejectToken.event
+
   constructor(
     public readonly baseUrl: string = DEFAULT_BASE_URL,
     public readonly dashboardUrl: string = DEFAULT_DASHBOARD_URL,
@@ -72,6 +76,8 @@ export class ApiService {
     })
 
     if (!response.ok) {
+      if (response.status === 401) this._onDidRejectToken.fire(token)
+
       let detail = ""
       try {
         const body = await response.json()
@@ -96,6 +102,7 @@ export class ApiService {
           ...getUserAgentHeaders(),
         },
       })
+      if (response.status === 401) this._onDidRejectToken.fire(token)
       if (!response.ok) return null
       return (await response.json()) as User
     } catch {
@@ -202,6 +209,10 @@ export class ApiService {
     )
 
     if (!response.ok || !response.body) {
+      if (response.status === 401) {
+        this._onDidRejectToken.fire(session.accessToken)
+      }
+
       let detail = ""
       try {
         const body = await response.json()
