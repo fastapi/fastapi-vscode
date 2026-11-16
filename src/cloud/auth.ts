@@ -139,22 +139,20 @@ export class CloudAuthenticationProvider
           this.cachedLabel = { token, label: info.email }
         }
       }
-      const label =
-        this.cachedLabel?.token === token ? this.cachedLabel.label : NAME
-
-      return [
-        {
-          id: SESSION_ID,
-          accessToken: token,
-          account: {
-            id: ACCOUNT_ID,
-            label,
-          },
-          scopes: [],
-        },
-      ]
+      return [this.toSession(token)]
     } catch {
       return []
+    }
+  }
+
+  private toSession(token: string): AuthenticationSession {
+    const label =
+      this.cachedLabel?.token === token ? this.cachedLabel.label : NAME
+    return {
+      id: SESSION_ID,
+      accessToken: token,
+      account: { id: ACCOUNT_ID, label },
+      scopes: [],
     }
   }
 
@@ -175,9 +173,15 @@ export class CloudAuthenticationProvider
     } catch {
       return
     }
+    // VS Code's Accounts menu only drops accounts listed in `removed`.
+    const session = this.toSession(token)
     this.cachedLabel = null
     this.lastAuthState = false
-    this._onDidChangeSessions.fire({ added: [], removed: [], changed: [] })
+    this._onDidChangeSessions.fire({
+      added: [],
+      removed: [session],
+      changed: [],
+    })
   }
 
   async saveToken(token: string): Promise<void> {
