@@ -2,7 +2,11 @@ import * as assert from "node:assert"
 import sinon from "sinon"
 import * as vscode from "vscode"
 import { ApiService } from "../../cloud/api"
-import { CloudAuthenticationProvider, SESSION_ID } from "../../cloud/auth"
+import {
+  ACCOUNT_ID,
+  CloudAuthenticationProvider,
+  SESSION_ID,
+} from "../../cloud/auth"
 import { mockResponse, stubFs } from "../testUtils"
 
 const SESSION_TOKEN = "fcs_test_token"
@@ -120,14 +124,18 @@ suite("cloud/auth", () => {
           .resolves(mockResponse({ detail: "Invalid credentials" }, false, 401))
 
         const { provider } = createProvider()
-        const changed = new Promise((resolve) =>
-          provider.onDidChangeSessions(resolve),
-        )
+        const changed =
+          new Promise<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>(
+            (resolve) => provider.onDidChangeSessions(resolve),
+          )
 
         const sessions = await provider.getSessions()
-        await changed
+        const event = await changed
 
         assert.strictEqual(sessions.length, 0)
+        assert.strictEqual(event.removed?.length, 1)
+        assert.strictEqual(event.removed[0].id, SESSION_ID)
+        assert.strictEqual(event.removed[0].account.id, ACCOUNT_ID)
         assert.ok(fsStub.fake.delete.notCalled)
         assert.deepStrictEqual(await provider.getSessions(), [])
         assert.ok(!(await (provider as any).hasToken()))
