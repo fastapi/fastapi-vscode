@@ -26,7 +26,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       - name: Prepare release
@@ -42,7 +42,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Get PR Submit token
         id: pr-submit
-        uses: tiangolo/pr-submit@d802fdf59bde80bc3eb8bd3259f4cbeec63de4aa # 0.0.1
+        uses: tiangolo/pr-submit@0.0.1
       - name: Create release pull request
         env:
           GH_TOKEN: ${{ steps.pr-submit.outputs.token }}
