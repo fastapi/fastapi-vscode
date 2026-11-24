@@ -2,6 +2,8 @@
 
 ## Latest Changes
 
+## 0.4.0 (2026-11-24)
+
 ### Internal
 
 * ✨ Revoke the FastAPI Cloud login on sign out. PR [#242](https://github.com/fastapi/fastapi-vscode/pull/242) by [@patrick91](https://github.com/patrick91).
