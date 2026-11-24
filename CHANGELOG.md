@@ -4,6 +4,7 @@
 
 ### Internal
 
+* ✨ Revoke the FastAPI Cloud login on sign out. PR [#242](https://github.com/fastapi/fastapi-vscode/pull/242) by [@patrick91](https://github.com/patrick91).
 * ✨ Support FastAPI Cloud session tokens. PR [#240](https://github.com/fastapi/fastapi-vscode/pull/240) by [@patrick91](https://github.com/patrick91).
 * ✏️ Fix typo in CHANGELOG. PR [#244](https://github.com/fastapi/fastapi-vscode/pull/244) by [@savannahostrowski](https://github.com/savannahostrowski).
 * 🔒️ Generate GH actions workflow lockfile and bump Zizmor. PR [#241](https://github.com/fastapi/fastapi-vscode/pull/241) by [@YuriiMotov](https://github.com/YuriiMotov).
