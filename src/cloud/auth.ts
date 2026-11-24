@@ -14,6 +14,7 @@ import {
   window,
   workspace,
 } from "vscode"
+import { log } from "../utils/logger"
 import { trackCloudSignIn } from "../utils/telemetry"
 import type { ApiService } from "./api"
 
@@ -23,6 +24,8 @@ const AUTH_POLL_INTERVAL_MS = 3000
 const SECRET_STORAGE_KEY = "fastapi-cloud-access-token"
 export const SESSION_ID = "fastapi-cloud-session"
 export const ACCOUNT_ID = "fastapi-cloud-account"
+export const REVOKE_FAILED_MESSAGE =
+  "Couldn't sign out on FastAPI Cloud, so this login stays valid until it expires."
 
 interface AuthConfig {
   access_token: string
@@ -293,6 +296,17 @@ export class CloudAuthenticationProvider
       }
     } catch {
       /* file doesn't exist */
+    }
+
+    if (session) {
+      // Revoke the token on a best-effort basis, after signing out here: signing
+      // out must still work when FastAPI Cloud can't be reached.
+      try {
+        await this.apiService.logout(session.accessToken)
+      } catch (error) {
+        log(`Could not revoke the token: ${error}`)
+        window.showWarningMessage(REVOKE_FAILED_MESSAGE)
+      }
     }
   }
 

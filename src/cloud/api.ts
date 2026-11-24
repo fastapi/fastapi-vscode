@@ -13,6 +13,9 @@ import type {
   User,
 } from "./types"
 
+// Short, so signing out doesn't hang when FastAPI Cloud is slow.
+const LOGOUT_TIMEOUT_MS = 5000
+
 function getUserAgentHeaders(): Record<string, string> {
   if (vscode.env.uiKind === vscode.UIKind.Web) return {}
   return { "User-Agent": `fastapi-vscode/${getExtensionVersion()}` }
@@ -107,6 +110,24 @@ export class ApiService {
       return (await response.json()) as User
     } catch {
       return null
+    }
+  }
+
+  /** Revokes the token on FastAPI Cloud. */
+  async logout(token: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/logout`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...getUserAgentHeaders(),
+      },
+      signal: AbortSignal.timeout(LOGOUT_TIMEOUT_MS),
+    })
+    // FastAPI Cloud without /logout can't revoke tokens, so there's nothing to do.
+    if (!response.ok && response.status !== 404) {
+      throw new Error(
+        `Logout failed: ${response.status} ${response.statusText}`,
+      )
     }
   }
 

@@ -142,6 +142,59 @@ suite("cloud/api", () => {
     })
   })
 
+  suite("logout", () => {
+    test("revokes the token", async () => {
+      const fetchStub = sinon
+        .stub(globalThis, "fetch")
+        .resolves(mockResponse(null, true, 204))
+
+      await new ApiService().logout("test_token")
+
+      const [url, options] = fetchStub.firstCall.args
+      assert.strictEqual(url, `${DEFAULT_BASE_URL}/logout`)
+      assert.strictEqual(options?.method, "POST")
+      const headers = options?.headers as Record<string, string>
+      assert.strictEqual(headers.Authorization, "Bearer test_token")
+      assert.ok(headers["User-Agent"]?.startsWith("fastapi-vscode/"))
+      assert.ok(options?.signal instanceof AbortSignal)
+    })
+
+    test("does nothing when FastAPI Cloud has no logout", async () => {
+      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 404))
+
+      await new ApiService().logout("test_token")
+    })
+
+    test("throws when FastAPI Cloud doesn't revoke the token", async () => {
+      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 500))
+
+      await assert.rejects(
+        () => new ApiService().logout("test_token"),
+        /Logout failed: 500/,
+      )
+    })
+
+    test("throws on network error", async () => {
+      sinon.stub(globalThis, "fetch").rejects(new TypeError("fetch failed"))
+
+      await assert.rejects(
+        () => new ApiService().logout("test_token"),
+        /fetch failed/,
+      )
+    })
+
+    test("does not report the token as rejected", async () => {
+      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 401))
+      const api = new ApiService()
+      const rejected = sinon.stub()
+      api.onDidRejectToken(rejected)
+
+      await assert.rejects(() => api.logout("test_token"))
+
+      assert.ok(rejected.notCalled)
+    })
+  })
+
   suite("pollDeviceToken", () => {
     test("returns token on success", async () => {
       sinon
