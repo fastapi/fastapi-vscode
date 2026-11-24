@@ -159,12 +159,6 @@ suite("cloud/api", () => {
       assert.ok(options?.signal instanceof AbortSignal)
     })
 
-    test("does nothing when FastAPI Cloud has no logout", async () => {
-      sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 404))
-
-      await new ApiService().logout("test_token")
-    })
-
     test("throws when FastAPI Cloud doesn't revoke the token", async () => {
       sinon.stub(globalThis, "fetch").resolves(mockResponse({}, false, 500))
 

@@ -123,8 +123,7 @@ export class ApiService {
       },
       signal: AbortSignal.timeout(LOGOUT_TIMEOUT_MS),
     })
-    // FastAPI Cloud without /logout can't revoke tokens, so there's nothing to do.
-    if (!response.ok && response.status !== 404) {
+    if (!response.ok) {
       throw new Error(
         `Logout failed: ${response.status} ${response.statusText}`,
       )
