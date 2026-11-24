@@ -5,6 +5,7 @@ import { ApiService } from "../../cloud/api"
 import {
   ACCOUNT_ID,
   CloudAuthenticationProvider,
+  REVOKE_FAILED_MESSAGE,
   SESSION_ID,
 } from "../../cloud/auth"
 import { mockResponse, stubFs } from "../testUtils"
@@ -325,6 +326,76 @@ suite("cloud/auth", () => {
           "should fire onDidChangeSessions with removed session",
         )
         assert.strictEqual(removeEvent[0].removed[0].id, SESSION_ID)
+
+        await provider.dispose()
+      })
+
+      test("revokes the token after signing out locally", async () => {
+        const token = validToken()
+        fsStub.fake.readFile.resolves(authFile(token))
+        sinon
+          .stub(globalThis, "fetch")
+          .resolves(
+            mockResponse({ email: "test@example.com", full_name: "Test" }),
+          )
+        fsStub.fake.delete.resolves()
+        const warning = sinon.stub(vscode.window, "showWarningMessage")
+
+        const { provider, apiService } = createProvider()
+        const logout = sinon.stub(apiService, "logout").resolves()
+        const fired = sinon.stub()
+        provider.onDidChangeSessions(fired)
+
+        await provider.removeSession(SESSION_ID)
+
+        assert.ok(logout.calledOnceWith(token))
+        assert.ok(fsStub.fake.delete.calledBefore(logout))
+        assert.ok(fired.calledBefore(logout))
+        assert.ok(warning.notCalled)
+
+        await provider.dispose()
+      })
+
+      test("warns when the token is not revoked, and still signs out", async () => {
+        const token = validToken()
+        fsStub.fake.readFile.resolves(authFile(token))
+        sinon
+          .stub(globalThis, "fetch")
+          .resolves(
+            mockResponse({ email: "test@example.com", full_name: "Test" }),
+          )
+        fsStub.fake.delete.resolves()
+        const warning = sinon.stub(vscode.window, "showWarningMessage")
+
+        const { provider, apiService } = createProvider()
+        sinon.stub(apiService, "logout").rejects(new TypeError("fetch failed"))
+        const fired = sinon.stub()
+        provider.onDidChangeSessions(fired)
+
+        await provider.removeSession(SESSION_ID)
+
+        assert.ok(fsStub.fake.delete.calledOnce)
+        assert.ok(
+          fired.args.some((args: any[]) => args[0].removed.length > 0),
+          "should fire onDidChangeSessions with removed session",
+        )
+        assert.ok(warning.calledOnceWith(REVOKE_FAILED_MESSAGE))
+
+        await provider.dispose()
+      })
+
+      test("doesn't call FastAPI Cloud without a session", async () => {
+        fsStub.fake.readFile.rejects(new Error("File not found"))
+        fsStub.fake.delete.rejects(new Error("File not found"))
+        const warning = sinon.stub(vscode.window, "showWarningMessage")
+
+        const { provider, apiService } = createProvider()
+        const logout = sinon.stub(apiService, "logout").resolves()
+
+        await provider.removeSession(SESSION_ID)
+
+        assert.ok(logout.notCalled)
+        assert.ok(warning.notCalled)
 
         await provider.dispose()
       })
